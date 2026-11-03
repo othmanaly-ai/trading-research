@@ -81,37 +81,41 @@ def _apply_outage(days: dict, replay: list[Session], outage: dict) -> None:
                                  day.official_close)
 
 
-def _instrument_events(inst: dict, days: dict, replay: list[Session]) -> list[Event]:
+def _instrument_events(inst: dict, days: dict, replay: list[Session], ctx: "Context") -> list[Event]:
     ev = []
     for s in replay:
-        day = days[s.date]
-        ev.append(Event(_iso(s.open_utc), SOURCE, MODE_DEMO_REPLAY, "feed_status", None, inst["id"],
-                        {"status": "live", "feed": FEED, "session_date": str(s.date)}))
+        day = days.get(s.date)
+        if day is None:
+            ev.append(Event(_iso(s.open_utc), ctx.source, ctx.mode, "feed_status", None, inst["id"],
+                            {"status": "stale", "feed": ctx.feed, "reason": "no usable data for this session"}))
+            continue
+        ev.append(Event(_iso(s.open_utc), ctx.source, ctx.mode, "feed_status", None, inst["id"],
+                        {"status": "live", "feed": ctx.feed, "session_date": str(s.date)}))
         prev_end = None
         for t, bar in day.bars.iterrows():
             end = t + MINUTE
             if prev_end is not None and t - prev_end >= MINUTE:
                 gap = int((t - prev_end) / MINUTE)
                 if prev_end + STALE_AFTER < end:
-                    ev.append(Event(_iso(prev_end + STALE_AFTER), SOURCE, MODE_DEMO_REPLAY,
+                    ev.append(Event(_iso(prev_end + STALE_AFTER), ctx.source, ctx.mode,
                                     "feed_status", None, inst["id"],
-                                    {"status": "stale", "feed": FEED, "last_bar_end_utc": _iso(prev_end)}))
-                ev.append(Event(_iso(end), SOURCE, MODE_DEMO_REPLAY, "feed_status", None, inst["id"],
-                                {"status": "live", "feed": FEED, "recovered_after_missing_minutes": gap}))
-            ev.append(Event(_iso(end), SOURCE, MODE_DEMO_REPLAY, "bar", None, inst["id"], {
+                                    {"status": "stale", "feed": ctx.feed, "last_bar_end_utc": _iso(prev_end)}))
+                ev.append(Event(_iso(end), ctx.source, ctx.mode, "feed_status", None, inst["id"],
+                                {"status": "live", "feed": ctx.feed, "recovered_after_missing_minutes": gap}))
+            ev.append(Event(_iso(end), ctx.source, ctx.mode, "bar", None, inst["id"], {
                 "t": _iso(t), "o": round(float(bar["open"]), 4), "h": round(float(bar["high"]), 4),
                 "l": round(float(bar["low"]), 4), "c": round(float(bar["close"]), 4),
-                "v": int(bar["volume"]), "feed": FEED, "interval": "1Min"}))
+                "v": int(bar["volume"]), "feed": ctx.feed, "interval": "1Min"}))
             prev_end = end
     return ev
 
 
 def _strategy_events(inst: dict, params: Params, days: dict, engine_sessions: list[Session],
-                     result: BacktestResult) -> list[Event]:
+                     result: BacktestResult, ctx: "Context") -> list[Event]:
     sid, ins = inst["id"], inst["instrument"]
 
     def mk(ts, typ, payload):
-        return Event(_iso(ts), SOURCE, MODE_DEMO_REPLAY, typ, sid, ins, payload)
+        return Event(_iso(ts), ctx.source, ctx.mode, typ, sid, ins, payload)
 
     ev = [mk(result.days[0].session.open_utc, "risk_status",
              {"status": "ok", "reason": "no limit reached"})] if result.days else []
@@ -159,56 +163,76 @@ def _strategy_events(inst: dict, params: Params, days: dict, engine_sessions: li
     return ev
 
 
-def build_demo(config: dict) -> DemoReplay:
-    engine_sessions, replay = _sessions(config["replay"])
-    instrument_days, events = {}, []
-    for inst in config["instruments"]:
-        days = make_days(engine_sessions, seed=inst["seed"], start_price=inst["start_price"],
-                         volume=inst.get("volume", 10_000), noise=inst.get("noise", 0.0))
-        if inst.get("outage"):
-            _apply_outage(days, replay, inst["outage"])
-        instrument_days[inst["id"]] = days
+@dataclass(frozen=True)
+class Context:
+    source: str
+    mode: str
+    feed: str
+    banner: str
 
-    used = {i["instrument"] for i in config["instances"]}
-    for inst in config["instruments"]:
+
+DEMO_CONTEXT = Context(SOURCE, MODE_DEMO_REPLAY, FEED,
+                       "DEMO REPLAY: synthetic data, simulated outcomes. Not market data, "
+                       "not a backtest of real prices, not broker results.")
+
+
+def build_replay(ctx: Context, instruments: list[dict], instrument_days: dict, instances: list[dict],
+                 engine_sessions: list[Session], replay: list[Session], extra_meta: dict | None = None) -> DemoReplay:
+    """Run every instance through the engine and turn the results into one event log.
+    Shared by DEMO (synthetic days) and HISTORICAL REPLAY (stored Alpaca days)."""
+    used = {i["instrument"] for i in instances}
+    events = []
+    for inst in instruments:
         if inst["id"] in used:
-            events += _instrument_events(inst, instrument_days[inst["id"]], replay)
+            events += _instrument_events(inst, instrument_days[inst["id"]], replay, ctx)
     for s in replay:
-        events.append(Event(_iso(s.open_utc), SOURCE, MODE_DEMO_REPLAY, "session_open", None, None,
+        events.append(Event(_iso(s.open_utc), ctx.source, ctx.mode, "session_open", None, None,
                             {"session_date": str(s.date), "open_utc": _iso(s.open_utc),
                              "close_utc": _iso(s.close_utc), "early_close": s.early_close}))
-        events.append(Event(_iso(s.close_utc), SOURCE, MODE_DEMO_REPLAY, "session_close", None, None,
+        events.append(Event(_iso(s.close_utc), ctx.source, ctx.mode, "session_close", None, None,
                             {"session_date": str(s.date)}))
 
     backtests, instances_meta = {}, []
-    for inst in config["instances"]:
+    for inst in instances:
         params = replace(Params(), **inst.get("params", {}))
         limits = replace(RiskLimits(), **inst.get("risk", {}))
         days = instrument_days[inst["instrument"]]
         result = run_backtest(days, engine_sessions, replay[0].date, replay[-1].date, params,
                               BASE, limits, float(inst["allocation"]))
         backtests[inst["id"]] = result
-        events += _strategy_events(inst, params, days, engine_sessions, result)
+        events += _strategy_events(inst, params, days, engine_sessions, result, ctx)
         instances_meta.append({"id": inst["id"], "name": inst["name"], "instrument": inst["instrument"],
                                "allocation": float(inst["allocation"]), "params": params.as_dict(),
                                "risk_limits": limits.__dict__,
                                "spec": spec_info(inst.get("strategy", "intraday_momentum"), params)})
 
     events.sort(key=Event.sort_key)
-    labels = {i["id"]: i["label"] for i in config["instruments"]}
     meta = {
-        "mode": MODE_DEMO_REPLAY,
-        "source": SOURCE,
-        "banner": "DEMO REPLAY: synthetic data, simulated outcomes. Not market data, "
-                  "not a backtest of real prices, not broker results.",
-        "feed": FEED,
+        "mode": ctx.mode,
+        "source": ctx.source,
+        "banner": ctx.banner,
+        "feed": ctx.feed,
         "cost_model": BASE.name,
-        "instruments": [{"id": i["id"], "label": labels[i["id"]], "feed": FEED}
-                        for i in config["instruments"] if i["id"] in used],
+        "instruments": [{"id": i["id"], "label": i["label"], "feed": ctx.feed}
+                        for i in instruments if i["id"] in used],
         "instances": instances_meta,
         "sessions": [{"date": str(s.date), "open_utc": _iso(s.open_utc), "close_utc": _iso(s.close_utc),
                       "early_close": s.early_close} for s in replay],
         "event_count": len(events),
         "order_submission": "disabled",
+        **(extra_meta or {}),
     }
     return DemoReplay(meta, events, backtests)
+
+
+def build_demo(config: dict) -> DemoReplay:
+    engine_sessions, replay = _sessions(config["replay"])
+    instrument_days = {}
+    for inst in config["instruments"]:
+        days = make_days(engine_sessions, seed=inst["seed"], start_price=inst["start_price"],
+                         volume=inst.get("volume", 10_000), noise=inst.get("noise", 0.0))
+        if inst.get("outage"):
+            _apply_outage(days, replay, inst["outage"])
+        instrument_days[inst["id"]] = days
+    return build_replay(DEMO_CONTEXT, config["instruments"], instrument_days, config["instances"],
+                        engine_sessions, replay)

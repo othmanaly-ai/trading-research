@@ -44,10 +44,12 @@ export function ResearchView({ research }: { research: Research | null }) {
   );
 }
 
-export function Banner({ text }: { text: string }) {
+export const MODE_LABELS: Record<string, string> = { DEMO_REPLAY: "DEMO REPLAY", HISTORICAL_REPLAY: "HISTORICAL REPLAY" };
+
+export function Banner({ text, mode = "DEMO_REPLAY" }: { text: string; mode?: string }) {
   return (
-    <div className="banner" role="status">
-      <strong>DEMO REPLAY</strong> <span>{text}</span> <span className="banner-off">Order submission: DISABLED</span>
+    <div className={`banner banner-${mode}`} role="status">
+      <strong>{MODE_LABELS[mode] ?? mode}</strong> <span>{text}</span> <span className="banner-off">Order submission: DISABLED</span>
     </div>
   );
 }

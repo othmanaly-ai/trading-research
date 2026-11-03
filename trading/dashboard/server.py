@@ -1,9 +1,12 @@
-"""Local DEMO REPLAY dashboard server (standard library only).
+"""Local dashboard server (standard library only): DEMO or HISTORICAL REPLAY.
 
-Run:  .venv\\Scripts\\python -m trading.dashboard.server  then open http://127.0.0.1:8765
+Run:  .venv\\Scripts\\python -m trading.dashboard.server                     (DEMO, synthetic)
+      .venv\\Scripts\\python -m trading.dashboard.server --mode historical   (stored Alpaca bars)
+then open http://127.0.0.1:8765
 
 Binds to 127.0.0.1 only. It never loads broker credentials and has no order
-or broker code paths; the only data source is the synthetic demo replay.
+or broker code paths. Historical mode reads only bars already stored on disk by
+`python -m trading.history`; if they are missing it refuses to start.
 
 Endpoints:
   GET  /api/meta                 replay description and configured instances
@@ -27,8 +30,12 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from trading.dashboard.demo_replay import DEFAULT_CONFIG, ConfigError, build_demo, load_config
+from trading.dashboard.historical_replay import DEFAULT_CONFIG as HIST_CONFIG
+from trading.dashboard.historical_replay import build_historical
+from trading.dashboard.historical_replay import load_config as load_hist_config
 from trading.dashboard.ledger import Ledger
 from trading.experiment import PERIODS
+from trading.history import HISTORY_DIR, HistoryError, read_manifest
 from trading.sessions import sessions_between
 
 HOST = "127.0.0.1"
@@ -127,18 +134,25 @@ class ReplayController:
         return self._snapshot_cache
 
 
-def research_status() -> dict:
+def research_status(history_root: Path = HISTORY_DIR, hist_config_path: Path = HIST_CONFIG) -> dict:
     """What the Research Lab can and cannot do right now, from files on disk."""
     responsibilities = json.loads(RESPONSIBILITIES.read_text(encoding="utf-8"))
+    hc = load_hist_config(hist_config_path)
+    manifest = read_manifest(hc["symbol"], hc["feed"], hc["adjustment"], history_root)
+    by_period = manifest["summary"]["by_period"] if manifest else {}
     periods = [{"period": name, "start": str(a), "end": str(b),
                 "expected_sessions": len(sessions_between(a, b)),
-                "sessions_with_verified_data": 0}
+                "sessions_with_verified_data": by_period.get(name, 0)}
                for name, (a, b) in PERIODS.items()]
+    usable = manifest["summary"]["usable_sessions"] if manifest else 0
+    hist_reason = (f"{usable} usable {hc['symbol']} {hc['feed']} sessions stored "
+                   f"(retrieved {manifest['retrieved_utc']}); start the server with --mode historical"
+                   if usable else "no verified historical data stored; needs Alpaca paper keys and "
+                                  "`python -m trading.history`")
     return {
         "modes": {
             "DEMO": {"available": True, "reason": "synthetic fixtures"},
-            "HISTORICAL_REPLAY": {"available": False,
-                                  "reason": "Alpaca data access not verified; no historical data loaded"},
+            "HISTORICAL_REPLAY": {"available": usable > 0, "reason": hist_reason},
             "SIMULATION": {"available": False,
                            "reason": "method proposed in docs/PRODUCT_SPEC.md section 8, awaiting review; "
                                      "also needs historical replay"},
@@ -153,8 +167,9 @@ def research_status() -> dict:
     }
 
 
-def make_handler(ctrl: ReplayController):
-    research = research_status()
+def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
+    research = research_status(history_root)
+    research["active_mode"] = ctrl.meta["mode"]
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "DemoReplayDashboard/0.1"
@@ -271,13 +286,21 @@ def _ticker(ctrl: ReplayController, stop: threading.Event):
         last = now
 
 
-def create_server(config_path: Path, port: int, speed: float | None = None):
-    config = load_config(config_path)
-    demo = build_demo(config)
-    replay_cfg = config["replay"]
-    ctrl = ReplayController(demo, speed or replay_cfg.get("start_speed", 600),
-                            replay_cfg.get("duplicate_every", 0))
-    httpd = ThreadingHTTPServer((HOST, port), make_handler(ctrl))
+def create_server(config_path: Path | None, port: int, speed: float | None = None, mode: str = "demo",
+                  history_root: Path = HISTORY_DIR):
+    """mode "demo" uses synthetic fixtures; mode "historical" uses stored Alpaca bars and
+    raises HistoryError if they are missing. One server runs exactly one mode."""
+    if mode == "historical":
+        replay = build_historical(load_hist_config(config_path or HIST_CONFIG), history_root)
+        ctrl = ReplayController(replay, speed or 600, duplicate_every=0)
+    elif mode == "demo":
+        config = load_config(config_path or DEFAULT_CONFIG)
+        replay_cfg = config["replay"]
+        ctrl = ReplayController(build_demo(config), speed or replay_cfg.get("start_speed", 600),
+                                replay_cfg.get("duplicate_every", 0))
+    else:
+        raise ValueError(f"unknown mode {mode!r}")
+    httpd = ThreadingHTTPServer((HOST, port), make_handler(ctrl, history_root))
     httpd.daemon_threads = True
     stop = threading.Event()
     threading.Thread(target=_ticker, args=(ctrl, stop), daemon=True).start()
@@ -285,17 +308,22 @@ def create_server(config_path: Path, port: int, speed: float | None = None):
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description="Local DEMO REPLAY dashboard server")
-    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser = argparse.ArgumentParser(description="Local dashboard server (DEMO or HISTORICAL REPLAY)")
+    parser.add_argument("--mode", choices=["demo", "historical"], default="demo")
+    parser.add_argument("--config", type=Path, default=None)
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--speed", type=float, default=None)
     args = parser.parse_args(argv)
     try:
-        httpd, ctrl, stop = create_server(args.config, args.port, args.speed)
+        httpd, ctrl, stop = create_server(args.config, args.port, args.speed, args.mode)
+    except HistoryError as exc:
+        print(f"HISTORICAL REPLAY unavailable: {exc}")
+        print("Not starting. (No fallback to demo data.)")
+        return 2
     except (ConfigError, FileNotFoundError, KeyError, json.JSONDecodeError) as exc:
         print(f"Config error: {exc}")
         return 2
-    print(f"DEMO REPLAY (synthetic data, simulated outcomes) on http://{HOST}:{args.port}")
+    print(f"{ctrl.meta['banner']}\nServing on http://{HOST}:{args.port}")
     print(f"{ctrl.meta['event_count']} events, {len(ctrl.meta['instances'])} instances. "
           f"Order submission: disabled. Ctrl+C to stop.")
     try:

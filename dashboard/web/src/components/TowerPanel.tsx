@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function ModeBadge({ mode }: { mode: string }) {
-  const label = mode === "DEMO_REPLAY" ? "DEMO" : mode.replace("_", " ");
+  const label = mode === "DEMO_REPLAY" ? "DEMO" : mode === "HISTORICAL_REPLAY" ? "HISTORICAL" : mode.replace("_", " ");
   return <span className={`mode-badge mode-${mode}`}>{label}</span>;
 }
 
@@ -131,8 +131,11 @@ function ResultsTab({ ev, error, rec }: { ev: Evaluation | null; error: string |
   const na = (v: number | null) => (v === null ? "n/a" : String(v));
   return (
     <>
-      <p className="notice"><ModeBadge mode={ev.mode} /> evaluation of replayed records up to {timeET(ev.as_of_utc)} {ev.as_of_utc?.slice(0, 10)}.
-        Synthetic fixture prices: this tests the software, not a strategy. Result hash <code>{ev.result_hash}</code>.</p>
+      <p className="notice"><ModeBadge mode={ev.mode} /> evaluation of replayed records up to {timeET(ev.as_of_utc)} {ev.as_of_utc?.slice(0, 10)}.{" "}
+        {ev.mode === "DEMO_REPLAY"
+          ? "Synthetic fixture prices: this tests the software, not a strategy."
+          : "Historical prices with simulated fills: an inspection sample, not evidence of an edge."}{" "}
+        Result hash <code>{ev.result_hash}</code>.</p>
       <div className="grid2">
         <dl className="kv">
           <dt>Net P&amp;L</dt><dd className={pnlClass(ev.pnl.net)}>{money(ev.pnl.net, true)} ({pct(ev.pnl.net_return_on_allocation, 3)} of allocation)</dd>

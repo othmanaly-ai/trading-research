@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass, field
 
 SCHEMA_VERSION = 1
 MODE_DEMO_REPLAY = "DEMO_REPLAY"
+MODE_HISTORICAL_REPLAY = "HISTORICAL_REPLAY"
 
 # Lower rank sorts first among events that share a timestamp.
 EVENT_TYPES = {

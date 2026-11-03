@@ -1,0 +1,13 @@
+{
+  "_note": "HISTORICAL REPLAY configuration. Reads only data stored by `python -m trading.history` (Alpaca, read-only). Replay sessions must fall inside allowed_periods; the final held-out period is never replayable here.",
+  "symbol": "SPY",
+  "feed": "sip",
+  "adjustment": "all",
+  "first_session": "2016-03-01",
+  "sessions": 5,
+  "warmup_sessions": 25,
+  "allowed_periods": ["development"],
+  "instances": [
+    {"id": "imom-spy-hist", "name": "Intraday Momentum", "instrument": "SPY", "allocation": 100000, "params": {}}
+  ]
+}

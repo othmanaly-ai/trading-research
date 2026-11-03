@@ -161,7 +161,8 @@ Questions for review:
 | 2 | Product spec and checklist | Done | This file |
 | 3 | DEMO dashboard with deterministic fixtures | Done (this milestone) | `pytest`, browser checks in PROGRESS.md |
 | 3a | Versioned strategy specs, responsibilities config, outcome rules, evaluation report, tower tabs | Done (this milestone) | `tests/test_evaluation.py`, `tests/test_dashboard.py` |
-| 4 | Historical replay on verified data | Blocked | Needs `.env` paper keys, a passing `verify_data_access`, then an SPY data loader |
+| 4a | Historical store (`trading/history.py`) and HISTORICAL REPLAY server mode (`--mode historical`) | Implemented; tested only with fake API responses | `tests/test_history.py`. Development period only; final never; refuses without data, no demo fallback. |
+| 4b | Historical replay on verified data | Blocked | Needs `.env` paper keys, a passing `verify_data_access`, then `python -m trading.history` |
 | 5 | Scenario simulation | Proposed | Needs review of section 8, and milestone 4 |
 | 6 | Paper-account monitoring (read-only) | Blocked | Needs verified Alpaca access |
 | later | Paper order submission | Not planned | Requires separate explicit approval |

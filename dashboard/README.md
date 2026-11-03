@@ -18,6 +18,20 @@ cd ..\..
 # open http://127.0.0.1:8765
 ```
 
+HISTORICAL REPLAY (needs Alpaca paper keys in `.env`; fetches read-only and stores
+data under the git-ignored `data/history/`):
+
+```powershell
+.venv\Scripts\python -m trading.verify_data_access
+.venv\Scripts\python -m trading.history --symbol SPY --feed sip --start 2016-01-04 --end 2016-06-30
+.venv\Scripts\python -m trading.dashboard.server --mode historical
+```
+
+- Replay sessions come from `dashboard/historical_config.json`.
+- Only development-period sessions are allowed by default; the final period is
+  never replayable here.
+- Without stored data the server refuses to start; it never falls back to demo.
+
 Options:
 - `--speed 1800` sets the starting replay speed.
 - `--port 8766` uses a different port.

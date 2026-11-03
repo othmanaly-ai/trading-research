@@ -6,6 +6,8 @@ import {
 import type { Research } from "./types";
 import { useReplay } from "./useReplay";
 
+const SUPPORTED_MODES = ["DEMO_REPLAY", "HISTORICAL_REPLAY"];
+
 // Three.js loads in its own chunk; if it fails to load, the boundary below falls back to tables.
 const CityView = lazy(() => import("./components/CityView"));
 
@@ -59,15 +61,15 @@ export default function App() {
     );
   }
   if (!r.meta) return <main className="fatal"><p>Loading replay description…</p></main>;
-  if (r.meta.mode !== "DEMO_REPLAY") {
-    return <main className="fatal"><h1>Unexpected mode: {r.meta.mode}</h1><p>This build only supports DEMO REPLAY. Nothing is displayed.</p></main>;
+  if (!SUPPORTED_MODES.includes(r.meta.mode)) {
+    return <main className="fatal"><h1>Unexpected mode: {r.meta.mode}</h1><p>This build supports DEMO REPLAY and HISTORICAL REPLAY only. Nothing is displayed.</p></main>;
   }
 
   const lastBar = selected ? snap?.instruments.find((i) => i.id === selected.instrument)?.last_bar_end_utc ?? null : null;
 
   return (
     <div className="app">
-      <Banner text={r.meta.banner} />
+      <Banner text={r.meta.banner} mode={r.meta.mode} />
       <ModeStrip active={r.meta.mode} research={research} />
       <Controls status={r.status} connection={r.connection} lastMessageAt={r.lastMessageAt} control={r.control}
                 controlError={r.controlError} view={view} setView={setView}

@@ -91,6 +91,34 @@ Last updated: 2026-11-03 (checks run around 21:30 UTC; strategy spec drafted lat
 - **Still illustrative (DEMO):** every number in the dashboard. Scanner/news,
   historical replay, simulation and paper account show "not available" with the reason.
 
+## Status audit (2026-11-03, after milestone 4a)
+
+- **DEMO checks passed** in the built-in browser:
+  - tower selection, the six tabs, chart, tables and mode labels
+  - pause, resume, restart and speed
+  - city-vs-report consistency for all four towers
+  - error responses (404 and 403)
+  - the console showed only those deliberate errors and stream resets from server restarts
+- **Tests:** `pytest -q`: 103 passed (9 new in `tests/test_history.py`). `npm run build`: type check passed.
+- **Implemented:** historical storage (`trading/history.py`) and HISTORICAL REPLAY mode
+  (`trading/dashboard/historical_replay.py`, `server --mode historical`).
+- **Unverified: real Alpaca access and historical replay with real data.** No credentials
+  were available in this session: no `.env` file, no `APCA_*` variables, no Alpaca connector.
+  `verify_data_access` exits 2 (BLOCKED) and historical mode refuses to start. The
+  history code has only been exercised against fake API responses.
+
+| Feature | Status | Evidence / reason |
+|---|---|---|
+| Trading City and tower panels | Verified (DEMO) | Built-in browser: selection, six tabs, chart, tables, no overflow |
+| Shared event records, consistent totals | Verified (DEMO) | Tests plus a browser cross-check: label = snapshot = report; equity identity |
+| Demo replay controls | Verified | Pause holds the cursor, resume advances, restart, speed |
+| Historical data retrieval and validation | Implemented, unverified | `trading/history.py` tested with fake API responses only; no keys |
+| Historical session replay | Implemented, unverified | `--mode historical` refuses without stored data (checked); never run on real data |
+| Strategy spec and evaluation | Verified on synthetic data | Spec v1.1 with hash; evaluation tests; not run on real data |
+| Scenario simulation | Missing (proposed) | `docs/PRODUCT_SPEC.md` section 8 awaits review |
+| Alpaca paper-account monitoring | Missing | Access not verified |
+| All dashboard numbers | Illustrative | DEMO fixtures |
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

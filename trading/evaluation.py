@@ -17,6 +17,9 @@ COST_MULTIPLIERS = (0, 1, 2, 3)
 MODE_LIMITATIONS = {
     "DEMO_REPLAY": "DEMO mode: synthetic fixture prices. These numbers test the software and "
                    "say nothing about any real market or strategy performance.",
+    "HISTORICAL_REPLAY": "HISTORICAL REPLAY: real past prices from stored Alpaca bars, but fills, "
+                         "costs and P&L are simulated. A few replayed sessions are an inspection "
+                         "sample, not evidence of an edge; use the experiment runner's periods for that.",
 }
 
 

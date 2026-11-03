@@ -146,6 +146,9 @@ td:first-child { white-space: nowrap; }
 .mode-chip.off { text-decoration: line-through; text-decoration-color: rgba(154, 150, 194, 0.5); }
 .mode-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; border-radius: 4px; padding: 0 5px; border: 1px solid; }
 .mode-DEMO_REPLAY { color: var(--amber); border-color: var(--amber); }
+.mode-HISTORICAL_REPLAY { color: var(--cyan); border-color: var(--cyan); }
+.banner-HISTORICAL_REPLAY { background: repeating-linear-gradient(-45deg, #083344, #083344 12px, #0e4a5c 12px, #0e4a5c 24px); border-bottom-color: var(--cyan); }
+.banner-HISTORICAL_REPLAY strong { color: var(--cyan); }
 .tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 8px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
 .tabs button { font-size: 12px; padding: 3px 8px; }
 .tab-body { min-height: 120px; overflow-x: auto; }
