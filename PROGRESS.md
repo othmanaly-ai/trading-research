@@ -1,6 +1,6 @@
 # Progress record
 
-Last updated: 2026-11-03 (checks run around 21:30 UTC).
+Last updated: 2026-11-03 (checks run around 21:30 UTC; strategy spec drafted later the same day).
 
 ## Verified (ran it and saw the result)
 
@@ -23,6 +23,12 @@ Last updated: 2026-11-03 (checks run around 21:30 UTC).
   it has never been run with real keys.
 - `trading/verify_data_access.py`: fetches AAPL daily bars for 5 completed sessions and 1-minute
   bars for the latest completed session, then saves data, provenance and validation results.
+
+## Proposed (written down, not implemented)
+
+- Experiment 001, SPY intraday momentum: `research/001_intraday_momentum/SPEC.md`.
+  Owner accepted defaults for D2-D10 on 2026-11-03; D1 (risk limits, setup answers) still open.
+  No backtest code exists and no results exist.
 
 ## Missing
 
