@@ -1,2 +1,6 @@
-# Add project dependencies here, then run:
-#   .venv\Scripts\python -m pip install -r requirements.txt
+# Direct dependencies, pinned. Full resolved set: requirements.lock
+#   .venv\Scripts\python -m pip install -r requirements.lock
+exchange_calendars==4.13.2
+pandas==3.1.0
+requests==2.34.2
+pytest==9.2.0
