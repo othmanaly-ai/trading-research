@@ -155,6 +155,38 @@ Known defects and limitations:
 - **Risk limits** are placeholders (D1 unanswered).
 - **No real-data results exist** for any strategy.
 
+## Pre-evaluation hardening (2026-11-03, after 9064814)
+
+- **First blocker unchanged:** secure data configuration.
+  - Checked again this session: no `.env` file, and `APCA_*` is not set in the shell or at
+    the Windows user level.
+  - `.env` and `.env.*` are git-ignored; only `.env.example` is tracked.
+  - The missing-credential message now names both supported mechanisms.
+- **Data provenance (`trading/history.py`):** for the first real sample, it now
+  - keeps the unmodified API bars (`raw/`)
+  - records requested vs received ranges and pagination completeness
+  - records missing minutes per session, daily-bar checks, the transformations applied, and
+    known limitations
+  - tested with fake API-shaped data only
+- **Daily loss limit now enforced (spec v1.2, section 17 item 7):**
+  - marked to market after each completed bar, so unrealized losses count
+  - exits at the next bar's open; a stop inside the same bar takes priority
+  - tests cover the breach timing, stop priority, end-of-session flat, and per-trade
+    accounting identities
+- **Experiment lock** `001-eaa09c9d5a` (`research/001_intraday_momentum/EXPERIMENT_LOCK.json`):
+  - records the hypothesis, spec v1.2 and its hash, costs, periods, budget, pass rules and
+    placeholder risk limits
+  - records zero real sessions stored or inspected in any period at lock time
+  - `run_experiment` refuses when the definition differs from the lock
+  - every attempt (completed, refused, failed) is appended to `experiment_attempts.csv`
+  - reports state whether validation or final sessions were already inspected
+- **Dashboard:** the Rules tab shows the lock id and status; the Historical tab shows stored
+  data provenance once data exists.
+- **Tests:** `pytest -q`: 118 passed. `npm run build`: type check passed. Checked in the
+  browser: the Rules tab lock display, the honest Historical tab, the mode strip, and no
+  overflow.
+- **No evaluation was run:** there is no real data. Nothing here is evidence about the strategy.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

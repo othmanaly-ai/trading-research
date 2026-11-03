@@ -40,6 +40,10 @@ LOG_FIELDS = ["run_id", "timestamp_utc", "git_commit", "variant_id", "period", "
               "random_percentile", "all_pass_rules", "final_test_reused"]
 
 
+ATTEMPT_FIELDS = ["timestamp_utc", "git_commit", "experiment_id", "period", "variant_id", "params",
+                  "status", "detail"]
+
+
 class ExperimentRefused(RuntimeError):
     pass
 
@@ -92,12 +96,9 @@ def _pass_rules(base, stress, always_long, pct, limits, neighbors) -> dict:
     }
 
 
-def run_experiment(days: dict[date, DayData], period: str, params: Params = Params(),
-                   limits: RiskLimits = RiskLimits(), start_equity: float = 100_000.0,
-                   final_test: bool = False, n_random: int = 10000, seed: int = 0,
-                   log_dir: Path = EXPERIMENT_DIR, results_dir: Path = RESULTS_DIR,
-                   periods: dict = PERIODS) -> dict:
-    """`periods` exists so tests can use short synthetic windows."""
+def _evaluate(days: dict[date, DayData], period: str, params: Params, limits: RiskLimits,
+              start_equity: float, final_test: bool, n_random: int, seed: int,
+              log_dir: Path, results_dir: Path, periods: dict, lock: dict) -> dict:
     log_path = log_dir / "variants.csv"
     rows = _read_log(log_path)
     vid = variant_id(params)
@@ -153,6 +154,8 @@ def run_experiment(days: dict[date, DayData], period: str, params: Params = Para
         "pass_rules": rules,
         "all_pass_rules": all(rules.values()),
         "final_test_reused": reused,
+        "experiment_id": lock["experiment_id"],
+        "held_out_inspection": _held_out_inspection(log_dir),
         "variants_tried": {p: len({r["variant_id"] for r in rows if r["period"] == p} | (
             {vid} if p == period else set())) for p in VARIANT_BUDGET},
     }
@@ -180,6 +183,55 @@ def run_experiment(days: dict[date, DayData], period: str, params: Params = Para
             "random_percentile": pct, "all_pass_rules": report["all_pass_rules"],
             "final_test_reused": reused,
         })
+    return report
+
+
+def _held_out_inspection(log_dir: Path) -> dict:
+    """Historical replays already run on validation/final sessions: such data is not untouched."""
+    from trading.experiment_lock import data_inspection_status
+    seen = data_inspection_status(inspection_log=log_dir / "inspection_runs.csv")
+    return {p: n for p, n in seen["inspection_replays_touching_period"].items() if p != "development"}
+
+
+def _log_attempt(log_dir: Path, row: dict) -> None:
+    path = log_dir / "experiment_attempts.csv"
+    new = not path.is_file()
+    log_dir.mkdir(parents=True, exist_ok=True)
+    with path.open("a", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=ATTEMPT_FIELDS)
+        if new:
+            w.writeheader()
+        w.writerow(row)
+
+
+def run_experiment(days: dict[date, DayData], period: str, params: Params = Params(),
+                   limits: RiskLimits = RiskLimits(), start_equity: float = 100_000.0,
+                   final_test: bool = False, n_random: int = 10000, seed: int = 0,
+                   log_dir: Path = EXPERIMENT_DIR, results_dir: Path = RESULTS_DIR,
+                   periods: dict = PERIODS, lock_path: Path | None = None) -> dict:
+    """Evaluate one variant on one period, after checking the experiment lock.
+
+    Every attempt, including refused and failed ones, is appended to
+    experiment_attempts.csv. `periods` and `lock_path` exist so tests can use
+    short synthetic windows and a temporary lock.
+    """
+    from trading.experiment_lock import LOCK_PATH, LockMismatch, check_lock
+
+    base = {"timestamp_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "git_commit": _git_commit(), "period": period, "variant_id": variant_id(params),
+            "params": json.dumps(params.as_dict(), sort_keys=True)}
+    try:
+        lock = check_lock(limits, periods, lock_path or LOCK_PATH)
+        report = _evaluate(days, period, params, limits, start_equity, final_test, n_random, seed,
+                           log_dir, results_dir, periods, lock)
+    except (ExperimentRefused, LockMismatch) as exc:
+        _log_attempt(log_dir, base | {"status": "refused", "detail": str(exc)})
+        raise
+    except Exception as exc:
+        _log_attempt(log_dir, base | {"status": "failed", "detail": f"{type(exc).__name__}: {exc}"})
+        raise
+    _log_attempt(log_dir, base | {"status": "completed", "experiment_id": lock["experiment_id"],
+                                  "detail": f"run_id {report['run_id']}"})
     return report
 
 

@@ -55,8 +55,9 @@ def load_credentials(env_file: Path | None = None) -> tuple[str, str]:
     secret = os.environ.get("APCA_API_SECRET_KEY") or dotenv.get("APCA_API_SECRET_KEY", "")
     if not key or not secret:
         raise MissingCredentials(
-            "APCA_API_KEY_ID and APCA_API_SECRET_KEY are not set. Put your Alpaca "
-            "paper keys in a .env file in the project folder (see .env.example)."
+            "APCA_API_KEY_ID and APCA_API_SECRET_KEY are not set. Set your Alpaca PAPER keys "
+            "as Windows user environment variables (then open a new terminal), or in a .env "
+            "file in the project folder (see .env.example; .env is git-ignored)."
         )
     return key, secret
 

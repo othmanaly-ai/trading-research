@@ -37,8 +37,9 @@ def alpaca_payloads(sessions, broken_day=None):
         if s.date == broken_day:
             minute.append(dict(minute[-1]))                    # duplicate timestamp
         midnight_et = pd.Timestamp(str(s.date), tz="America/New_York").tz_convert("UTC")
-        daily.append({"t": midnight_et.strftime("%Y-%m-%dT%H:%M:%SZ"), "o": 1, "h": 1, "l": 1,
-                      "c": d.official_close, "v": 1, "n": 1, "vw": 1})
+        c = d.official_close
+        daily.append({"t": midnight_et.strftime("%Y-%m-%dT%H:%M:%SZ"), "o": c, "h": c * 1.01, "l": c * 0.99,
+                      "c": c, "v": 1, "n": 1, "vw": c})
     return days, minute, daily
 
 
@@ -70,6 +71,18 @@ def test_store_keeps_regular_session_and_records_provenance(store):
     assert ok["rows"] == 390 and ok["present_minutes"] == 390 and ok["usable"]
     assert m["sessions"][str(broken)]["usable"] is False
     assert m["sessions"][str(broken)]["structure"]["duplicate_timestamps"] == 1
+    assert m["requests"]["pagination_complete"] is True
+    assert m["requests"]["minute_received"][0] < m["requests"]["minute_requested"][0]  # pre-market bar
+    assert ok["missing_minutes"] == 0
+    assert m["transformations"] and m["limitations"]
+    assert not any(m["daily_structure"][k] for k in m["daily_structure"] if k != "rows")
+
+
+def test_raw_responses_kept_unmodified(store):
+    root, _, m, _ = store
+    raw = pd.read_csv(root / "SPY" / "sip" / "all" / "raw" / "minute_all_hours.csv")
+    assert len(raw) == m["requests"]["minute_rows_all_hours"]      # includes pre-market and the duplicate
+    assert list(raw.columns[:6]) == ["t", "o", "h", "l", "c", "v"]
 
 
 def test_load_days_round_trip_and_excludes_unusable(store):

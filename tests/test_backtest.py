@@ -182,6 +182,53 @@ def test_short_pays_sell_fee_on_entry(days):
     assert t.net_pnl == pytest.approx(-t.shares * (exit_fill - t.entry_fill) - fee)
 
 
+def test_daily_loss_limit_uses_unrealized_and_exits_next_bar(days):
+    day = replace_day(days, SESSIONS, TARGET, morning=0.01, last30=-0.004)   # long, then falls
+    params = replace(Params(), stop_mult=None)          # no stop: only the loss limit can act
+    tight = RiskLimits(daily_loss_limit=0.0002)         # $20 on $100k
+    t = run_day(days, TARGET, params, limits=tight).trade
+    assert t.exit_reason == "risk: daily loss limit"
+    # Find the first completed bar whose close-marked unrealized loss breached the limit.
+    entry_est = BASE.fill_price(t.entry_price, 1)
+    bars = day.bars[(day.bars.index >= t.entry_time) & (day.bars.index < utc("2026-11-24 21:00"))]
+    breach = next(ts for ts, b in bars.iterrows() if t.shares * (b["close"] - entry_est) <= -20)
+    assert t.exit_time == breach + MINUTE                    # next bar, not the breach bar itself
+    assert t.exit_price == day.bars.at[breach + MINUTE, "open"]
+    loose = run_day(days, TARGET, params, limits=RiskLimits(daily_loss_limit=0.5)).trade
+    assert loose.exit_reason == "time exit"
+
+
+def test_stop_takes_priority_over_loss_limit_in_same_bar(days):
+    day = replace_day(days, SESSIONS, TARGET, morning=0.01, last30=0.001)
+    t = run_day(days, TARGET).trade
+    bar_t = utc("2026-11-24 20:40")
+    day.bars.loc[bar_t, "low"] = t.stop_price * 0.99
+    day.bars.loc[bar_t, "close"] = t.stop_price * 0.995
+    # Earlier bars rise, so only the 20:40 bar breaches both the stop and a $10 loss limit.
+    hit = run_day(days, TARGET, limits=RiskLimits(daily_loss_limit=0.0001)).trade
+    assert hit.exit_reason == "stop" and hit.exit_price == pytest.approx(t.stop_price)
+    assert hit.exit_time == bar_t + MINUTE
+
+
+def test_positions_never_held_past_close_except_halt(days):
+    res = run_backtest(days, SESSIONS, SESSIONS[25].date, SESSIONS[-2].date, Params(), BASE,
+                       RiskLimits(), 100_000.0)
+    for tr in res.trades:
+        close = next(s.close_utc for s in SESSIONS if s.date == tr.date)
+        assert tr.exit_time <= close or "halted; held overnight" in tr.flags
+
+
+def test_accounting_identity_over_a_run(days):
+    res = run_backtest(days, SESSIONS, SESSIONS[25].date, SESSIONS[-2].date, Params(), BASE,
+                       RiskLimits(), 100_000.0)
+    assert res.end_equity == pytest.approx(res.start_equity + sum(t.net_pnl for t in res.trades))
+    for tr in res.trades:
+        sell_notional = tr.shares * (tr.exit_fill if tr.direction > 0 else tr.entry_fill)
+        expected = tr.direction * tr.shares * (tr.exit_fill - tr.entry_fill) - BASE.sell_fee(sell_notional)
+        assert tr.net_pnl == pytest.approx(expected)
+        assert tr.notional <= RiskLimits().max_notional * tr.equity_before * 1.01   # notional cap (fill vs decision price)
+
+
 def test_no_stop_variant_never_stops(days):
     day = replace_day(days, SESSIONS, TARGET, morning=0.01, last30=0.001)
     day.bars.loc[utc("2026-11-24 20:40"), "low"] = 1.0

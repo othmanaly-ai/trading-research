@@ -41,6 +41,18 @@ export interface Instance {
 export interface Research {
   modes: Record<string, { available: boolean; reason: string }>;
   historical_periods: { period: string; start: string; end: string; expected_sessions: number; sessions_with_verified_data: number }[];
+  historical_data: null | {
+    source: string; symbol: string; requested_feed: string; actual_feed: string; adjustment: string;
+    interval: string; calendar: string; start: string; end: string; retrieved_utc: string;
+    transformations: string[]; limitations: string[];
+    requests: { minute_requested: string[]; minute_received: string[] | null; minute_pages: number; pagination_complete: boolean };
+    summary: { expected_sessions: number; usable_sessions: number };
+  };
+  experiment_lock: {
+    present: boolean; status: string; experiment_id?: string; created_utc?: string; hypothesis?: string;
+    risk_limits_are_placeholders?: boolean;
+    data_status_at_lock?: { sessions_stored_by_period: Record<string, number>; inspection_replays_touching_period: Record<string, number> };
+  };
   responsibilities: { id: string; name: string; implementation: string; module: string | null; status: string; notes: string; veto?: boolean }[];
   skills_note: string;
   scanner_news: { available: boolean; reason: string };

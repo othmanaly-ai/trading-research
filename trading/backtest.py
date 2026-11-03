@@ -172,16 +172,30 @@ def _simulate_day(i, sessions, days, sigma_hist, params, costs, limits, equity,
 
     scanned = day.bars[(day.bars.index >= entry_bar_t) & (day.bars.index < close_t)]
     exit_info = None
-    if stop is not None:
-        for t, bar in scanned.iterrows():
-            # Pessimistic: a stop touched anywhere in a bar (including the entry
-            # bar) counts as hit; a bar opening beyond the stop fills at its open.
-            if direction > 0 and bar["low"] <= stop:
-                exit_info = (t + MINUTE, min(float(bar["open"]), stop), "stop", [])
-                break
-            if direction < 0 and bar["high"] >= stop:
-                exit_info = (t + MINUTE, max(float(bar["open"]), stop), "stop", [])
-                break
+    entry_fill_est = costs.fill_price(price, direction)
+    loss_limit = limits.daily_loss_limit * equity        # equity at the start of this day
+    bar_times = list(scanned.index)
+    for k, (t, bar) in enumerate(scanned.iterrows()):
+        # Pessimistic: a stop touched anywhere in a bar (including the entry
+        # bar) counts as hit; a bar opening beyond the stop fills at its open.
+        if stop is not None and direction > 0 and bar["low"] <= stop:
+            exit_info = (t + MINUTE, min(float(bar["open"]), stop), "stop", [])
+            break
+        if stop is not None and direction < 0 and bar["high"] >= stop:
+            exit_info = (t + MINUTE, max(float(bar["open"]), stop), "stop", [])
+            break
+        # Daily loss limit, marked to market at each completed bar's close (unrealized
+        # loss counts). A breach is only known once the bar ends, so the exit fills at
+        # the next bar's open, the same one-minute delay as entries.
+        unrealized = direction * shares * (float(bar["close"]) - entry_fill_est)
+        if unrealized <= -loss_limit:
+            if k + 1 < len(bar_times):
+                nt = bar_times[k + 1]
+                exit_info = (nt, float(scanned.at[nt, "open"]), "risk: daily loss limit", [])
+            else:
+                exit_info = (t + MINUTE, float(bar["close"]), "risk: daily loss limit",
+                             ["no later bar; exited at breach bar close"])
+            break
     if exit_info is None:
         nxt = days.get(sessions[i + 1].date) if i + 1 < len(sessions) else None
         exit_info = _exit_without_stop(day, nxt, scanned, params, close_t)

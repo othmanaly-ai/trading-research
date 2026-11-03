@@ -74,6 +74,11 @@ Exit codes for the data check: 0 = success, 1 = API refused or failed, 2 = no cr
   never run the final period without explicit owner approval, and never edit
   `research/*/variants.csv` except by appending through the runner.
 - Risk values in `trading/risk.py` are placeholders until the owner sets them (SPEC D1).
+- Experiment lock: `research/001_intraday_momentum/EXPERIMENT_LOCK.json`
+  (`python -m trading.experiment_lock` checks it).
+  - Any change to the spec file, costs, periods, budget, pass rules or risk limits breaks the
+    lock. Record it with `--supersede "reason"`, never by editing the lock.
+  - Every evaluation attempt is logged in `experiment_attempts.csv`.
 
 ## Data conventions
 

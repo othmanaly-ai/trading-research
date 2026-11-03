@@ -76,7 +76,7 @@ export default function TowerPanel({ strategy, instance, research, mode, lastBar
       </div>
 
       <div role="tabpanel" aria-label={tab} className="tab-body">
-        {tab === "Rules & version" && <RulesTab instance={instance} />}
+        {tab === "Rules & version" && <RulesTab instance={instance} research={research} />}
         {tab === "Scanner & news" && (
           <Unavailable title="Scanner & news" reason={research?.scanner_news.reason ?? "Loading…"} />
         )}
@@ -96,12 +96,26 @@ export default function TowerPanel({ strategy, instance, research, mode, lastBar
   );
 }
 
-function RulesTab({ instance }: { instance: Instance | undefined }) {
+function RulesTab({ instance, research }: { instance: Instance | undefined; research: Research | null }) {
   if (!instance) return <p className="empty">No specification found for this instance.</p>;
   const sp = instance.spec;
   const placeholder = instance.risk_limits.placeholder === true;
+  const lock = research?.experiment_lock;
   return (
     <>
+      <h3>Experiment lock</h3>
+      {!lock ? <p className="empty">Loading…</p> : !lock.present ? <p className="warn">No experiment lock written.</p> : (
+        <dl className="kv">
+          <dt>Experiment id</dt><dd>{lock.experiment_id}</dd>
+          <dt>Status</dt><dd className={lock.status.startsWith("MISMATCH") ? "tone-danger" : ""}>{lock.status}</dd>
+          <dt>Locked</dt><dd>{lock.created_utc}</dd>
+          <dt>Hypothesis</dt><dd>{lock.hypothesis}</dd>
+          <dt>Data at lock</dt>
+          <dd>stored sessions {JSON.stringify(lock.data_status_at_lock?.sessions_stored_by_period)}; inspection replays {JSON.stringify(lock.data_status_at_lock?.inspection_replays_touching_period)}</dd>
+          <dt>Risk limits</dt><dd>{lock.risk_limits_are_placeholders ? "placeholders (owner decision D1 open)" : "owner-set"}</dd>
+        </dl>
+      )}
+      <h3>Specification</h3>
       <dl className="kv">
         <dt>Strategy</dt><dd>{sp.title}</dd>
         <dt>Spec version</dt><dd>{sp.spec_version} <span className="muted">(file hash {sp.spec_sha256})</span></dd>
@@ -125,6 +139,24 @@ function HistoricalTab({ research }: { research: Research | null }) {
   return (
     <>
       {!m.available && <Unavailable title="HISTORICAL REPLAY mode" reason={m.reason} />}
+      {research.historical_data && (() => {
+        const h = research.historical_data;
+        return (
+          <>
+            <h3>Stored data provenance</h3>
+            <dl className="kv">
+              <dt>Source</dt><dd>{h.source} · {h.symbol}</dd>
+              <dt>Feed</dt><dd>requested {h.requested_feed}; {h.actual_feed}</dd>
+              <dt>Bars</dt><dd>{h.interval}, {h.adjustment} adjustment, {h.calendar} calendar</dd>
+              <dt>Requested</dt><dd>{h.start} to {h.end}</dd>
+              <dt>Received</dt><dd>{h.requests.minute_received?.join(" to ") ?? "none"} ({h.requests.minute_pages} pages, complete: {String(h.requests.pagination_complete)})</dd>
+              <dt>Retrieved</dt><dd>{h.retrieved_utc}</dd>
+              <dt>Usable sessions</dt><dd>{h.summary.usable_sessions} of {h.summary.expected_sessions}</dd>
+            </dl>
+            <ul className="notes">{[...h.transformations, ...h.limitations].map((t) => <li key={t}>{t}</li>)}</ul>
+          </>
+        );
+      })()}
       <h3>Defined periods (experiment 001)</h3>
       <table>
         <thead><tr><th>Period</th><th>Dates</th><th>Expected sessions</th><th>With verified data</th></tr></thead>

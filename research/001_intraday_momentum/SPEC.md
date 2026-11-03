@@ -1,8 +1,12 @@
 # Experiment 001: Intraday momentum in SPY (specification)
 
-Spec version: 1.1. Version 1.0 was approved 2026-11-03; 1.1 adds the section 17
-implementation clarifications. The strategy registry records this version and
-the file's hash.
+Spec version: 1.2. Version history:
+- 1.0: approved 2026-11-03.
+- 1.1: adds the section 17 implementation clarifications.
+- 1.2: section 17 item 7, how the daily loss limit handles unrealized losses.
+
+The strategy registry records this version and the file's hash. No real data
+had been seen when any of these versions was written.
 
 **Status: APPROVED by owner on 2026-11-03 for D2-D10 (proposed defaults accepted).
 D1 (risk limits and setup answers) is still open. Implemented and tested on
@@ -348,6 +352,19 @@ Choices made while coding. No results existed when they were made.
    - New variants beyond the budget are refused.
    - Every run is appended to `variants.csv` (tracked by Git).
    - Full reports go to `results/experiment_001/` (git-ignored).
+
+7. **Daily loss limit with unrealized losses (v1.2, section 7).**
+   - **Check:** after every completed 1-minute bar, the open position is marked
+     at that bar's close against the estimated entry fill.
+   - **Breach:** if the loss reaches the daily limit (a fraction of start-of-day
+     equity), the position exits at the **next bar's open**, the same one-minute
+     delay as entries. If there is no later bar, it exits at the breach bar's close,
+     and the trade is flagged.
+   - **Priority:** a stop touched inside a bar takes priority over a breach marked
+     at that bar's close.
+   - **Effect:** with the stop at 2 x sigma30 and 0.5% risk sizing, the limit
+     normally acts only on gaps or halts. It exists so the control is enforced in
+     code, not just written down.
 
 **Prerequisite for any implementation:** paper keys in `.env`, then a
 successful `python -m trading.verify_data_access`, then a separate SPY

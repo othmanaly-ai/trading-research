@@ -40,7 +40,7 @@ def test_journal_matches_ledger_engine_and_report(demo):
         assert sum(1 for r in rows if r["decision"] == "enter") == len(bt.trades)
         for a, b in zip(rows, rows[1:]):
             assert b["equity_before"] == pytest.approx(a["equity_after"])
-        assert all(r["mode"] == "DEMO_REPLAY" and r["spec_version"] == "1.1" for r in rows)
+        assert all(r["mode"] == "DEMO_REPLAY" and r["spec_version"] == "1.2" for r in rows)
         assert set(rows[0]) == set(COLUMNS)
 
 

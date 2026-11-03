@@ -139,6 +139,23 @@ class ReplayController:
         return self._snapshot_cache
 
 
+def _lock_status() -> dict:
+    from trading.experiment_lock import LOCK_PATH, LockMismatch, check_lock
+    from trading.risk import RiskLimits
+    if not LOCK_PATH.is_file():
+        return {"present": False, "status": "no lock written"}
+    lock = json.loads(LOCK_PATH.read_text(encoding="utf-8"))
+    try:
+        check_lock(RiskLimits())
+        status = "matches current definition"
+    except LockMismatch as exc:
+        status = f"MISMATCH: {exc}"
+    return {"present": True, "experiment_id": lock["experiment_id"], "created_utc": lock["created_utc"],
+            "hypothesis": lock["hypothesis"], "status": status,
+            "risk_limits_are_placeholders": lock["risk_limits_are_placeholders"],
+            "data_status_at_lock": lock["data_status_at_lock"]}
+
+
 def research_status(history_root: Path = HISTORY_DIR, hist_config_path: Path = HIST_CONFIG) -> dict:
     """What the Research Lab can and cannot do right now, from files on disk."""
     responsibilities = json.loads(RESPONSIBILITIES.read_text(encoding="utf-8"))
@@ -164,6 +181,12 @@ def research_status(history_root: Path = HISTORY_DIR, hist_config_path: Path = H
             "PAPER_ACCOUNT": {"available": False, "reason": "Alpaca paper access not verified"},
         },
         "historical_periods": periods,
+        "historical_data": None if not manifest else {
+            k: manifest.get(k) for k in ("source", "symbol", "requested_feed", "actual_feed", "adjustment",
+                                         "interval", "calendar", "start", "end", "retrieved_utc",
+                                         "transformations", "limitations")
+        } | {"requests": manifest.get("requests"), "summary": manifest.get("summary")},
+        "experiment_lock": _lock_status(),
         "responsibilities": responsibilities["responsibilities"],
         "skills_note": "The eleven-skill package from the reference video has not been received or installed.",
         "scanner_news": {"available": False,

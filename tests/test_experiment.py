@@ -11,6 +11,8 @@ import pytest
 from trading.experiment import (
     LOG_FIELDS, ExperimentRefused, run_experiment, variant_id,
 )
+from trading.experiment_lock import LockMismatch, build_lock
+from trading.risk import RiskLimits
 from trading.sessions import sessions_between
 from trading.strategies.intraday_momentum import Params
 
@@ -29,11 +31,49 @@ def days():
 
 
 @pytest.fixture
-def run(days, tmp_path):
+def lock_path(tmp_path):
+    path = tmp_path / "LOCK.json"
+    path.write_text(json.dumps(build_lock(periods=PERIODS, history_root=tmp_path / "none",
+                                          inspection_log=tmp_path / "none.csv")))
+    return path
+
+
+@pytest.fixture
+def run(days, tmp_path, lock_path):
     def _run(period, **kw):
         return run_experiment(days, period, n_random=200, log_dir=tmp_path,
-                              results_dir=tmp_path / "results", periods=PERIODS, **kw)
+                              results_dir=tmp_path / "results", periods=PERIODS,
+                              lock_path=lock_path, **kw)
     return _run
+
+
+def attempts(tmp_path):
+    with (tmp_path / "experiment_attempts.csv").open(newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def test_missing_lock_refused_and_logged(days, tmp_path):
+    with pytest.raises(LockMismatch, match="no experiment lock"):
+        run_experiment(days, "development", n_random=10, log_dir=tmp_path, results_dir=tmp_path / "r",
+                       periods=PERIODS, lock_path=tmp_path / "absent.json")
+    assert attempts(tmp_path)[-1]["status"] == "refused"
+
+
+def test_changed_definition_refused(days, tmp_path, lock_path):
+    with pytest.raises(LockMismatch, match="risk_limits"):
+        run_experiment(days, "development", limits=RiskLimits(max_drawdown=0.10), n_random=10,
+                       log_dir=tmp_path, results_dir=tmp_path / "r", periods=PERIODS, lock_path=lock_path)
+    assert "risk_limits" in attempts(tmp_path)[-1]["detail"]
+
+
+def test_attempts_ledger_records_completed_and_refused(run, tmp_path):
+    report = run("development")
+    with pytest.raises(ExperimentRefused):
+        run("final")
+    rows = attempts(tmp_path)
+    assert [r["status"] for r in rows] == ["completed", "refused"]
+    assert rows[0]["experiment_id"] == report["experiment_id"]
+    assert report["held_out_inspection"] == {"validation": 0, "final": 0}
 
 
 def read_log(tmp_path):

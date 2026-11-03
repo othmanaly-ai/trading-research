@@ -68,10 +68,15 @@ def fetch_and_store(client: "ReadOnlyAlpacaClient", symbol: str, start: date, en
 
     out = series_dir(root, symbol, feed, adjustment)
     (out / "minute").mkdir(parents=True, exist_ok=True)
+    (out / "raw").mkdir(parents=True, exist_ok=True)
+    # Keep the API's bars exactly as received (all hours) before any filtering.
+    pd.DataFrame(minute["bars"]).to_csv(out / "raw" / "minute_all_hours.csv", index=False)
+    pd.DataFrame(daily["bars"]).to_csv(out / "raw" / "daily.csv", index=False)
     mframe = bars_to_frame(minute["bars"])
     dframe = bars_to_frame(daily["bars"])
     dframe["session_date"] = dframe["timestamp_et"].dt.date.astype(str)
     dframe.to_csv(out / "daily.csv", index=False)
+    daily_structure = check_bars(dframe) if len(dframe) else {"rows": 0}
 
     per_session = {}
     for s in sessions:
@@ -86,6 +91,8 @@ def fetch_and_store(client: "ReadOnlyAlpacaClient", symbol: str, start: date, en
             "period": period_of(s.date), "rows": len(day), "structure": structure,
             "present_minutes": coverage.get("present_minutes", 0),
             "expected_minutes": s.regular_minutes, "early_close": s.early_close,
+            "missing_minutes": coverage.get("missing_minutes", s.regular_minutes),
+            "missing_examples_et": coverage.get("missing_examples_et", []),
             "daily_bar": has_daily, "usable": usable,
         }
 
@@ -96,7 +103,25 @@ def fetch_and_store(client: "ReadOnlyAlpacaClient", symbol: str, start: date, en
         "timezone_stored": "UTC plus America/New_York column", "calendar": "XNYS",
         "start": str(start), "end": str(end), "retrieved_utc": _iso(retrieved),
         "requests": {"minute_pages": minute["pages"], "minute_rows_all_hours": len(minute["bars"]),
-                     "daily_pages": daily["pages"], "daily_rows": len(daily["bars"])},
+                     "daily_pages": daily["pages"], "daily_rows": len(daily["bars"]),
+                     "pagination_complete": True,   # get_bars follows next_page_token until it is null
+                     "minute_requested": [_iso(sessions[0].open_utc), _iso(sessions[-1].close_utc)],
+                     "minute_received": _received(mframe), "daily_received": _received(dframe)},
+        "daily_structure": daily_structure,
+        "transformations": [
+            "raw/ holds the API bars unmodified (all hours).",
+            "minute/<date>.csv keeps bars whose start is in [session open, session close) per the XNYS "
+            "calendar, so pre-market and after-hours bars are excluded; prices are not altered.",
+            "No gaps are filled and no bars are interpolated. Missing minutes are reported, not repaired.",
+            "A session is unusable if it has no regular-session bars, fails structural checks, or has "
+            "no daily bar; unusable sessions are kept on disk but never fed to the engine.",
+        ],
+        "limitations": [
+            "Alpaca creates a minute bar only when a trade printed; a missing minute may mean no trades "
+            "on this feed rather than lost data (much more common on IEX than SIP).",
+            "The API does not echo which feed served the data.",
+            "Daily bars are compared to minute bars only by session date, not by price.",
+        ],
         "sessions": per_session,
         "summary": {
             "expected_sessions": len(sessions),
@@ -107,6 +132,12 @@ def fetch_and_store(client: "ReadOnlyAlpacaClient", symbol: str, start: date, en
     }
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2, default=str), encoding="utf-8")
     return manifest
+
+
+def _received(frame: pd.DataFrame) -> list[str] | None:
+    if not len(frame):
+        return None
+    return [_iso(frame["timestamp_utc"].min()), _iso(frame["timestamp_utc"].max())]
 
 
 def read_manifest(symbol: str, feed: str, adjustment: str, root: Path = HISTORY_DIR) -> dict | None:
@@ -162,9 +193,14 @@ def main(argv=None) -> int:
     except (HistoryError, AlpacaAccessError) as exc:
         print(f"FAILED: {exc} (no feed substitution was made)")
         return 1
-    s = m["summary"]
-    print(f"{m['symbol']} {m['requested_feed']} {m['adjustment']}: {s['usable_sessions']} of "
-          f"{s['expected_sessions']} sessions usable; by period {s['by_period']}")
+    s, r = m["summary"], m["requests"]
+    gappy = {d: v["missing_minutes"] for d, v in m["sessions"].items() if v["missing_minutes"]}
+    print(f"{m['symbol']} feed requested {m['requested_feed']} ({m['actual_feed']}), adjustment {m['adjustment']}")
+    print(f"minute bars requested {r['minute_requested']} received {r['minute_received']} "
+          f"({r['minute_pages']} pages, complete={r['pagination_complete']})")
+    print(f"{s['usable_sessions']} of {s['expected_sessions']} sessions usable; by period {s['by_period']}")
+    print(f"sessions with missing regular-session minutes: {len(gappy)} {dict(list(gappy.items())[:5])}")
+    print(f"daily bar checks: {m['daily_structure']}")
     print(f"Saved to {series_dir(HISTORY_DIR, args.symbol, args.feed, args.adjustment)}")
     return 0
 
