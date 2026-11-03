@@ -24,11 +24,23 @@ Last updated: 2026-11-03 (checks run around 21:30 UTC; strategy spec drafted lat
 - `trading/verify_data_access.py`: fetches AAPL daily bars for 5 completed sessions and 1-minute
   bars for the latest completed session, then saves data, provenance and validation results.
 
-## Proposed (written down, not implemented)
+## Implemented and tested on synthetic data only (no real market data yet)
 
-- Experiment 001, SPY intraday momentum: `research/001_intraday_momentum/SPEC.md`.
-  Owner accepted defaults for D2-D10 on 2026-11-03; D1 (risk limits, setup answers) still open.
-  No backtest code exists and no results exist.
+- Experiment 001 spec: `research/001_intraday_momentum/SPEC.md`. D2-D10 accepted
+  2026-11-03; D1 (risk limits, setup answers) still open, so risk values are placeholders.
+- Backtest engine `trading/backtest.py`, signal `trading/strategies/intraday_momentum.py`,
+  costs `trading/costs.py`, sizing and loss limits `trading/risk.py`, metrics
+  `trading/metrics.py`, runner with period lock and variant budget `trading/experiment.py`.
+- Evidence: `pytest -q`: 56 passed. The 34 engine/risk/experiment tests use labeled synthetic bars:
+  - fills, costs, stops, gap-through stops, the stop on the entry bar
+  - future bars cannot change the decision
+  - early close, missing and invalid data, halts, MOC
+  - kill switch, stress options, sizing caps
+  - period lock, budget, and reuse flag
+- Speed: about 0.75 s per synthetic year, so roughly 50 s for a full development run.
+- **No backtest has been run on real data. There are no strategy results.**
+- Not built yet: a loader that downloads and stores 2016-2026 SPY bars; a spread
+  measurement from historical quotes.
 
 ## Missing
 

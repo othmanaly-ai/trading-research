@@ -34,6 +34,8 @@ journal/
 *.sqlite3
 *.pkl
 *.pickle
+# ...except the experiment run logs, which are part of the research record.
+!research/*/variants.csv
 
 # --- Python environment and caches ---
 .venv/

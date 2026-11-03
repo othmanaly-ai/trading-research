@@ -30,6 +30,22 @@ def _calendar():
     return xcals.get_calendar(CALENDAR_NAME)
 
 
+def _session(cal, s: pd.Timestamp, early: set) -> Session:
+    return Session(
+        date=s.date(),
+        open_utc=cal.session_open(s).to_pydatetime().astimezone(timezone.utc),
+        close_utc=cal.session_close(s).to_pydatetime().astimezone(timezone.utc),
+        early_close=s in early,
+    )
+
+
+def sessions_between(start: date, end: date) -> list[Session]:
+    """All sessions from start to end inclusive, in order."""
+    cal = _calendar()
+    early = set(cal.early_closes)
+    return [_session(cal, s, early) for s in cal.sessions_in_range(str(start), str(end))]
+
+
 def completed_sessions(now_utc: datetime, count: int) -> list[Session]:
     """The last `count` sessions whose close is at least DATA_DELAY before now_utc."""
     if now_utc.tzinfo is None:
@@ -44,12 +60,4 @@ def completed_sessions(now_utc: datetime, count: int) -> list[Session]:
     if len(done) < count:
         raise ValueError(f"only {len(done)} completed sessions found")
     early = set(cal.early_closes)
-    return [
-        Session(
-            date=s.date(),
-            open_utc=cal.session_open(s).to_pydatetime().astimezone(timezone.utc),
-            close_utc=cal.session_close(s).to_pydatetime().astimezone(timezone.utc),
-            early_close=s in early,
-        )
-        for s in done[-count:]
-    ]
+    return [_session(cal, s, early) for s in done[-count:]]

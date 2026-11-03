@@ -49,6 +49,14 @@ copy .env.example .env    # then add paper keys yourself
 
 Exit codes for the data check: 0 = success, 1 = API refused or failed, 2 = no credentials.
 
+## Experiments
+
+- Spec first, code second: `research/<id>/SPEC.md` is approved by the owner before coding.
+- `trading/experiment.py` enforces the period lock and variant budget. Never bypass it,
+  never run the final period without explicit owner approval, and never edit
+  `research/*/variants.csv` except by appending through the runner.
+- Risk values in `trading/risk.py` are placeholders until the owner sets them (SPEC D1).
+
 ## Data conventions
 
 - Exchange calendar: `exchange_calendars` XNYS (holidays, early closes). Market

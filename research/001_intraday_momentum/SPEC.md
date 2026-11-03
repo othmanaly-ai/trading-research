@@ -316,6 +316,34 @@ later counts as a new variant and must be logged (section 13).
 | D9 | Variant budget | 10 / 2 / 1 |
 | D10 | Period boundaries | As in section 12 |
 
+## 17. Implementation clarifications (2026-11-03, before any data was seen)
+
+Choices made while coding. No results existed when they were made.
+
+1. **Data-check window (section 8).** The "gaps in 15:00-16:00" check would
+   look at bars after the 15:30 decision, which is future data. The engine
+   checks only the bars known at the decision: structural checks on the day so
+   far, and no missing minute in 15:00-15:29. Problems after entry are handled
+   by the exit rules (missing exit bar, halt).
+2. **Sizing price (section 7).** Shares are computed from the last close known
+   at the decision (the 15:29 bar), not from the later fill price. The stop
+   is then placed relative to the actual fill.
+3. **Late-exit stress (section 8).** A "late" exit fills at the official close,
+   because no regular-session bar exists after the 15:59 bar.
+4. **"Not clearly negative at stress costs" (pass rule 1).** Implemented
+   strictly as stress-cost net return >= 0. Loosening it must be decided
+   before any validation run.
+5. **Random baseline (section 11).** It uses the days on which both a long and
+   a short trade were possible, with the drawdown kill switch off, so that
+   every random run trades the same days.
+6. **Period lock and budget (sections 12-13).** Enforced in `trading/experiment.py`:
+   - The final period refuses to run without `final_test=True`.
+   - Validation requires a prior development run of the same variant, and the
+     final test requires a prior validation run.
+   - New variants beyond the budget are refused.
+   - Every run is appended to `variants.csv` (tracked by Git).
+   - Full reports go to `results/experiment_001/` (git-ignored).
+
 **Prerequisite for any implementation:** paper keys in `.env`, then a
 successful `python -m trading.verify_data_access`, then a separate SPY
 2016-2026 download and quality report. Order submission stays disabled
