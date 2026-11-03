@@ -9,6 +9,8 @@ Endpoints:
   GET  /api/meta                 replay description and configured instances
   GET  /api/snapshot             current ledger snapshot
   GET  /api/strategies/<id>      one instance's signals, decisions, fills, trades, bars
+  GET  /api/strategies/<id>/evaluation   evaluation report up to the current replay time
+  GET  /api/research             mode availability, periods, responsibilities
   GET  /api/stream               server-sent events: reset, ev, snapshot, replay
   POST /api/control              {"action": "pause"|"resume"|"restart"|"speed", "speed": n}
 """
@@ -26,9 +28,12 @@ from urllib.parse import unquote, urlparse
 
 from trading.dashboard.demo_replay import DEFAULT_CONFIG, ConfigError, build_demo, load_config
 from trading.dashboard.ledger import Ledger
+from trading.experiment import PERIODS
+from trading.sessions import sessions_between
 
 HOST = "127.0.0.1"
 WEB_DIST = Path(__file__).resolve().parents[2] / "dashboard" / "web" / "dist"
+RESPONSIBILITIES = Path(__file__).resolve().parents[2] / "research" / "responsibilities.json"
 TICK_SECONDS = 0.05
 MAX_IDLE_REPLAY_SECONDS = 90      # skip quiet stretches (overnight, mid-day) faster
 MIN_SPEED, MAX_SPEED = 1, 3600
@@ -122,7 +127,35 @@ class ReplayController:
         return self._snapshot_cache
 
 
+def research_status() -> dict:
+    """What the Research Lab can and cannot do right now, from files on disk."""
+    responsibilities = json.loads(RESPONSIBILITIES.read_text(encoding="utf-8"))
+    periods = [{"period": name, "start": str(a), "end": str(b),
+                "expected_sessions": len(sessions_between(a, b)),
+                "sessions_with_verified_data": 0}
+               for name, (a, b) in PERIODS.items()]
+    return {
+        "modes": {
+            "DEMO": {"available": True, "reason": "synthetic fixtures"},
+            "HISTORICAL_REPLAY": {"available": False,
+                                  "reason": "Alpaca data access not verified; no historical data loaded"},
+            "SIMULATION": {"available": False,
+                           "reason": "method proposed in docs/PRODUCT_SPEC.md section 8, awaiting review; "
+                                     "also needs historical replay"},
+            "PAPER_ACCOUNT": {"available": False, "reason": "Alpaca paper access not verified"},
+        },
+        "historical_periods": periods,
+        "responsibilities": responsibilities["responsibilities"],
+        "skills_note": "The eleven-skill package from the reference video has not been received or installed.",
+        "scanner_news": {"available": False,
+                         "reason": "Universe fixed by spec (SPY). No verified, time-stamped news source."},
+        "product_spec": "docs/PRODUCT_SPEC.md",
+    }
+
+
 def make_handler(ctrl: ReplayController):
+    research = research_status()
+
     class Handler(BaseHTTPRequestHandler):
         server_version = "DemoReplayDashboard/0.1"
 
@@ -152,6 +185,13 @@ def make_handler(ctrl: ReplayController):
             if path == "/api/snapshot":
                 with ctrl.cond:
                     return self._json({"snapshot": ctrl.snapshot(), "replay": ctrl.status()})
+            if path == "/api/research":
+                return self._json(research)
+            if path.startswith("/api/strategies/") and path.endswith("/evaluation"):
+                sid = unquote(path.split("/")[3])
+                with ctrl.cond:
+                    rep = ctrl.ledger.evaluation(sid)
+                return self._json(rep) if rep else self._json({"error": f"unknown strategy {sid}"}, 404)
             if path.startswith("/api/strategies/"):
                 sid = unquote(path.rsplit("/", 1)[-1])
                 with ctrl.cond:

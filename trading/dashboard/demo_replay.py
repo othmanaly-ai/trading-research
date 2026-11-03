@@ -17,9 +17,11 @@ from trading.backtest import BacktestResult, DayData, run_backtest
 from trading.costs import BASE
 from trading.events import MODE_DEMO_REPLAY, Event
 from trading.fixtures.synthetic import make_days
+from trading.outcomes import classify_trade
 from trading.risk import RiskLimits
 from trading.sessions import Session, sessions_between
 from trading.strategies.intraday_momentum import MINUTE, Params, signal
+from trading.strategies.registry import spec_info
 
 SOURCE = "demo_replay"
 FEED = "synthetic"
@@ -149,6 +151,10 @@ def _strategy_events(inst: dict, params: Params, days: dict, engine_sessions: li
             "direction": t.direction, "shares": t.shares, "entry_time_utc": _iso(t.entry_time),
             "entry_fill": t.entry_fill, "exit_fill": t.exit_fill, "gross_pnl": t.gross_pnl,
             "net_pnl": t.net_pnl, "exit_reason": t.exit_reason, "flags": t.flags,
+            "stop_price": t.stop_price, "target_price": None,
+            "outcome": classify_trade(day.bars, t.entry_time, t.exit_time, t.direction,
+                                      t.stop_price, None),
+            "holding_minutes": t.minutes_held, "session_date": str(s.date),
             "cost_model": BASE.name, "simulated": True}))
     return ev
 
@@ -185,7 +191,8 @@ def build_demo(config: dict) -> DemoReplay:
         events += _strategy_events(inst, params, days, engine_sessions, result)
         instances_meta.append({"id": inst["id"], "name": inst["name"], "instrument": inst["instrument"],
                                "allocation": float(inst["allocation"]), "params": params.as_dict(),
-                               "risk_limits": limits.__dict__})
+                               "risk_limits": limits.__dict__,
+                               "spec": spec_info(inst.get("strategy", "intraday_momentum"), params)})
 
     events.sort(key=Event.sort_key)
     labels = {i["id"]: i["label"] for i in config["instruments"]}

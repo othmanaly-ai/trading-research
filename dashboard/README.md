@@ -53,6 +53,18 @@ Every event has `event_id`, `ts_utc`, `source`, `mode`, `type`, `strategy_id`,
 - **Mode mismatch:** events whose `mode` differs from the server's are rejected
   and counted, never mixed in.
 
+Each tower has six tabs:
+- Rules & version
+- Scanner & news
+- Historical replay
+- Results
+- Paper account
+- Decisions & risk
+
+Results come from `GET /api/strategies/<id>/evaluation`, which is built from
+the same ledger records as the city. Mode availability comes from
+`GET /api/research`. See `docs/PRODUCT_SPEC.md`.
+
 Towers are configured in `dashboard/demo_config.json` (instruments, instances,
 parameters, per-instance risk overrides). Adding an instance needs no code
 change, and no AI agents or model calls are involved.

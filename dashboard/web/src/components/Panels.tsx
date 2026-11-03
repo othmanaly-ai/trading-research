@@ -1,6 +1,48 @@
 import { describe } from "../describe";
 import { dateTimeET, money, pct, pnlClass, statusTone, timeET, utc } from "../format";
-import type { Account, Connection, InstrumentView, ReplayStatus, Snapshot, StrategyView, TradingEvent } from "../types";
+import type { Account, Connection, InstrumentView, ReplayStatus, Research, Snapshot, StrategyView, TradingEvent } from "../types";
+
+const MODE_KEYS: [string, string][] = [
+  ["DEMO", "DEMO_REPLAY"], ["HISTORICAL_REPLAY", "HISTORICAL_REPLAY"], ["SIMULATION", "SIMULATION"], ["PAPER_ACCOUNT", "PAPER_ACCOUNT"],
+];
+
+// All four modes, with the active one marked. Balances from different modes are never combined.
+export function ModeStrip({ active, research }: { active: string; research: Research | null }) {
+  return (
+    <div className="mode-strip" aria-label="Modes">
+      {MODE_KEYS.map(([key, modeId]) => {
+        const info = research?.modes[key];
+        const isActive = modeId === active;
+        return (
+          <span key={key} className={`mode-chip ${isActive ? "on" : info?.available ? "" : "off"}`} title={info?.reason}>
+            {key.replace("_", " ")}: {isActive ? "ACTIVE" : info ? (info.available ? "available" : "unavailable") : "…"}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+export function ResearchView({ research }: { research: Research | null }) {
+  if (!research) return <p className="empty panel">Loading research status…</p>;
+  return (
+    <section className="panel wide" aria-label="Research lab status">
+      <h2>Research &amp; Simulation Lab</h2>
+      <h3>Modes</h3>
+      <table><thead><tr><th>Mode</th><th>Available</th><th>Reason</th></tr></thead>
+        <tbody>{Object.entries(research.modes).map(([k, v]) => (
+          <tr key={k}><td>{k.replace("_", " ")}</td><td>{v.available ? "yes" : "no"}</td><td>{v.reason}</td></tr>))}</tbody></table>
+      <h3>Responsibilities</h3>
+      <div className="scroll">
+        <table><thead><tr><th>Responsibility</th><th>Implementation</th><th>Module</th><th>Status</th><th>Notes</th></tr></thead>
+          <tbody>{research.responsibilities.map((x) => (
+            <tr key={x.id}><td>{x.name}{x.veto ? " (veto)" : ""}</td><td>{x.implementation.replace("_", " ")}</td>
+              <td>{x.module ? <code>{x.module}</code> : "—"}</td><td>{x.status}</td><td>{x.notes}</td></tr>))}</tbody></table>
+      </div>
+      <p className="muted small">{research.skills_note} No responsibility currently uses an AI agent. Specification: <code>{research.product_spec}</code>.</p>
+    </section>
+  );
+}
 
 export function Banner({ text }: { text: string }) {
   return (
@@ -18,7 +60,7 @@ export function Controls({ status, connection, lastMessageAt, control, controlEr
   control: (a: string, s?: number) => void; controlError: string | null;
   view: string; setView: (v: string) => void; reducedMotion: boolean; setReducedMotion: (b: boolean) => void;
 }) {
-  const views = ["City", "Table", "Sessions", "Leaderboard"];
+  const views = ["City", "Table", "Sessions", "Leaderboard", "Research"];
   return (
     <div className="controls">
       <div className="group" role="group" aria-label="Replay controls">

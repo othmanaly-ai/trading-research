@@ -17,6 +17,49 @@ export interface TradingEvent {
   payload: Record<string, unknown>;
 }
 
+export interface SpecInfo {
+  strategy: string;
+  title: string;
+  spec_path: string;
+  spec_version: string;
+  spec_sha256: string;
+  variant_id: string;
+  params: Record<string, unknown>;
+  target_defined: boolean;
+}
+
+export interface Instance {
+  id: string;
+  name: string;
+  instrument: string;
+  allocation: number;
+  params: Record<string, unknown>;
+  risk_limits: Record<string, number | boolean>;
+  spec: SpecInfo;
+}
+
+export interface Research {
+  modes: Record<string, { available: boolean; reason: string }>;
+  historical_periods: { period: string; start: string; end: string; expected_sessions: number; sessions_with_verified_data: number }[];
+  responsibilities: { id: string; name: string; implementation: string; module: string | null; status: string; notes: string; veto?: boolean }[];
+  skills_note: string;
+  scanner_news: { available: boolean; reason: string };
+  product_spec: string;
+}
+
+export interface Evaluation {
+  mode: string;
+  strategy_id: string;
+  as_of_utc: string | null;
+  sample: { trades: number; unique_sessions_traded: number; sessions_evaluated: number; expected_sessions: number; coverage: number; skips: Record<string, number> };
+  pnl: { net: number; gross: number; modeled_costs: number; net_return_on_allocation: number; cost_sensitivity: Record<string, number> };
+  risk: { max_drawdown: number; time_in_market: number; avg_notional_to_allocation: number };
+  outcomes: { target_first: number | null; stop_first: number; neither: number; ambiguous: number | null; unfillable: number; target_defined: boolean };
+  trades: { wins: number; losses: number; avg_gain: number | null; avg_loss: number | null; avg_holding_minutes: number | null };
+  limitations: string[];
+  result_hash: string;
+}
+
 export interface Meta {
   mode: string;
   source: string;
@@ -24,7 +67,7 @@ export interface Meta {
   feed: string;
   cost_model: string;
   instruments: { id: string; label: string; feed: string }[];
-  instances: { id: string; name: string; instrument: string; allocation: number }[];
+  instances: Instance[];
   sessions: { date: string; open_utc: string; close_utc: string; early_close: boolean }[];
   event_count: number;
   order_submission: string;

@@ -1,8 +1,9 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import TowerPanel from "./components/TowerPanel";
 import {
-  AccountPanel, ActivityFeed, Banner, Controls, Leaderboard, SessionHistory, StrategyTable,
+  AccountPanel, ActivityFeed, Banner, Controls, Leaderboard, ModeStrip, ResearchView, SessionHistory, StrategyTable,
 } from "./components/Panels";
+import type { Research } from "./types";
 import { useReplay } from "./useReplay";
 
 // Three.js loads in its own chunk; if it fails to load, the boundary below falls back to tables.
@@ -28,6 +29,11 @@ export default function App() {
   const [cityError, setCityError] = useState<string | null>(() =>
     new URLSearchParams(window.location.search).get("3d") === "off"
       ? "3D view turned off (?3d=off). Showing the Table view." : null);
+
+  const [research, setResearch] = useState<Research | null>(null);
+  useEffect(() => {
+    fetch("/api/research").then((x) => (x.ok ? x.json() : null)).then(setResearch).catch(() => setResearch(null));
+  }, [r.meta]);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -62,6 +68,7 @@ export default function App() {
   return (
     <div className="app">
       <Banner text={r.meta.banner} />
+      <ModeStrip active={r.meta.mode} research={research} />
       <Controls status={r.status} connection={r.connection} lastMessageAt={r.lastMessageAt} control={r.control}
                 controlError={r.controlError} view={view} setView={setView}
                 reducedMotion={reducedMotion} setReducedMotion={setReducedMotion} />
@@ -89,10 +96,13 @@ export default function App() {
             )}
             {view === "Sessions" && <SessionHistory snapshot={snap} />}
             {view === "Leaderboard" && <Leaderboard snapshot={snap} />}
+            {view === "Research" && <ResearchView research={research} />}
           </div>
           <div className="side">
             <AccountPanel account={snap.account} snapshot={snap} instruments={snap.instruments} />
-            {selected && <TowerPanel strategy={selected} lastBar={lastBar} onClose={() => setSelectedId(null)} />}
+            {selected && <TowerPanel strategy={selected} lastBar={lastBar} mode={r.meta.mode} research={research}
+                                     instance={r.meta.instances.find((i) => i.id === selected.id)}
+                                     onClose={() => setSelectedId(null)} />}
           </div>
           <ActivityFeed events={r.events} names={names} />
         </div>

@@ -10,8 +10,15 @@ before exit costs.
 """
 
 from collections import defaultdict
+from datetime import datetime
+
+from trading.evaluation import evaluate
 
 RECENT_EVENTS = 200
+
+
+def _ts(iso: str) -> float:
+    return datetime.fromisoformat(iso.replace("Z", "+00:00")).timestamp()
 
 
 class Ledger:
@@ -246,6 +253,31 @@ class Ledger:
             "instruments": list(self.instruments.values()),
             "sessions": list(self.sessions.values()),
         }
+
+    def _session_minutes(self) -> float:
+        """Regular-session minutes elapsed so far (completed sessions + the open one)."""
+        total = 0.0
+        for row in self.sessions.values():
+            start, close = _ts(row["open_utc"]), _ts(row["close_utc"])
+            end = close if row["status"] == "closed" else min(close, _ts(self.as_of))
+            total += max(0.0, (end - start) / 60)
+        return total
+
+    def evaluation(self, sid: str) -> dict | None:
+        """Evaluation report from this strategy's records up to the current replay time."""
+        s = self.strategies.get(sid)
+        if s is None:
+            return None
+        inst = next(i for i in self.meta["instances"] if i["id"] == sid)
+        report = evaluate(
+            mode=self.mode, trades=self.records[sid]["trades"],
+            decisions=self.records[sid]["decisions"], sessions_evaluated=list(self.sessions),
+            expected_sessions=len(self.meta["sessions"]), session_minutes=self._session_minutes(),
+            allocation=s["allocation"], max_drawdown=s["max_drawdown"],
+            target_defined=inst.get("spec", {}).get("target_defined", False))
+        report["as_of_utc"] = self.as_of
+        report["strategy_id"] = sid
+        return report
 
     def strategy_records(self, sid: str) -> dict | None:
         s = self.strategies.get(sid)

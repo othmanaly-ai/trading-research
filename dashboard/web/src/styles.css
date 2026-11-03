@@ -48,7 +48,7 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
 
 .layout {
   display: grid; gap: 12px; padding: 12px 16px;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  grid-template-columns: minmax(0, 1fr) 470px;
   grid-template-areas: "main side" "feed feed";
 }
 .main-area { grid-area: main; min-width: 0; }
@@ -139,6 +139,21 @@ td:first-child { white-space: nowrap; }
 .et-feed_status { color: var(--amber); }
 .who { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 800px) { .feed li { grid-template-columns: 1fr; } }
+
+.mode-strip { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 16px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.mode-chip { border: 1px solid var(--line); border-radius: 999px; padding: 1px 10px; color: var(--muted); }
+.mode-chip.on { border-color: var(--amber); color: var(--amber); font-weight: 700; }
+.mode-chip.off { text-decoration: line-through; text-decoration-color: rgba(154, 150, 194, 0.5); }
+.mode-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; border-radius: 4px; padding: 0 5px; border: 1px solid; }
+.mode-DEMO_REPLAY { color: var(--amber); border-color: var(--amber); }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 8px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.tabs button { font-size: 12px; padding: 3px 8px; }
+.tab-body { min-height: 120px; overflow-x: auto; }
+.unavailable { border: 1px dashed var(--line); border-radius: 8px; padding: 8px 12px; margin: 6px 0; }
+.unavailable p { margin: 4px 0; }
+.notice { font-size: 12px; color: var(--muted); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
 
 footer { padding: 8px 16px 16px; }
 .fatal { padding: 24px; }

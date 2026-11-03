@@ -1,7 +1,12 @@
-# Experiment 001: Intraday momentum in SPY (draft specification)
+# Experiment 001: Intraday momentum in SPY (specification)
+
+Spec version: 1.1. Version 1.0 was approved 2026-11-03; 1.1 adds the section 17
+implementation clarifications. The strategy registry records this version and
+the file's hash.
 
 **Status: APPROVED by owner on 2026-11-03 for D2-D10 (proposed defaults accepted).
-D1 (risk limits and setup answers) is still open. Nothing here is implemented or tested.**
+D1 (risk limits and setup answers) is still open. Implemented and tested on
+synthetic data only. Not run on real data.**
 No market data has been retrieved yet (no Alpaca keys in this project), so no
 statement below about behavior or returns is a measured result.
 

@@ -63,6 +63,34 @@ Last updated: 2026-11-03 (checks run around 21:30 UTC; strategy spec drafted lat
 - Not done: real Alpaca data or account in the dashboard (plan in `dashboard/README.md`).
   The Playwright connector was disconnected in this session, so the built-in browser was used instead.
 
+## Research & Simulation Lab, milestone 3a (2026-11-03)
+
+- **Spec:** `docs/PRODUCT_SPEC.md` contains the product spec, the four modes
+  (never blended) and the milestone checklist. The simulation method in its
+  section 8 is **PROPOSED, awaiting review**.
+- **Implemented:**
+  - versioned strategy specs (`trading/strategies/registry.py`: spec version plus file hash)
+  - responsibilities config (`research/responsibilities.json`: all deterministic, manual or
+    not implemented; no AI agents; the eleven-skill package is not installed)
+  - outcome classification rules (`trading/outcomes.py`)
+  - an evaluation report from the shared ledger records (`trading/evaluation.py`)
+  - six tower tabs, a mode strip and a Research view in the dashboard
+- **Tested:** `pytest`: 94 pass. The 20 new tests check:
+  - classification rules, including ambiguous bars and short trades
+  - classifier agreement with the engine's stop exits
+  - cost accounting and cost sensitivity
+  - reports matching the city for every strategy
+  - identical result hashes on a rebuilt replay
+  - signals recomputed only from bar events that had already arrived
+  - spec hash, and honest mode status
+- **Browser-checked:**
+  - all six tabs render
+  - mid-replay, report net equals city realized for all four towers
+  - live updates during playback
+  - fixed horizontal overflow; no new console errors
+- **Still illustrative (DEMO):** every number in the dashboard. Scanner/news,
+  historical replay, simulation and paper account show "not available" with the reason.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

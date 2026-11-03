@@ -58,6 +58,8 @@ Exit codes for the data check: 0 = success, 1 = API refused or failed, 2 = no cr
 - The browser displays ledger output only (`trading/dashboard/ledger.py`); P&L and risk
   logic stay in Python. The server must not import broker code or load credentials.
 - Any real-data mode must be an explicit, separately labeled mode; never fall back silently.
+- Product spec, modes, outcome rules and milestone checklist: `docs/PRODUCT_SPEC.md`.
+  Don't implement scenario simulation until the owner approves its section 8.
 
 ## Experiments
 
