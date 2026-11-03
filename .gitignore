@@ -53,6 +53,9 @@ dist/
 htmlcov/
 .ipynb_checkpoints/
 
+# --- Node / frontend ---
+node_modules/
+
 # --- Editor / OS ---
 .vscode/
 .idea/

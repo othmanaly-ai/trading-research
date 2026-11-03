@@ -49,6 +49,16 @@ copy .env.example .env    # then add paper keys yourself
 
 Exit codes for the data check: 0 = success, 1 = API refused or failed, 2 = no credentials.
 
+## Dashboard (DEMO REPLAY)
+
+- See `dashboard/README.md`. Launch: build `dashboard/web` (`npm install && npm run build`),
+  then `.venv\Scripts\python -m trading.dashboard.server` and open http://127.0.0.1:8765.
+- Mode is DEMO_REPLAY: synthetic fixtures, simulated outcomes. Keep the banner and
+  "simulated" labels; never present replay results as backtests or broker results.
+- The browser displays ledger output only (`trading/dashboard/ledger.py`); P&L and risk
+  logic stay in Python. The server must not import broker code or load credentials.
+- Any real-data mode must be an explicit, separately labeled mode; never fall back silently.
+
 ## Experiments
 
 - Spec first, code second: `research/<id>/SPEC.md` is approved by the owner before coding.

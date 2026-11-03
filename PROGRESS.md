@@ -42,6 +42,27 @@ Last updated: 2026-11-03 (checks run around 21:30 UTC; strategy spec drafted lat
 - Not built yet: a loader that downloads and stores 2016-2026 SPY bars; a spread
   measurement from historical quotes.
 
+## DEMO REPLAY dashboard (synthetic data, simulated outcomes)
+
+- Implemented and verified locally on 2026-11-03:
+  - **Pieces:** event schema `trading/events.py`, replay builder and ledger in
+    `trading/dashboard/`, standard-library server, and React + TypeScript + Three.js app
+    in `dashboard/web/`.
+  - **Tests:** `pytest`: 18 dashboard tests pass, checking that totals match the engine,
+    duplicates don't double-count, records stay per strategy, the halt and data outage
+    show, the empty config works, controls behave, and no broker code is loaded.
+    `npm run build`: the type check passes.
+  - **In-browser checks (built-in browser):**
+    - selecting a tower shows that instance's records and chart
+    - pause, resume, restart and speed work
+    - open positions show unrealized P&L that sums to the account figure
+    - the table, sessions and leaderboard views render
+    - the empty, reconnecting and `?3d=off` fallback states render
+    - reduced motion works, and there are no console errors
+    - browser storage is empty, and the bundle has no credential references
+- Not done: real Alpaca data or account in the dashboard (plan in `dashboard/README.md`).
+  The Playwright connector was disconnected in this session, so the built-in browser was used instead.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

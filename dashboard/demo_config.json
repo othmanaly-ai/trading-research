@@ -1,0 +1,23 @@
+{
+  "_note": "DEMO REPLAY configuration. Instruments are SYNTHETIC: made-up prices on real NYSE calendar dates. Add or remove instances here; no code change needed.",
+  "replay": {
+    "first_session": "2026-11-23",
+    "sessions": 5,
+    "warmup_sessions": 25,
+    "start_speed": 600,
+    "duplicate_every": 400
+  },
+  "instruments": [
+    {"id": "SPY.SYN", "label": "SPY (synthetic)", "seed": 11, "start_price": 580.0, "volume": 2000000, "noise": 0.0004},
+    {"id": "QQQ.SYN", "label": "QQQ (synthetic)", "seed": 12, "start_price": 500.0, "volume": 1500000, "noise": 0.0005,
+     "outage": {"session": 1, "start_minute": 95, "minutes": 6}},
+    {"id": "IWM.SYN", "label": "IWM (synthetic)", "seed": 13, "start_price": 220.0, "volume": 1000000, "noise": 0.0006}
+  ],
+  "instances": [
+    {"id": "imom-spy", "name": "Intraday Momentum", "instrument": "SPY.SYN", "allocation": 25000, "params": {}},
+    {"id": "imom-spy-long", "name": "Momentum Long-Only", "instrument": "SPY.SYN", "allocation": 25000, "params": {"long_only": true}},
+    {"id": "imom-qqq", "name": "Intraday Momentum", "instrument": "QQQ.SYN", "allocation": 25000, "params": {}},
+    {"id": "imom-iwm-tight", "name": "Momentum Tight Risk", "instrument": "IWM.SYN", "allocation": 25000, "params": {},
+     "risk": {"max_drawdown": 0.002}}
+  ]
+}

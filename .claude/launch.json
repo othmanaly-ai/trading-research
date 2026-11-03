@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "demo-dashboard",
+      "runtimeExecutable": "C:\\Users\\othma\\OneDrive\\Documents\\TradingProject\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": ["-m", "trading.dashboard.server", "--port", "8765"],
+      "port": 8765
+    },
+    {
+      "name": "demo-dashboard-empty",
+      "runtimeExecutable": "C:\\Users\\othma\\OneDrive\\Documents\\TradingProject\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": ["-m", "trading.dashboard.server", "--port", "8766", "--config", "dashboard/empty_config.json"],
+      "port": 8766
+    }
+  ]
+}

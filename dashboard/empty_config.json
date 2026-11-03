@@ -1,0 +1,6 @@
+{
+  "_note": "DEMO REPLAY with no strategy instances, for checking the dashboard's empty state.",
+  "replay": {"first_session": "2026-11-23", "sessions": 1, "warmup_sessions": 25, "start_speed": 600},
+  "instruments": [],
+  "instances": []
+}
