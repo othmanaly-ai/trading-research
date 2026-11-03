@@ -61,6 +61,9 @@ Exit codes for the data check: 0 = success, 1 = API refused or failed, 2 = no cr
 - Historical data: `python -m trading.history` (read-only fetch into `data/history/`, with
   manifest provenance), then `python -m trading.dashboard.server --mode historical`.
   The dashboard replays development-period sessions only unless the owner decides otherwise.
+- One inspectable research run (replay + journal + evaluation, outputs in git-ignored
+  `results/research/`): `python -m trading.research_run --mode historical` (or `--mode demo`).
+  Historical runs append to `research/001_intraday_momentum/inspection_runs.csv`.
 - Product spec, modes, outcome rules and milestone checklist: `docs/PRODUCT_SPEC.md`.
   Don't implement scenario simulation until the owner approves its section 8.
 

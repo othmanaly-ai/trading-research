@@ -13,12 +13,15 @@ Endpoints:
   GET  /api/snapshot             current ledger snapshot
   GET  /api/strategies/<id>      one instance's signals, decisions, fills, trades, bars
   GET  /api/strategies/<id>/evaluation   evaluation report up to the current replay time
+  GET  /api/strategies/<id>/journal      journal rows (JSON); /journal.csv downloads them
   GET  /api/research             mode availability, periods, responsibilities
   GET  /api/stream               server-sent events: reset, ev, snapshot, replay
   POST /api/control              {"action": "pause"|"resume"|"restart"|"speed", "speed": n}
 """
 
 import argparse
+import csv
+import io
 import json
 import mimetypes
 import sys
@@ -36,6 +39,8 @@ from trading.dashboard.historical_replay import load_config as load_hist_config
 from trading.dashboard.ledger import Ledger
 from trading.experiment import PERIODS
 from trading.history import HISTORY_DIR, HistoryError, read_manifest
+from trading.journal import COLUMNS as JOURNAL_COLUMNS
+from trading.journal import build_journal
 from trading.sessions import sessions_between
 
 HOST = "127.0.0.1"
@@ -202,6 +207,26 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
                     return self._json({"snapshot": ctrl.snapshot(), "replay": ctrl.status()})
             if path == "/api/research":
                 return self._json(research)
+            if path.startswith("/api/strategies/") and path.endswith(("/journal", "/journal.csv")):
+                sid = unquote(path.split("/")[3])
+                with ctrl.cond:
+                    if sid not in ctrl.ledger.strategies:
+                        return self._json({"error": f"unknown strategy {sid}"}, 404)
+                    rows = build_journal(ctrl.ledger, sid)
+                if not path.endswith(".csv"):
+                    return self._json({"mode": ctrl.meta["mode"], "strategy_id": sid, "rows": rows})
+                buf = io.StringIO()
+                w = csv.DictWriter(buf, fieldnames=JOURNAL_COLUMNS)
+                w.writeheader()
+                w.writerows(rows)
+                body = buf.getvalue().encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/csv; charset=utf-8")
+                self.send_header("Content-Disposition",
+                                 f'attachment; filename="{ctrl.meta["mode"].lower()}_{sid}_journal.csv"')
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                return self.wfile.write(body)
             if path.startswith("/api/strategies/") and path.endswith("/evaluation"):
                 sid = unquote(path.split("/")[3])
                 with ctrl.cond:

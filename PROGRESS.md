@@ -119,6 +119,42 @@ Last updated: 2026-11-03 (checks run around 21:30 UTC; strategy spec drafted lat
 | Alpaca paper-account monitoring | Missing | Access not verified |
 | All dashboard numbers | Illustrative | DEMO fixtures |
 
+## Journal and research workflow, milestone 4a+ (2026-11-03)
+
+Fresh evidence this session:
+- **Setup is reproducible:** a brand-new venv built from `requirements.lock` reports no
+  broken requirements (`pip check`) and 103 tests passed, before this milestone's changes.
+- **Tests:** `pytest -q`: 110 passed (7 new in `tests/test_journal.py`). `npm run build`:
+  type check passed.
+- **Alpaca:** still unverified.
+  - There is no `.env` file, and `APCA_*` is not set in this shell or at the Windows user level.
+  - There is no Alpaca connector in this session.
+  - `verify_data_access` exits 2 (BLOCKED).
+
+Implemented:
+- `trading/journal.py`: one row per strategy per session, including skips, risk blocks and
+  sessions in progress, built from the ledger records the city uses.
+- `trading/research_run.py`: one command that runs the stored data, versioned strategy,
+  chronological replay, modeled fills and costs and risk checks, and writes the journal,
+  evaluation and provenance to `results/research/`.
+  - Historical runs are appended to `research/001_intraday_momentum/inspection_runs.csv`.
+  - A historical run refuses without stored data, with no synthetic substitute.
+- Dashboard: a seventh tower tab (Journal) with CSV download.
+
+Verified on DEMO data, in tests and in the browser:
+- journal net = city realized = engine = evaluation report, for every tower
+- every session appears, and the equity chain is continuous
+- the halted session is shown with its reason
+- the historical path is tested only with fake API-shaped data
+
+Known defects and limitations:
+- **Daily loss limit:** it exists and is unit-tested, but the engine checks it once before
+  each day's single trade, so in experiment 001 it can never trigger. It needs a
+  within-day check before any multi-trade strategy.
+- **Costs** are unmeasured guesses, until a spread measurement exists.
+- **Risk limits** are placeholders (D1 unanswered).
+- **No real-data results exist** for any strategy.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

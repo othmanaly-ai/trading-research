@@ -90,6 +90,8 @@ th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line
 th { color: var(--muted); font-weight: 600; }
 tr.selected td { background: #1e1b4b; }
 td:first-child { white-space: nowrap; }
+tr.inactive td { color: var(--muted); }
+a { color: var(--cyan); }
 
 .city { position: relative; height: 560px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); }
 .city canvas { display: block; }

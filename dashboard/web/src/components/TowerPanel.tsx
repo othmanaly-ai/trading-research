@@ -4,7 +4,14 @@ import type { Evaluation, Instance, Research, StrategyRecords, StrategyView } fr
 import { useLiveJson } from "../useLiveJson";
 import PriceChart from "./PriceChart";
 
-const TABS = ["Rules & version", "Scanner & news", "Historical replay", "Results", "Paper account", "Decisions & risk"] as const;
+const TABS = ["Rules & version", "Scanner & news", "Historical replay", "Results", "Journal", "Paper account", "Decisions & risk"] as const;
+
+interface JournalRow {
+  session_date: string; decision: string; decision_reason: string; risk_status: string;
+  signal_direction: number | null; signal_r1: number | null; shares: number | null;
+  exposure_of_equity: number | null; net_pnl: number | null; modeled_costs: number | null;
+  outcome: string | null; exit_reason: string | null; equity_after: number; flags: string;
+}
 type Tab = (typeof TABS)[number];
 
 interface Props {
@@ -39,6 +46,8 @@ export default function TowerPanel({ strategy, instance, research, mode, lastBar
   const evalUrl = tab === "Results" ? `/api/strategies/${encodeURIComponent(s.id)}/evaluation` : null;
   const { data: rec, error: recError } = useLiveJson<StrategyRecords>(recUrl, trigger);
   const { data: ev, error: evError } = useLiveJson<Evaluation>(evalUrl, trigger);
+  const journalUrl = tab === "Journal" ? `/api/strategies/${encodeURIComponent(s.id)}/journal` : null;
+  const { data: journal, error: jError } = useLiveJson<{ mode: string; rows: JournalRow[] }>(journalUrl, s.version);
 
   return (
     <aside className="panel tower-panel" aria-label={`Details for ${s.name}`}>
@@ -73,6 +82,11 @@ export default function TowerPanel({ strategy, instance, research, mode, lastBar
         )}
         {tab === "Historical replay" && <HistoricalTab research={research} />}
         {tab === "Results" && <ResultsTab ev={ev} error={evError ?? recError} rec={rec} />}
+        {tab === "Journal" && (
+          jError ? <p className="error">Could not load the journal: {jError}</p>
+            : !journal ? <p className="empty">Loading journal…</p>
+              : <JournalTab rows={journal.rows} mode={journal.mode} sid={s.id} />
+        )}
         {tab === "Paper account" && (
           <Unavailable title="PAPER ACCOUNT mode" reason={research?.modes.PAPER_ACCOUNT?.reason ?? "Loading…"} />
         )}
@@ -182,6 +196,34 @@ function ResultsTab({ ev, error, rec }: { ev: Evaluation | null; error: string |
       ) : <p className="empty">No closed trades yet in this replay.</p>}
       <h3>Limitations</h3>
       <ul className="notes">{ev.limitations.map((l) => <li key={l}>{l}</li>)}</ul>
+    </>
+  );
+}
+
+function JournalTab({ rows, mode, sid }: { rows: JournalRow[]; mode: string; sid: string }) {
+  if (!rows.length) return <p className="empty">No sessions replayed yet.</p>;
+  const inactive = rows.filter((r) => r.decision !== "enter").length;
+  return (
+    <>
+      <p className="notice"><ModeBadge mode={mode} /> One row per session, including sessions with no trade
+        ({inactive} of {rows.length} without a trade). Same records as the city and the Results tab.{" "}
+        <a href={`/api/strategies/${encodeURIComponent(sid)}/journal.csv`} download>Download CSV</a></p>
+      <table>
+        <thead><tr><th>Session</th><th>Signal</th><th>Decision</th><th>Risk</th><th>Exposure</th><th>Net</th><th>Costs</th><th>Outcome</th><th>Equity after</th></tr></thead>
+        <tbody>{rows.slice().reverse().map((r) => (
+          <tr key={r.session_date} className={r.decision === "enter" ? "" : "inactive"}>
+            <td>{r.session_date}</td>
+            <td>{r.signal_direction === 1 ? "LONG" : r.signal_direction === -1 ? "SHORT" : "none"} {pct(r.signal_r1, 3)}</td>
+            <td>{r.decision.toUpperCase()}{r.decision_reason ? `: ${r.decision_reason}` : ""}</td>
+            <td>{r.risk_status}</td>
+            <td>{r.shares ? `${r.shares} sh, ${pct(r.exposure_of_equity, 0)}` : "—"}</td>
+            <td className={pnlClass(r.net_pnl)}>{r.net_pnl === null ? "—" : money(r.net_pnl, true)}</td>
+            <td>{r.modeled_costs === null ? "—" : money(r.modeled_costs)}</td>
+            <td>{r.outcome ? `${r.outcome} · ${r.exit_reason}` : "—"}{r.flags ? ` (${r.flags})` : ""}</td>
+            <td>{money(r.equity_after)}</td>
+          </tr>))}
+        </tbody>
+      </table>
     </>
   );
 }
