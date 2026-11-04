@@ -110,3 +110,20 @@ def test_verify_refuses_held_out_sample_before_network(monkeypatch, capsys):
 
 def test_paper_url_is_paper():
     assert alpaca_client.PAPER_TRADING_URL == "https://paper-api.alpaca.markets"
+
+
+def test_rate_limit_is_retried_then_succeeds():
+    http = FakeHttp([FakeResponse(429, {"message": "too many requests"}),
+                     FakeResponse(200, {"bars": {"AAPL": [{"t": "a"}]}, "next_page_token": None})])
+    waits = []
+    client = ReadOnlyAlpacaClient(FAKE_KEY, FAKE_SECRET, http=http, sleep=waits.append)
+    assert client.get_bars("AAPL", "1Day", "s", "e", feed="sip", adjustment="raw")["bars"] == [{"t": "a"}]
+    assert len(http.calls) == 2 and waits == [alpaca_client.RATE_LIMIT_WAIT_SECONDS]
+
+
+def test_rate_limit_gives_up_after_bounded_retries():
+    http = FakeHttp([FakeResponse(429, {"message": "slow down"})] * (alpaca_client.RATE_LIMIT_RETRIES + 1))
+    client = ReadOnlyAlpacaClient(FAKE_KEY, FAKE_SECRET, http=http, sleep=lambda s: None)
+    with pytest.raises(AlpacaAccessError) as err:
+        client.get_account()
+    assert err.value.status_code == 429 and len(http.calls) == alpaca_client.RATE_LIMIT_RETRIES + 1

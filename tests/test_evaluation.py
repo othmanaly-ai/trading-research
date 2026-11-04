@@ -182,8 +182,8 @@ def test_spec_version_and_hash():
     assert info["target_defined"] is False
 
 
-def test_research_status_is_honest():
-    r = research_status()
+def test_research_status_is_honest(tmp_path):
+    r = research_status(history_root=tmp_path)          # no stored data: independent of this machine
     assert r["modes"]["DEMO"]["available"] is True
     for m in ("HISTORICAL_REPLAY", "SIMULATION", "PAPER_ACCOUNT"):
         assert r["modes"][m]["available"] is False and r["modes"][m]["reason"]

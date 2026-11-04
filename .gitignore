@@ -36,6 +36,8 @@ journal/
 *.pickle
 # ...except the experiment run logs, which are part of the research record.
 !research/*/variants.csv
+!research/*/experiment_attempts.csv
+!research/*/inspection_runs.csv
 
 # --- Python environment and caches ---
 .venv/

@@ -1,0 +1,130 @@
+{
+  "source": "alpaca_rest",
+  "symbol": "SPY",
+  "requested_feed": "sip",
+  "actual_feed": "sip (request accepted; API does not echo feed)",
+  "adjustment": "all",
+  "interval": "1Min (regular session only) + 1Day",
+  "calendar": "XNYS",
+  "timezone_stored": "UTC plus America/New_York column",
+  "requested_range": [
+    "2015-11-02",
+    "2021-12-31"
+  ],
+  "retrieved_utc": "2026-11-04T00:12:54Z",
+  "requests": {
+    "minute_pages": 146,
+    "minute_rows_all_hours": 1134616,
+    "minute_chunks": 74,
+    "daily_pages": 1,
+    "daily_rows": 1511,
+    "pagination_complete": true,
+    "minute_requested": [
+      "2015-11-02T14:30:00Z",
+      "2021-12-31T21:00:00Z"
+    ],
+    "minute_received": [
+      "2016-01-04T14:30:00Z",
+      "2021-12-31T21:00:00Z"
+    ],
+    "daily_received": [
+      "2016-01-04T05:00:00Z",
+      "2021-12-31T05:00:00Z"
+    ]
+  },
+  "daily_structure": {
+    "rows": 1511,
+    "duplicate_timestamps": 0,
+    "out_of_order": 0,
+    "nonfinite_values": 0,
+    "invalid_ohlc_rows": 0,
+    "nonpositive_price_rows": 0,
+    "negative_volume_rows": 0
+  },
+  "summary": {
+    "expected_sessions": 1553,
+    "usable_sessions": 1511,
+    "by_period": {
+      "development": 1511,
+      "validation": 0,
+      "final": 0
+    }
+  },
+  "pre_2016_sessions_without_data": 42,
+  "development_minute_coverage": [
+    587030,
+    587130
+  ],
+  "development_sessions_with_missing_minutes": {
+    "2016-02-02": {
+      "missing_minutes": 9,
+      "examples_et": [
+        "2016-02-02 11:19:00-05:00",
+        "2016-02-02 11:20:00-05:00",
+        "2016-02-02 11:21:00-05:00"
+      ]
+    },
+    "2019-08-12": {
+      "missing_minutes": 30,
+      "examples_et": [
+        "2019-08-12 15:29:00-04:00",
+        "2019-08-12 15:30:00-04:00",
+        "2019-08-12 15:32:00-04:00"
+      ]
+    },
+    "2020-03-09": {
+      "missing_minutes": 14,
+      "examples_et": [
+        "2020-03-09 09:35:00-04:00",
+        "2020-03-09 09:36:00-04:00",
+        "2020-03-09 09:37:00-04:00"
+      ]
+    },
+    "2020-03-12": {
+      "missing_minutes": 14,
+      "examples_et": [
+        "2020-03-12 09:36:00-04:00",
+        "2020-03-12 09:37:00-04:00",
+        "2020-03-12 09:38:00-04:00"
+      ]
+    },
+    "2020-03-16": {
+      "missing_minutes": 14,
+      "examples_et": [
+        "2020-03-16 09:31:00-04:00",
+        "2020-03-16 09:32:00-04:00",
+        "2020-03-16 09:33:00-04:00"
+      ]
+    },
+    "2020-03-18": {
+      "missing_minutes": 14,
+      "examples_et": [
+        "2020-03-18 12:57:00-04:00",
+        "2020-03-18 12:58:00-04:00",
+        "2020-03-18 12:59:00-04:00"
+      ]
+    },
+    "2021-05-05": {
+      "missing_minutes": 5,
+      "examples_et": [
+        "2021-05-05 11:27:00-04:00",
+        "2021-05-05 11:28:00-04:00",
+        "2021-05-05 11:29:00-04:00"
+      ]
+    }
+  },
+  "transformations": [
+    "raw/ holds the API bars unmodified (all hours), one minute file per calendar month.",
+    "minute/<date>.csv keeps bars whose start is in [session open, session close) per the XNYS calendar, so pre-market and after-hours bars are excluded; prices are not altered.",
+    "No gaps are filled and no bars are interpolated. Missing minutes are reported, not repaired.",
+    "A session is unusable if it has no regular-session bars, fails structural checks, or has no daily bar; unusable sessions are kept on disk but never fed to the engine."
+  ],
+  "limitations": [
+    "Alpaca creates a minute bar only when a trade printed; a missing minute may mean no trades on this feed rather than lost data (much more common on IEX than SIP).",
+    "The API does not echo which feed served the data.",
+    "Daily bars are compared to minute bars only by session date, not by price."
+  ],
+  "local_manifest_sha256_16": "059d596915fb6c02",
+  "local_location": "data/history/SPY/sip/all/ (git-ignored, about 132 MB: raw/, minute/, daily.csv, manifest.json)",
+  "refetch_command": ".venv\\Scripts\\python -m trading.history --symbol SPY --feed sip --adjustment all --start 2015-11-02 --end 2021-12-31"
+}

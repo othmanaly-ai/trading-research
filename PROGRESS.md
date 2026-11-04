@@ -258,6 +258,22 @@ Known defects and limitations:
 - **Lock history:** `001-eaa09c9d5a` was archived in `locks/` with the reason.
 - **Tests:** `pytest -q`: 136 passed.
 
+## Development evaluation of 001-fd13f1fdef: FAILED (2026-11-04)
+
+- **Data:** `python -m trading.history --start 2015-11-02 --end 2021-12-31`. 74 monthly chunks,
+  146 pages, complete. 1,511 of 1,511 development sessions usable; 99.983% of minutes present.
+  - Alpaca returned nothing before 2016-01-04.
+  - No validation or final data was retrieved.
+- **Run:** `python -m trading.evaluate --period development`.
+  - Net -1.41% after base costs and -0.50% even at zero cost. Mean per-trade move before
+    costs -1.24 bp (SE 1.08); Sharpe CI [-2.72, -0.59].
+  - Every year was negative.
+  - It reached only the 10th percentile of random long/flat entries.
+  - It failed pass rules 1, 2, 4 and 5.
+  - Details: `research/001_intraday_momentum/RESULTS_development.md`.
+- **Also added:** a bounded HTTP 429 retry in the read-only client (2 tests); `trading/evaluate.py`.
+- **Recommendation:** reject the hypothesis; do not run validation for this variant.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

@@ -6,6 +6,7 @@ closes orders or positions, or changes account settings.
 """
 
 import os
+import time
 from pathlib import Path
 
 import requests
@@ -15,6 +16,8 @@ DATA_URL = "https://data.alpaca.markets"
 ALLOWED_HOSTS = (PAPER_TRADING_URL, DATA_URL)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+RATE_LIMIT_RETRIES = 5
+RATE_LIMIT_WAIT_SECONDS = 15
 
 # Account fields worth recording. Identifiers such as id and account_number
 # are deliberately left out of anything we save.
@@ -63,8 +66,9 @@ def load_credentials(env_file: Path | None = None) -> tuple[str, str]:
 
 
 class ReadOnlyAlpacaClient:
-    def __init__(self, key_id: str, secret_key: str, http=None, timeout: float = 30):
+    def __init__(self, key_id: str, secret_key: str, http=None, timeout: float = 30, sleep=time.sleep):
         self._http = http or requests.Session()
+        self._sleep = sleep
         self._headers = {"APCA-API-KEY-ID": key_id, "APCA-API-SECRET-KEY": secret_key}
         self._timeout = timeout
 
@@ -75,7 +79,12 @@ class ReadOnlyAlpacaClient:
         if base not in ALLOWED_HOSTS:
             raise ValueError(f"host not allowed: {base}")
         url = base + path
-        resp = self._http.get(url, headers=self._headers, params=params, timeout=self._timeout)
+        for attempt in range(RATE_LIMIT_RETRIES + 1):
+            resp = self._http.get(url, headers=self._headers, params=params, timeout=self._timeout)
+            if resp.status_code != 429 or attempt == RATE_LIMIT_RETRIES:
+                break
+            # Rate limited (HTTP 429): wait and retry the same GET, a bounded number of times.
+            self._sleep(RATE_LIMIT_WAIT_SECONDS * (attempt + 1))
         if resp.status_code != 200:
             try:
                 message = resp.json().get("message", resp.text)

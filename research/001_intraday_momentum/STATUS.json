@@ -1,0 +1,21 @@
+{
+  "experiment_id": "001-fd13f1fdef",
+  "spec_version": "1.3",
+  "spec_sha256": "0b32b30b3b33",
+  "status": "FAILED at development stage under the predefined criteria (SPEC section 14)",
+  "decided_utc": "2026-11-04",
+  "failed_rules": [
+    "1_positive_after_costs",
+    "2_beats_baselines",
+    "4_survives_top10_removal",
+    "5_neighbors_same_sign"
+  ],
+  "passed_rules": [
+    "3_drawdown_within_limit"
+  ],
+  "development_run_id": "20261104T001504609413Z-d11b3023b7bf",
+  "variant_id": "d11b3023b7bf",
+  "validation_data": "not retrieved, not inspected",
+  "final_data": "not retrieved, not inspected",
+  "next": "owner to choose: close as rejected, or approve a new experiment"
+}
