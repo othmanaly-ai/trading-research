@@ -126,8 +126,10 @@ class JobStore:
         field = "started_utc" if status == "running" else "finished_utc"
         self.db.execute(f"UPDATE jobs SET status=?, {field}=?, outputs_json=COALESCE(?, outputs_json), "
                         "evidence_json=COALESCE(?, evidence_json), error=? WHERE id=?",
-                        (status, _now(), json.dumps(outputs, default=str) if outputs is not None else None,
-                         json.dumps(evidence, default=str) if evidence is not None else None, error, job_id))
+                        (status, _now(),
+                         json.dumps(_finite(outputs), default=str, allow_nan=False) if outputs is not None else None,
+                         json.dumps(_finite(evidence), default=str, allow_nan=False) if evidence is not None else None,
+                         error, job_id))
         self.db.commit()
 
     def get(self, job_id):
@@ -147,6 +149,17 @@ class JobStore:
         return {"pipelines": pipes, "jobs": jobs, "workers": [{"worker": w, "kind": k, "version": v, "depends_on": d}
                                                               for w, k, v, d in WORKERS],
                 "roles": UNIMPLEMENTED_ROLES, "model_policy": MODEL_POLICY}
+
+
+def _finite(obj):
+    """Non-finite floats become None so stored records are valid strict JSON."""
+    if isinstance(obj, float):
+        return obj if obj == obj and obj not in (float("inf"), float("-inf")) else None
+    if isinstance(obj, dict):
+        return {k: _finite(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_finite(v) for v in obj]
+    return obj
 
 
 def _row(r) -> dict:

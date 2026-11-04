@@ -24,6 +24,7 @@ import argparse
 import csv
 import io
 import json
+import math
 import mimetypes
 import sys
 import threading
@@ -49,6 +50,17 @@ WEB_DIST = Path(__file__).resolve().parents[2] / "dashboard" / "web" / "dist"
 RESPONSIBILITIES = Path(__file__).resolve().parents[2] / "research" / "responsibilities.json"
 JOBS_DB = Path(__file__).resolve().parents[2] / "data" / "jobs" / "jobs.sqlite"
 ALPACA_CHECKS = Path(__file__).resolve().parents[2] / "data" / "alpaca"
+
+
+def strict_json(obj):
+    """Replace non-finite floats with None, recursively."""
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, dict):
+        return {k: strict_json(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [strict_json(v) for v in obj]
+    return obj
 
 
 def paper_account_reason() -> str:
@@ -244,7 +256,8 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
             self.end_headers()
 
         def _json(self, obj, status=200):
-            body = json.dumps(obj, default=str).encode()
+            # Strict JSON: NaN/Infinity are not valid JSON and break browsers, so send null.
+            body = json.dumps(strict_json(obj), default=str, allow_nan=False).encode()
             self._headers(status, "application/json", len(body))
             self.wfile.write(body)
 

@@ -128,3 +128,28 @@ def test_dashboard_endpoint_matches_store(env, monkeypatch, tmp_path):
         stop.set()
         httpd.shutdown()
         httpd.server_close()
+
+
+def test_api_and_store_emit_strict_json(env, monkeypatch, tmp_path):
+    """Regression: NaN in saved reports made /api/jobs invalid JSON for browsers."""
+    store, research = env
+    jobs.run_pipeline(EXPS[1], store, research, env={})
+    def reject(token):
+        raise ValueError(f"non-strict JSON constant {token}")
+    for row in store.db.execute("SELECT outputs_json, evidence_json FROM jobs"):
+        for text in row:
+            if text:
+                json.loads(text, parse_constant=reject)
+    from trading.dashboard import server
+    monkeypatch.setattr(server, "JOBS_DB", tmp_path / "jobs.sqlite")
+    httpd, ctrl, stop = server.create_server(None, 0, speed=3600)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    try:
+        base = f"http://127.0.0.1:{httpd.server_address[1]}"
+        for path in ("/api/jobs", "/api/research", "/api/meta", "/api/snapshot"):
+            with urllib.request.urlopen(base + path, timeout=10) as r:
+                json.loads(r.read(), parse_constant=reject)
+    finally:
+        stop.set()
+        httpd.shutdown()
+        httpd.server_close()
