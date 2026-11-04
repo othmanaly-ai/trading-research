@@ -300,6 +300,26 @@ Known defects and limitations:
   recomputed, and the gate fields were verified identical.
 - **Validation and final:** untouched. **Tests:** `pytest -q`: 161 passed.
 
+## Experiment 002 closed; research-job workflow; city restarted (2026-11-04)
+
+- **Experiment 002** is CLOSED (FAILED_DEVELOPMENT, commit 827a62c). The runner refuses all
+  new evaluations of closed experiments (tested); `--inspect` is read-only.
+- **Research jobs** (`trading/jobs.py`, commits b4d08e8 and d9c9783):
+  - a persisted SQLite store (`data/jobs/jobs.sqlite`, git-ignored)
+  - the pipeline ingest -> reconcile -> analysis -> rule_checks -> model_review -> report
+  - **Results:** both experiments reconcile with 0 discrepancies (9 and 13 checks).
+    model_review is **blocked** (no ANTHROPIC_API_KEY and no authorization); no model output
+    exists.
+  - **Tests:** success, missing and corrupt artifacts, failure recovery, retry/restart duplicate
+    prevention, tamper detection, cancel, dashboard/store consistency, strict JSON (171 pass).
+- **City:** "Research jobs" tab (real, not demo). The mode strip text was corrected: paper
+  account access verified via CLI (monitoring not implemented); simulation awaiting review;
+  historical replay verified to build from real stored data.
+- **Server:** restarted via the documented `demo-dashboard` launch configuration. One listener
+  on 127.0.0.1:8765 (this project, DEMO mode).
+- **Alpaca:** read-only verification re-run 2026-11-04 04:01 UTC with the current user-level
+  credentials (session values match): account ACTIVE, SPY SIP development sample complete.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca
