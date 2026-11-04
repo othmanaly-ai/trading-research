@@ -274,6 +274,18 @@ Known defects and limitations:
 - **Also added:** a bounded HTTP 429 retry in the read-only client (2 tests); `trading/evaluate.py`.
 - **Recommendation:** reject the hypothesis; do not run validation for this variant.
 
+## Experiment 001 CLOSED; experiment 002 candidates proposed (2026-11-04)
+
+- `research/001_intraday_momentum/STATUS.json` now reads CLOSED. `run_experiment` refuses
+  runs for a closed experiment (tested). The real refusal is logged in `experiment_attempts.csv`.
+- `research/EXPLORATION_LOG.md` records every look at historical data, including the
+  development-only trigger-frequency counts (no returns computed).
+- `research/NEXT_HYPOTHESES.md` holds two speculative candidates:
+  - **A:** long-only 30-minute opening-range breakout (recommended for testability)
+  - **B:** long-only gap-down reversal
+  - Owner to choose; nothing implemented.
+- **Tests:** `pytest -q`: 139 passed.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

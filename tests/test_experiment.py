@@ -135,3 +135,10 @@ def test_variant_budget_enforced(run, tmp_path):
 def test_variant_id_changes_with_params():
     assert variant_id(Params()) != variant_id(replace(Params(), stop_mult=1.5))
     assert variant_id(Params()) == variant_id(Params())
+
+
+def test_closed_experiment_refuses_further_runs(run, tmp_path):
+    (tmp_path / "STATUS.json").write_text(json.dumps({"status": "CLOSED: failed at development"}))
+    with pytest.raises(ExperimentRefused, match="closed"):
+        run("development")
+    assert attempts(tmp_path)[-1]["status"] == "refused"

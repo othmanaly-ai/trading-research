@@ -238,6 +238,11 @@ def run_experiment(days: dict[date, DayData], period: str, params: Params = EXPE
             "git_commit": _git_commit(), "period": period, "variant_id": variant_id(params),
             "params": json.dumps(params.as_dict(), sort_keys=True)}
     try:
+        status_path = log_dir / "STATUS.json"
+        if status_path.is_file():
+            status = json.loads(status_path.read_text(encoding="utf-8")).get("status", "")
+            if status.startswith("CLOSED"):
+                raise ExperimentRefused(f"experiment is closed ({status}); start a new experiment instead")
         lock = check_lock(limits, periods, lock_path or LOCK_PATH, primary=EXPERIMENT_PRIMARY)
         report = _evaluate(days, period, params, limits, start_equity, final_test, n_random, seed,
                            log_dir, results_dir, periods, lock)

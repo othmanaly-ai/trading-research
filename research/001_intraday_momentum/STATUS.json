@@ -2,7 +2,7 @@
   "experiment_id": "001-fd13f1fdef",
   "spec_version": "1.3",
   "spec_sha256": "0b32b30b3b33",
-  "status": "FAILED at development stage under the predefined criteria (SPEC section 14)",
+  "status": "CLOSED: failed at development stage under the predefined criteria (SPEC section 14)",
   "decided_utc": "2026-11-04",
   "failed_rules": [
     "1_positive_after_costs",
@@ -17,5 +17,17 @@
   "variant_id": "d11b3023b7bf",
   "validation_data": "not retrieved, not inspected",
   "final_data": "not retrieved, not inspected",
-  "next": "owner to choose: close as rejected, or approve a new experiment"
+  "next": "no further runs; validation and final periods remain untouched and unused by this experiment",
+  "closed_utc": "2026-11-04",
+  "closed_by": "owner decision 2026-11-04",
+  "records": [
+    "RESULTS_development.md (results, diagnosis, corrected gross/cost figures)",
+    "runs/20261104T001504609413Z-d11b3023b7bf.json",
+    "runs/...data_provenance.json",
+    "variants.csv",
+    "experiment_attempts.csv",
+    "diagnose_development.py",
+    "EXPERIMENT_LOCK.json",
+    "locks/001-eaa09c9d5a.json"
+  ]
 }
