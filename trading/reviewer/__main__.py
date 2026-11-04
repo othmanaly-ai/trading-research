@@ -10,7 +10,6 @@
 
 import argparse
 import json
-import os
 import sys
 
 from trading import jobs
@@ -33,7 +32,7 @@ def main(argv=None) -> int:
     store = budget.ReviewStore()
     try:
         if args.cmd == "status":
-            print(json.dumps(review.readiness(dict(os.environ), store), indent=2, default=str))
+            print(json.dumps(review.readiness(review.cli_env(), store), indent=2, default=str))
         elif args.cmd == "preview":
             pkg = evidence.build_package(args.experiment)
             user = prompt.render_user_message(pkg)
@@ -50,7 +49,7 @@ def main(argv=None) -> int:
                 print("Refusing: this makes a billable API call. Re-run with --i-authorize-one-paid-call.")
                 return 2
             store.recover_in_flight()
-            res = review.verify(args.experiment, dict(os.environ), store)
+            res = review.verify(args.experiment, review.cli_env(), store)
             print(json.dumps({k: v for k, v in res.items() if k != "review"}, indent=2, default=str))
             return 0 if res.get("verified") else 1
         elif args.cmd == "acknowledge":

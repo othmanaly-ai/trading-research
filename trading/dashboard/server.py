@@ -85,13 +85,17 @@ def paper_account_reason() -> str:
 REVIEW_ID = re.compile(r"^rv-[A-Za-z0-9-]{1,80}$")
 
 
+def _server_env() -> dict:
+    from trading.reviewer import review
+    return review.server_env()
+
+
 def reviewer_status() -> dict:
-    """Readiness gates (presence checks only; no secret is read or returned) and recent records."""
-    import os
+    """Readiness gates (no secret is read or returned) and recent records. Server context: no keys."""
     from trading.reviewer import budget, review
     store = budget.ReviewStore()
     try:
-        r = review.readiness(dict(os.environ), store)
+        r = review.readiness(review.server_env(), store)
         r["recent"] = store.recent(10)
     finally:
         store.close()
@@ -361,7 +365,7 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
             if path == "/api/pipelines/preview":
                 exp = parse_qs(urlparse(self.path).query).get("experiment", [""])[0]
                 try:
-                    return self._json(with_store(lambda st: jobs_mod.preview(exp, st, JOBS_RESEARCH_DIR)))
+                    return self._json(with_store(lambda st: jobs_mod.preview(exp, st, JOBS_RESEARCH_DIR, env=_server_env())))
                 except ValueError as exc:
                     return self._json({"error": str(exc)}, 400)
             if path == "/api/reviewer/status":
@@ -430,7 +434,7 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
                             or not isinstance(body.get("pipeline", "reconcile_report"), str):
                         raise ValueError("expected only {experiment, pipeline} as strings")
                     pid, created = with_store(lambda st: jobs_mod.plan_pipeline(
-                        body["experiment"], st, JOBS_RESEARCH_DIR, body.get("pipeline", "reconcile_report")))
+                        body["experiment"], st, JOBS_RESEARCH_DIR, body.get("pipeline", "reconcile_report"), env=_server_env()))
                     return self._json({"pipeline_id": pid, "created": created,
                                        "note": "queued for the background runner" if created
                                        else "an active pipeline already exists; no new work created"},

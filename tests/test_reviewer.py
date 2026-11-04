@@ -463,7 +463,8 @@ def test_reviewer_endpoints_report_gates_without_secrets(setup, monkeypatch):
         st = json.loads(raw)
         assert st["available"] is False and st["label"].startswith("automated second review")
         key = next(c for c in st["checks"] if c["check"].startswith("API key"))
-        assert key["ok"] is True and "value not read" in key["detail"]
+        assert key["ok"] is False and "never loads API keys" in key["detail"]      # server never checks keys
+        assert st["context"].startswith("dashboard server")
         with urllib.request.urlopen(base + f"/api/reviews/{done['review_id']}", timeout=10) as r:
             rec = json.loads(r.read())
         assert rec["review"]["failed_gates"] and rec["package"]["items"] and rec["mock"] is True
@@ -475,3 +476,79 @@ def test_reviewer_endpoints_report_gates_without_secrets(setup, monkeypatch):
         stop.set()
         httpd.shutdown()
         httpd.server_close()
+
+
+# ---- credentials stay out of the dashboard server ----------------------------------------
+
+def test_server_env_strips_credentials(monkeypatch):
+    for name in review.SECRET_NAMES:
+        monkeypatch.setenv(name, "TEST-SECRET")
+    env = review.server_env()
+    assert not any(name in env for name in review.SECRET_NAMES) and env[review.SERVER_MARKER] == "1"
+
+
+def test_dashboard_context_never_makes_billable_calls_but_reuses_cache(setup, monkeypatch):
+    store, research, _ = setup
+    write_auth()
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "TEST-SECRET")
+    real = providers.AnthropicProvider("claude-opus-5-5", review.server_env())
+    res = review.run_review(EXPS[1], research, review.server_env(), store, run_ref="dash", provider=real,
+                            auth={**AUTH, "model": "claude-opus-5-5"})
+    assert res["status"] == "blocked" and res["reasons"] == [review.CLI_ONLY] and store.recent() == []
+    # A review completed from the command line (here: MOCK named like the real provider) is reused.
+    pkg = evidence.build_package(EXPS[1], research)
+    cli = MockProvider([ok(good_answer(pkg))], model="claude-opus-5-5")
+    cli.name = "anthropic"
+    done = run(store, research, cli, auth={**AUTH, "model": "claude-opus-5-5"})
+    again = review.run_review(EXPS[1], research, review.server_env(), store, run_ref="dash2", provider=real,
+                              auth={**AUTH, "model": "claude-opus-5-5"})
+    assert again["status"] == "completed" and again["cached"] and again["review_id"] == done["review_id"]
+
+
+def test_server_job_runner_passes_no_keys(setup, tmp_path, monkeypatch):
+    seen = {}
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "TEST-SECRET")
+    monkeypatch.setattr(jobs, "execute_pipeline", lambda pid, st, rd, env=None: seen.setdefault("env", env))
+    store = jobs.JobStore(tmp_path / "j.sqlite")
+    store.db.execute("INSERT INTO pipelines (id, experiment, created_utc, status, job_ids_json, pipeline, "
+                     "cancel_requested) VALUES ('p1','x','t','queued','[]','reconcile_report',0)")
+    store.db.commit()
+    store.close()
+    runner = jobs.JobRunner(tmp_path / "j.sqlite", tmp_path, poll=0.01)
+    runner.start()
+    import time
+    for _ in range(200):
+        if "env" in seen:
+            break
+        time.sleep(0.01)
+    runner.stop_event.set()
+    runner.join(2)
+    assert "ANTHROPIC_API_KEY" not in seen["env"] and seen["env"][review.SERVER_MARKER] == "1"
+
+
+def test_cli_env_reads_key_from_dotenv_and_bom_authorization(tmp_path, monkeypatch):
+    monkeypatch.setattr(jobs, "PROJECT_ROOT", tmp_path)
+    (tmp_path / ".env").write_text('APCA_API_KEY_ID=x\nANTHROPIC_API_KEY="test-from-dotenv"\n', encoding="utf-8")
+    assert review.cli_env()["ANTHROPIC_API_KEY"] == "test-from-dotenv"
+    budget.AUTH_PATH.write_text(json.dumps(AUTH), encoding="utf-8-sig")             # Notepad-style BOM
+    auth, problems = budget.load_authorization()
+    assert problems == [] and auth["model"] == "claude-sonnet-5-5"
+
+
+def test_real_sdk_error_mapping_against_closed_local_port(monkeypatch):
+    """Uses the INSTALLED anthropic SDK, pointed at a closed port on this machine: no request
+    reaches Anthropic, nothing is billed. Checks that real SDK exceptions map to 'uncertain'."""
+    pytest.importorskip("anthropic")
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", "http://127.0.0.1:9")
+    p = providers.AnthropicProvider("claude-opus-5-5", {"ANTHROPIC_API_KEY": "test-not-a-key"})
+    assert p.unavailable_reasons() == []
+    with pytest.raises(providers.ProviderError) as err:
+        p.complete("sys", "user", prompt.OUTPUT_SCHEMA, 16, "low", 3)
+    assert err.value.kind == "uncertain"
+
+
+def test_dashboard_blocker_wording_without_authorization(setup):
+    store, research, _ = setup
+    res = review.run_review(EXPS[1], research, review.server_env(), store, run_ref="dash")
+    text = "; ".join(res["reasons"])
+    assert "no owner authorization" in text and review.CLI_ONLY in text and "ANTHROPIC_API_KEY is not set" not in text

@@ -95,7 +95,7 @@ interface Readiness {
   available: boolean; label: string; checks: { check: string; ok: boolean; detail: string }[];
   month_spent_usd: number; prices_per_million: Record<string, [number, number]>; price_source: string;
   proposed_limits: Record<string, string | number>; hard_limits: Record<string, number>; prompt_version: string;
-  authorization: Record<string, unknown> | null;
+  authorization: Record<string, unknown> | null; context: string;
   recent: { id: string; status: string; model: string; experiment: string; charged_usd: number; mock: boolean; finished_utc: string | null }[];
 }
 
@@ -109,6 +109,9 @@ export function ReviewerReadiness({ tick }: { tick: number }) {
     <div className="readiness">
       <p className={r.available ? "tone-ok" : "tone-warn"}><strong>Model reviewer: {r.available ? "AVAILABLE" : "UNAVAILABLE"}</strong>
         {" "}({r.label}). Prompt {r.prompt_version}. Charged this month: ${r.month_spent_usd.toFixed(4)}.</p>
+      <p className="small">Context: {r.context}. Paid reviews run only from the command line
+        (<code>python -m trading.jobs run --experiment …</code>); pipelines started here reuse a completed review from
+        the cache and never trigger a charge.</p>
       <table><thead><tr><th>Gate</th><th>OK</th><th>Detail</th></tr></thead>
         <tbody>{r.checks.map((c) => <tr key={c.check}><td>{c.check}</td><td className={c.ok ? "tone-ok" : "tone-danger"}>{c.ok ? "yes" : "NO"}</td><td>{c.detail}</td></tr>)}</tbody></table>
       <p className="small">Proposed limits (not authorized): {Object.entries(r.proposed_limits).map(([k, v]) => `${k} ${v}`).join(" · ")}</p>

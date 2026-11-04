@@ -48,6 +48,27 @@ package. Findings are labelled:
 - DEDUCTION
 - SUGGESTION (speculative)
 
+## Owner decision (2026-11-04)
+
+Provider **Anthropic**, model **`claude-opus-5-5`**, budget **$5.00 per month**, with the proposed
+per-run limits. The `anthropic` SDK 2.4.0 is installed and pinned. Still needed from the owner:
+- the authorization file
+- the API key in your environment or `.env`
+- running the verification call
+
+## Where paid calls can happen
+
+Only on the command line:
+- `python -m trading.reviewer verify ...` (the first call)
+- `python -m trading.jobs run --experiment ...` (the pipeline)
+
+These read `ANTHROPIC_API_KEY` from the environment or from the git-ignored `.env`.
+
+The dashboard server never loads API keys. Its job runner strips credential variables before
+running any job. A pipeline started from the browser reuses a completed review from the cache,
+which costs $0. Otherwise it reports that the review must be run from the command line. A browser
+click can never cause a charge.
+
 ## Provider options
 
 | Option | Status here | Billing |
@@ -126,10 +147,9 @@ Each attempt is stored in `data/reviews/reviews.sqlite` (git-ignored) with:
 ## To enable it (owner steps; nothing here is done automatically)
 
 1. Choose a provider and model (only Anthropic is implemented) and a budget.
-2. Create a Claude Console API key and set `ANTHROPIC_API_KEY` in your own environment. Never
-   paste it into chat.
-3. Install the SDK: `.venv\Scripts\python -m pip install anthropic`, then update
-   `requirements.lock`.
+2. Create a Claude Console API key. Put it in `.env` as `ANTHROPIC_API_KEY=...`, or set it as a
+   Windows user environment variable and open a new terminal. Never paste it into chat.
+3. SDK: already installed and pinned (`anthropic==2.4.0`).
 4. Write `research/MODEL_REVIEW_AUTHORIZATION.json` with your values. Template:
 
 ```json

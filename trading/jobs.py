@@ -53,7 +53,7 @@ WORKERS = [
     ("reconcile", "deterministic", "1", ["ingest"]),
     ("analysis", "deterministic", "1", ["ingest"]),
     ("rule_checks", "deterministic", "1", ["reconcile", "analysis"]),
-    ("model_review", "model", "1", ["analysis", "rule_checks"]),
+    ("model_review", "model", "2", ["analysis", "rule_checks"]),
     ("report", "deterministic", "1", ["reconcile", "analysis", "rule_checks"]),
 ]
 UNIMPLEMENTED_ROLES = [
@@ -378,13 +378,16 @@ def model_review(experiment: str, research_dir: Path, env: dict, pipeline_id: st
                        "charged_usd": res.get("charged_usd")}), f"{res['status'].upper()}: {res.get('error')}"
 
 
-def _review_availability() -> str:
+def _review_availability(env) -> str:
     from trading.reviewer import budget, review
     store = budget.ReviewStore()
     try:
-        r = review.readiness(dict(os.environ), store)
+        r = review.readiness(env, store)
     finally:
         store.close()
+    if env.get(review.SERVER_MARKER):
+        return ("dashboard: reuses a completed review from the cache if one matches; otherwise no call. "
+                + review.CLI_ONLY)
     if r["available"]:
         return "automated second review AVAILABLE: may make one budgeted, billable call unless a cached review matches"
     missing = [c["check"] for c in r["checks"] if not c["ok"]]
@@ -469,28 +472,29 @@ def inventory(experiment: str, research_dir: Path = RESEARCH_DIR) -> dict:
     return out
 
 
-def preview(experiment: str, store: "JobStore", research_dir: Path = RESEARCH_DIR) -> dict:
+def preview(experiment: str, store: "JobStore", research_dir: Path = RESEARCH_DIR, env=None) -> dict:
     """What starting the pipeline would do, without creating anything."""
     _validate(experiment)
-    _, keys = _keys(research_dir / experiment)
+    env = os.environ if env is None else env
+    _, keys = _keys(research_dir / experiment, env)
     tasks = []
     for worker, kind, version, deps in WORKERS:
         row = store.reusable(worker, experiment, keys[worker])
         action = f"reuse {row['status']} record {row['id']}" if row is not None else "will run"
         if worker == "model_review":
-            action += f" ({_review_availability()})"
+            action += f" ({_review_availability(env)})"
         tasks.append({"worker": worker, "kind": kind, "version": version, "depends_on": deps, "action": action})
     return {"experiment": experiment, "pipeline": "reconcile_report", "description": PIPELINES["reconcile_report"],
             "active_pipeline": store.active_pipeline(experiment), "tasks": tasks}
 
 
 def plan_pipeline(experiment: str, store: "JobStore", research_dir: Path = RESEARCH_DIR,
-                  pipeline: str = "reconcile_report") -> tuple[str, bool]:
+                  pipeline: str = "reconcile_report", env=None) -> tuple[str, bool]:
     """Create a queued pipeline, reusing completed work. If one is already queued or running for
     this experiment, return it instead: repeated clicks never duplicate work."""
     _validate(experiment, pipeline)
     exp_dir = research_dir / experiment
-    artifact_key, keys = _keys(exp_dir)
+    artifact_key, keys = _keys(exp_dir, env)
     # One write transaction for check + insert: simultaneous requests (threads or processes)
     # serialize here, so only the first creates a pipeline and the rest see it as active.
     if store.db.in_transaction:
@@ -625,7 +629,7 @@ def execute_pipeline(pipeline_id: str, store: "JobStore", research_dir: Path = R
 def run_pipeline(experiment: str, store: "JobStore", research_dir: Path = RESEARCH_DIR, env=None) -> dict:
     """Synchronous plan + execute (CLI and tests). Reuses an already active pipeline."""
     store.recover_interrupted()
-    pipeline_id, created = plan_pipeline(experiment, store, research_dir)
+    pipeline_id, created = plan_pipeline(experiment, store, research_dir, env=env)
     if not created:
         p = store.pipeline(pipeline_id)
         return {"pipeline_id": pipeline_id, "status": p["status"],
@@ -644,7 +648,8 @@ class JobRunner(threading.Thread):
     def run(self):
         store = JobStore(self.db_path)
         store.recover_interrupted()
-        from trading.reviewer import budget
+        from trading.reviewer import budget, review
+        server_env = review.server_env()        # the server never passes API keys to any job
         rstore = budget.ReviewStore()
         try:
             rstore.recover_in_flight()          # a review call cut off by a restart is UNCERTAIN, not done
@@ -654,7 +659,7 @@ class JobRunner(threading.Thread):
             while not self.stop_event.wait(self.poll):
                 pid = store.next_queued_pipeline()
                 if pid:
-                    execute_pipeline(pid, store, self.research_dir)
+                    execute_pipeline(pid, store, self.research_dir, env=server_env)
         finally:
             store.close()
 
@@ -671,7 +676,8 @@ def main(argv=None) -> int:
     store = JobStore()
     try:
         if args.cmd == "run":
-            print(json.dumps(run_pipeline(args.experiment, store), indent=2))
+            from trading.reviewer import review
+            print(json.dumps(run_pipeline(args.experiment, store, env=review.cli_env()), indent=2))
         elif args.cmd == "list":
             for j in store.snapshot()["jobs"]:
                 print(f"{j['created_utc']}  {j['status']:9s}  {j['id']}  {j['error'] or ''}")

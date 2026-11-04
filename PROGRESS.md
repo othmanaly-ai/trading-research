@@ -386,6 +386,27 @@ pipeline -> watch progress -> cancel if needed -> open the report.
   your own environment, SDK install, then one approved verification call. See `docs/MODEL_REVIEW.md`.
 - **Tests:** 223 pass.
 
+## Owner chose Anthropic Opus 5.5, $5/month (2026-11-04)
+
+- **Done:**
+  - `anthropic==2.4.0` installed and pinned (`requirements.txt`, `requirements.lock`). Only new
+    packages were added; nothing else was upgraded.
+  - **Credential separation:** paid reviews run only from the command line
+    (`trading.jobs run`, `trading.reviewer verify`), which read `ANTHROPIC_API_KEY` from the
+    environment or `.env`. The dashboard server strips credential variables before any job runs.
+    Browser-started pipelines reuse cached reviews or report that the review must run from the
+    command line; a click can never cause a charge.
+  - The authorization file may contain a byte-order mark (Notepad).
+- **Tested:**
+  - the separation, `.env` reading and the byte-order-mark case
+  - real SDK error mapping against a closed local port (no request left this machine)
+  - 229 tests pass
+- **Still not done (owner steps):**
+  - write `research/MODEL_REVIEW_AUTHORIZATION.json`
+  - set the API key in your environment or `.env`
+  - run the verification call
+- **No paid call has been made.** Model review remains UNAVAILABLE.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

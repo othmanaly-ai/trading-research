@@ -72,7 +72,7 @@ def test_experiments_and_preview(setup):
     assert all(a["present"] for e in body["experiments"] for a in e["artifacts"])
     code, prev = call(base, "/api/pipelines/preview?experiment=002_opening_range_breakout")
     assert code == 200 and [t["worker"] for t in prev["tasks"]][0] == "ingest"
-    assert "UNAVAILABLE: no model call" in next(t for t in prev["tasks"] if t["worker"] == "model_review")["action"]
+    assert "never loads API keys" in next(t for t in prev["tasks"] if t["worker"] == "model_review")["action"]
     assert call(base, "/api/pipelines/preview?experiment=../etc")[0] == 400
 
 

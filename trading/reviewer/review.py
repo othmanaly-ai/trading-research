@@ -17,6 +17,7 @@ other 5xx) are recorded with the full reservation charged and are never repeated
 import hashlib
 import json
 import math
+import os
 import time
 import uuid
 from pathlib import Path
@@ -28,11 +29,37 @@ TIMEOUT_S = 180.0
 RETRY_DELAYS = (2.0, 8.0)
 MAX_RETRY_AFTER = 30.0
 SLEEP = time.sleep                  # replaced in tests
+SERVER_MARKER = "TRADING_DASHBOARD_SERVER"
+SECRET_NAMES = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "APCA_API_KEY_ID", "APCA_API_SECRET_KEY")
+CLI_ONLY = ("billable reviews run only from the command line "
+            "(python -m trading.jobs run --experiment <name>); the dashboard server never loads API keys "
+            "and reuses a completed review from the cache when one exists")
 COST_BASIS = "measured: provider-reported token usage x local price table (estimate; invoice is authoritative)"
 
 
 def _sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def server_env() -> dict:
+    """Environment for work done inside the dashboard server: credentials removed, marker added."""
+    env = {k: v for k, v in os.environ.items() if k not in SECRET_NAMES}
+    env[SERVER_MARKER] = "1"
+    return env
+
+
+def cli_env() -> dict:
+    """Environment for command-line runs: process environment, then ANTHROPIC_API_KEY from the
+    project's git-ignored .env file if it is not set. The value is passed to the SDK only."""
+    env = dict(os.environ)
+    if not env.get("ANTHROPIC_API_KEY"):
+        path = jobs.PROJECT_ROOT / ".env"
+        if path.is_file():
+            for line in path.read_text(encoding="utf-8-sig").splitlines():
+                name, sep, value = line.strip().partition("=")
+                if sep and name.strip() == "ANTHROPIC_API_KEY" and value.strip():
+                    env["ANTHROPIC_API_KEY"] = value.strip().strip('"').strip("'")
+    return env
 
 
 def cache_key(provider: str, model: str, fingerprint: str) -> str:
@@ -60,12 +87,17 @@ def readiness(env: dict, store: budget.ReviewStore, auth_path: Path | None = Non
         {"check": "API key present in environment", "ok": bool(env.get("ANTHROPIC_API_KEY")),
          "detail": "present (value not read here)" if env.get("ANTHROPIC_API_KEY") else "ANTHROPIC_API_KEY not set"},
     ]
+    if env.get(SERVER_MARKER):
+        checks[3] = {"check": "API key present in environment", "ok": False,
+                     "detail": "not checked here: the dashboard server never loads API keys. "
+                               "Run python -m trading.reviewer status in a terminal for the command-line view."}
     ver = store.verified("anthropic", model, prompt.PROMPT_VERSION) if model else None
     checks.append({"check": "real integration verified by one owner-approved paid call", "ok": ver is not None,
                    "detail": f"verified {ver['verified_utc']} (review {ver['review_id']})" if ver
                    else "not verified; model review stays UNAVAILABLE"})
     del prov
     return {"available": all(c["ok"] for c in checks), "checks": checks, "authorization": auth,
+            "context": "dashboard server (no keys; cached reviews only)" if env.get(SERVER_MARKER) else "command line",
             "month_spent_usd": round(store.month_spent(), 6), "prices_per_million": budget.PRICES,
             "price_source": budget.PRICE_SOURCE, "proposed_limits": budget.PROPOSED,
             "hard_limits": budget.HARD_LIMITS, "prompt_version": prompt.PROMPT_VERSION}
@@ -76,7 +108,8 @@ def gate_fingerprint(env: dict, store: budget.ReviewStore, auth_path: Path | Non
     path = auth_path or budget.AUTH_PATH
     auth_sha = _sha(path.read_text(encoding="utf-8")) if path.is_file() else None
     r = readiness(env, store, auth_path)
-    return _sha(json.dumps([auth_sha, [c["ok"] for c in r["checks"]], prompt.PROMPT_VERSION]))
+    return _sha(json.dumps([auth_sha, [c["ok"] for c in r["checks"]], prompt.PROMPT_VERSION,
+                            bool(env.get(SERVER_MARKER))]))
 
 
 def _blocked(reasons: list[str], **extra) -> dict:
@@ -98,7 +131,10 @@ def run_review(experiment: str, research_dir: Path, env: dict, store: budget.Rev
         auth, problems = budget.load_authorization(auth_path)
         reasons += problems
     if auth is None:
-        reasons += providers.AnthropicProvider("unset", env).unavailable_reasons()
+        if env.get(SERVER_MARKER):
+            reasons.append(CLI_ONLY)
+        else:
+            reasons += providers.AnthropicProvider("unset", env).unavailable_reasons()
         reasons.append("real integration not verified")
         return _blocked(reasons, evidence_fingerprint=package["fingerprint"])
 
@@ -111,6 +147,8 @@ def run_review(experiment: str, research_dir: Path, env: dict, store: budget.Rev
                 "prompt_version": hit["prompt_version"], "mock": hit["mock"],
                 "note": f"reused completed review {hit['id']} (same evidence, prompt and model); no new call"}
 
+    if env.get(SERVER_MARKER) and not provider.mock:
+        return _blocked([CLI_ONLY], evidence_fingerprint=package["fingerprint"], cache_key=key)
     reasons += provider.unavailable_reasons()
     if not verification_call and not provider.mock and not store.verified(provider.name, provider.model,
                                                                           prompt.PROMPT_VERSION):

@@ -63,7 +63,7 @@ def load_authorization(path: Path | None = None) -> tuple[dict | None, list[str]
     if not path.is_file():
         return None, [f"no owner authorization file ({jobs._rel(path)})"]
     try:
-        auth = json.loads(path.read_text(encoding="utf-8"))
+        auth = json.loads(path.read_text(encoding="utf-8-sig"))      # tolerate a Notepad byte-order mark
     except (OSError, ValueError) as exc:
         return None, [f"authorization file unreadable: {type(exc).__name__}"]
     problems = [f"authorization missing field {k!r}" for k in REQUIRED if k not in auth]

@@ -76,6 +76,8 @@ Exit codes for the data check: 0 = success, 1 = API refused or failed, 2 = no cr
 - Keep the review UNAVAILABLE until `python -m trading.reviewer verify ... --i-authorize-one-paid-call`
   has succeeded with a real provider. Mock results never count as verification.
 - Never repeat a billable call after an uncertain or failed outcome without an acknowledgement.
+- Paid calls only from the command line (`trading.jobs run`, `trading.reviewer verify`). The dashboard
+  server never loads API keys (`review.server_env()` strips them); browser runs use cached reviews only.
 
 ## Experiments
 
