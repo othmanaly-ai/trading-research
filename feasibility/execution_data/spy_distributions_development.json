@@ -1,0 +1,228 @@
+{
+ "label": "SPY distribution calendar, development period only (2016-01-04 to 2021-12-31). RETROSPECTIVE classification source.",
+ "source": {
+  "publisher": "State Street Global Advisors (issuer/sponsor of SPDR S&P 500 ETF Trust)",
+  "url": "https://www.ssga.com/us/en/intermediary/resources/documents/etf-dividend-distributions",
+  "section": "Historical Distributions, row 'State Street SPDR S&P 500 ETF Trust', expanded",
+  "retrieved_utc": "2026-11-04T23:13:40Z",
+  "retrieval_method": "in-app browser, page DOM read; no file download",
+  "instrument": {
+   "ticker": "SPY",
+   "cusip": "78462F103",
+   "isin": "US78462F1030",
+   "listing": "NYSE Arca, listed 1993-01-22 (issuer fund page, retrieved 2026-11-04)"
+  },
+  "publication_dates": "none shown on the page; the page is the issuer's current history, not a point-in-time record",
+  "page_coverage": "continuous quarterly history 1993-03-19 to 2026-09-18 as displayed; no short- or long-term capital gain amounts in 2016-2021 (shown as '-' or 0.000000)"
+ },
+ "rows": [
+  {
+   "ex_date": "2016-03-18",
+   "record_date": "2016-03-22",
+   "payable_date": "2016-04-29",
+   "distribution_usd": 1.049604
+  },
+  {
+   "ex_date": "2016-06-17",
+   "record_date": "2016-06-21",
+   "payable_date": "2016-07-29",
+   "distribution_usd": 1.078442
+  },
+  {
+   "ex_date": "2016-09-16",
+   "record_date": "2016-09-20",
+   "payable_date": "2016-10-31",
+   "distribution_usd": 1.082068
+  },
+  {
+   "ex_date": "2016-12-16",
+   "record_date": "2016-12-20",
+   "payable_date": "2017-01-31",
+   "distribution_usd": 1.32893
+  },
+  {
+   "ex_date": "2017-03-17",
+   "record_date": "2017-03-21",
+   "payable_date": "2017-04-28",
+   "distribution_usd": 1.033118
+  },
+  {
+   "ex_date": "2017-06-16",
+   "record_date": "2017-06-20",
+   "payable_date": "2017-07-31",
+   "distribution_usd": 1.183108
+  },
+  {
+   "ex_date": "2017-09-15",
+   "record_date": "2017-09-18",
+   "payable_date": "2017-10-31",
+   "distribution_usd": 1.234574
+  },
+  {
+   "ex_date": "2017-12-15",
+   "record_date": "2017-12-18",
+   "payable_date": "2018-01-31",
+   "distribution_usd": 1.351333
+  },
+  {
+   "ex_date": "2018-03-16",
+   "record_date": "2018-03-19",
+   "payable_date": "2018-04-30",
+   "distribution_usd": 1.096775
+  },
+  {
+   "ex_date": "2018-06-15",
+   "record_date": "2018-06-18",
+   "payable_date": "2018-07-31",
+   "distribution_usd": 1.245568
+  },
+  {
+   "ex_date": "2018-09-21",
+   "record_date": "2018-09-24",
+   "payable_date": "2018-10-31",
+   "distribution_usd": 1.322611
+  },
+  {
+   "ex_date": "2018-12-21",
+   "record_date": "2018-12-24",
+   "payable_date": "2019-01-31",
+   "distribution_usd": 1.435429
+  },
+  {
+   "ex_date": "2019-03-15",
+   "record_date": "2019-03-18",
+   "payable_date": "2019-04-30",
+   "distribution_usd": 1.233119
+  },
+  {
+   "ex_date": "2019-06-21",
+   "record_date": "2019-06-24",
+   "payable_date": "2019-07-31",
+   "distribution_usd": 1.43164
+  },
+  {
+   "ex_date": "2019-09-20",
+   "record_date": "2019-09-23",
+   "payable_date": "2019-10-31",
+   "distribution_usd": 1.383619
+  },
+  {
+   "ex_date": "2019-12-20",
+   "record_date": "2019-12-23",
+   "payable_date": "2020-01-31",
+   "distribution_usd": 1.569992
+  },
+  {
+   "ex_date": "2020-03-20",
+   "record_date": "2020-03-23",
+   "payable_date": "2020-04-30",
+   "distribution_usd": 1.405559
+  },
+  {
+   "ex_date": "2020-06-19",
+   "record_date": "2020-06-22",
+   "payable_date": "2020-07-31",
+   "distribution_usd": 1.366242
+  },
+  {
+   "ex_date": "2020-09-18",
+   "record_date": "2020-09-21",
+   "payable_date": "2020-10-30",
+   "distribution_usd": 1.339224
+  },
+  {
+   "ex_date": "2020-12-18",
+   "record_date": "2020-12-21",
+   "payable_date": "2021-01-29",
+   "distribution_usd": 1.58
+  },
+  {
+   "ex_date": "2021-03-19",
+   "record_date": "2021-03-22",
+   "payable_date": "2021-04-30",
+   "distribution_usd": 1.277788
+  },
+  {
+   "ex_date": "2021-06-18",
+   "record_date": "2021-06-21",
+   "payable_date": "2021-07-30",
+   "distribution_usd": 1.375875
+  },
+  {
+   "ex_date": "2021-09-17",
+   "record_date": "2021-09-20",
+   "payable_date": "2021-10-29",
+   "distribution_usd": 1.428117
+  },
+  {
+   "ex_date": "2021-12-17",
+   "record_date": "2021-12-20",
+   "payable_date": "2022-01-31",
+   "distribution_usd": 1.636431
+  }
+ ],
+ "classification": {
+  "policy": "ex-distribution-day exclusion (owner decision 2026-11-04); retrospective classification",
+  "development_sessions": 1511,
+  "verified_ex_distribution_excluded": 24,
+  "verified_non_ex_distribution_eligible": 1487,
+  "unresolved_ineligible": 0,
+  "unresolved_note": "0 unresolved: the issuer history shows one distribution per quarter for every quarter 1993-2026 with no gap; no capital-gain distributions 2016-2021. If the issuer record were incomplete this count would be wrong; corroboration is partial (Alpaca 21 of 24 exact matches, 0 extra records).",
+  "excluded_sessions_profile": "all 24 are the third Friday of March/June/September/December, i.e. quarterly index option/futures expiration days",
+  "point_in_time_evidence": {
+   "ex_dates_with_archived_issuer_schedule_before_ex_date": 7,
+   "details": {
+    "2020-06-19": "2020-05-19T14:03:30Z",
+    "2020-09-18": "2020-05-19T14:03:30Z",
+    "2020-12-18": "2020-05-19T14:03:30Z",
+    "2021-03-19": "2021-01-30T22:19:19Z",
+    "2021-06-18": "2021-01-30T22:19:19Z",
+    "2021-09-17": "2021-01-30T22:19:19Z",
+    "2021-12-17": "2021-01-30T22:19:19Z"
+   },
+   "ex_dates_without_point_in_time_evidence": [
+    "2016-03-18",
+    "2016-06-17",
+    "2016-09-16",
+    "2016-12-16",
+    "2017-03-17",
+    "2017-06-16",
+    "2017-09-15",
+    "2017-12-15",
+    "2018-03-16",
+    "2018-06-15",
+    "2018-09-21",
+    "2018-12-21",
+    "2019-03-15",
+    "2019-06-21",
+    "2019-09-20",
+    "2019-12-20",
+    "2020-03-20"
+   ],
+   "archive_urls": {
+    "2020": "https://web.archive.org/web/20200519140330/https://www.ssga.com/library-content/products/fund-data/etfs/us/distribution/SPDR_Dividend_Distribution_Schedule.pdf",
+    "2021": "https://web.archive.org/web/20210130221919/https://www.ssga.com/library-content/products/fund-data/etfs/us/distribution/SPDR_Dividend_Distribution_Schedule.pdf"
+   },
+   "archive_note": "capture time = latest moment the document is shown to have been public; the 2020 file is labelled v.4.8.2020 and also lists 2020-03-20, which had already passed at capture; it misprints 2020-12-18 as 'Wednesday'. Both schedules also list a 'Potential Excise Distribution' date for SPY (2020-12-30, 2021-12-30); the issuer history shows no distribution on those dates.",
+   "archive_cdx_query": "web.archive.org/cdx for the schedule URL, 2015-2021: captures only from 2020-05-19; none for 2016-2019"
+  },
+  "sample_dates_from_access_check": {
+   "2019-06-21": "excluded (verified ex-distribution)",
+   "others": "eligible (verified non-ex-distribution)"
+  }
+ },
+ "reconciliation_with_alpaca": {
+  "alpaca_records": 21,
+  "exact_matches_date_and_amount": 21,
+  "missing_in_alpaca": [
+   "2016-03-18",
+   "2018-06-15",
+   "2021-12-17"
+  ],
+  "extra_in_alpaca": [],
+  "alpaca_cusip_values": [
+   "78462F103",
+   ""
+  ]
+ }
+}

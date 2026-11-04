@@ -509,6 +509,19 @@ pipeline -> watch progress -> cancel if needed -> open the report.
 - **Recorded:** findings in `feasibility/execution_data/FINDINGS.md`; downloads git-ignored.
   This is not research evaluation.
 
+## Distribution calendar, quote interpretation and exit coverage (2026-11-04)
+
+- **Done:**
+  - issuer (SSGA) SPY distribution history captured with provenance
+  - 24 development ex-dates; reconciled with Alpaca (21 of 24, 0 extra)
+  - archived schedules give point-in-time evidence for 7 of 24 ex-dates
+- **Quote coverage:** checked through 10:01 (pre-registered, commit a67fc20); 195 requests,
+  all HTTP 200, complete.
+- **Locked/crossed treatment:** proposed.
+- **Not established:** the quote timestamp clock and the 2016-2020 condition codes.
+- **Verdict:** defer the gap-down candidate (`feasibility/execution_data/FINDINGS_2.md`).
+  No returns computed, no experiment.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

@@ -167,3 +167,7 @@ class ReadOnlyAlpacaClient:
                 break
             params = {**params, "page_token": token}
         return {"corporate_actions": out, "pages": pages, "complete": not token}
+
+    def get_quote_conditions(self, tape: str) -> dict:
+        """Provider's quote condition-code meanings for one tape (GET only)."""
+        return self._get(DATA_URL, "/v2/stocks/meta/conditions/quote", {"tape": tape})

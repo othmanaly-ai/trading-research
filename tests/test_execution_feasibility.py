@@ -76,3 +76,21 @@ def test_quote_validation_flags_crossed_and_disorder():
     v = ef.validate_quotes(rows, d)
     assert v["crossed"] == 1 and v["out_of_order"] == 1 and v["outside_window"] == 0
     assert v["by_minute_et"]["09:30"]["valid"] == 2
+
+
+def test_classification_keeps_every_quote():
+    """SYNTHETIC: locked, crossed and one-sided quotes are classified, never dropped."""
+    import pandas as pd
+    f = pd.DataFrame([{"bp": 1.0, "ap": 1.01}, {"bp": 1.0, "ap": 1.0}, {"bp": 1.01, "ap": 1.0}, {"bp": 0.0, "ap": 1.0}])
+    assert list(ef.classify(f)) == ["normal", "locked", "crossed", "one-sided"]
+
+
+def test_coverage_reports_empty_minutes_and_dedupes_identical_only():
+    from datetime import time
+    q = {"ap": 100.01, "as": 1, "ax": "P", "bp": 100.0, "bs": 1, "bx": "P", "c": ["R"], "z": "B"}   # SYNTHETIC
+    rows = [dict(q, t="2019-06-21T13:35:00Z"), dict(q, t="2019-06-21T13:35:00Z"),   # identical overlap: once
+            dict(q, t="2019-06-21T13:35:00Z", bs=2),                                  # differs: kept
+            dict(q, t="2019-06-21T13:37:10Z")]
+    v = ef.coverage_stats(rows, "2019-06-21", time(9, 35), time(9, 37))
+    assert v["quotes"] == 3 and v["minutes_without_quote"] == ["09:36"]
+    assert v["class_counts"]["normal"] == 3

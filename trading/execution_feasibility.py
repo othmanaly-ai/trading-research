@@ -271,6 +271,127 @@ def analyze(out: Path) -> dict:
     return findings
 
 
+# ---------------------------------------------------------------- amendment 2: coverage to the exit
+
+COVERAGE_WINDOW = (dtime(9, 35), dtime(10, 1))      # both ends inclusive per the provider docs
+COVERAGE_PAGE_CAP, COVERAGE_MAX_REQUESTS = 100, 360
+
+
+def fetch_coverage(client, http: CountingHttp, out: Path, dates=DATES) -> dict:
+    from trading.alpaca_client import AlpacaAccessError
+    check_dates(dates)
+    out.mkdir(parents=True, exist_ok=True)
+    res = {"conditions": None, "dates": {}, "stopped_paths": {}}
+    try:
+        cond = client.get_quote_conditions("B")
+        (out / "quote_conditions_tape_B.json").write_text(json.dumps(cond, indent=1), encoding="utf-8")
+        res["conditions"] = {"status": "ok"}
+    except AlpacaAccessError as exc:
+        res["conditions"] = {"status": "access failure", "http_status": exc.status_code, "error": str(exc)[:400]}
+    except RequestCapReached as exc:
+        res["conditions"] = {"status": "INCOMPLETE COVERAGE", "error": str(exc)}
+    for d, _, _ in dates:
+        if "quotes" in res["stopped_paths"]:
+            res["dates"][d] = {"status": "not requested", "reason": "path stopped after access failure"}
+            continue
+        try:
+            r = client.get_quotes(SYMBOL, et_utc(d, COVERAGE_WINDOW[0]), et_utc(d, COVERAGE_WINDOW[1]),
+                                  feed=FEED, max_pages=COVERAGE_PAGE_CAP)
+            with gzip.open(out / f"quotes_cov_{d}.json.gz", "wt", encoding="utf-8") as f:
+                json.dump(r["quotes"], f)
+            res["dates"][d] = {"status": "ok" if r["complete"] else "INCOMPLETE COVERAGE", "pages": r["pages"],
+                               "quotes": len(r["quotes"]), "complete": r["complete"],
+                               "last_t": r["quotes"][-1]["t"] if r["quotes"] else None}
+        except AlpacaAccessError as exc:
+            res["stopped_paths"]["quotes"] = {"http_status": exc.status_code, "error": str(exc)[:400]}
+            res["dates"][d] = {"status": "access failure", "http_status": exc.status_code, "error": str(exc)[:400]}
+        except RequestCapReached as exc:
+            res["dates"][d] = {"status": "INCOMPLETE COVERAGE", "error": str(exc)}
+    res["http_requests"], res["request_cap"] = http.count, COVERAGE_MAX_REQUESTS
+    (out / "requests_log.json").write_text(json.dumps(http.log, indent=1), encoding="utf-8")
+    (out / "fetch_results.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
+    return res
+
+
+def classify(f: pd.DataFrame) -> pd.Series:
+    """normal / locked / crossed / one-sided. Every quote keeps its class; nothing is deleted."""
+    cls = pd.Series("normal", index=f.index)
+    cls[f.ap == f.bp] = "locked"
+    cls[f.ap < f.bp] = "crossed"
+    cls[(f.bp <= 0) | (f.ap <= 0)] = "one-sided"
+    return cls
+
+
+def coverage_stats(rows: list[dict], d: str, start: dtime, end: dtime) -> dict:
+    """Per-minute coverage for minutes start..end (inclusive). Only byte-identical duplicate
+    records (the window-boundary overlap) are counted once."""
+    f = pd.DataFrame(rows)
+    if f.empty:
+        return {"quotes": 0}
+    f["c_key"] = f["c"].astype(str)
+    f = f.drop_duplicates(subset=["t", "ap", "as", "ax", "bp", "bs", "bx", "z", "c_key"]).reset_index(drop=True)
+    f["ts"] = pd.to_datetime(f["t"], utc=True, format="ISO8601")
+    f["cls"] = classify(f)
+    f["dur"] = f.ts.shift(-1).sub(f.ts).dt.total_seconds().fillna(0).clip(lower=0)
+    lo = pd.Timestamp(et_utc(d, start))
+    n_min = (end.hour * 60 + end.minute) - (start.hour * 60 + start.minute) + 1
+    classes = ("normal", "locked", "crossed", "one-sided")
+    total = max(float(f.dur.sum()), 1e-9)
+    out = {"quotes": len(f), "first_t": f.t.iloc[0], "last_t": f.t.iloc[-1],
+           "out_of_order": int((f.ts.diff().dt.total_seconds() < 0).sum()),
+           "class_counts": {c: int((f.cls == c).sum()) for c in classes},
+           "class_time_share": {c: round(float(f.dur[f.cls == c].sum()) / total, 5) for c in classes},
+           "condition_codes": {str(k): int(v) for k, v in f["c"].explode().value_counts().items()},
+           "minutes_without_quote": [], "by_minute_et": {}}
+    for m in range(n_min):
+        a, b = lo + pd.Timedelta(minutes=m), lo + pd.Timedelta(minutes=m + 1)
+        g = f[(f.ts >= a) & (f.ts < b)]
+        key = a.tz_convert(ET).strftime("%H:%M")
+        if g.empty:
+            out["minutes_without_quote"].append(key)
+            continue
+        nrm = g[g.cls == "normal"]
+        sc = ((nrm.ap - nrm.bp) * 100).round(4)
+        gap = g.ts.diff().dt.total_seconds().max()
+        out["by_minute_et"][key] = {
+            "quotes": int(len(g)), "largest_gap_s": None if pd.isna(gap) else round(float(gap), 6),
+            "normal": int(len(nrm)), "locked": int((g.cls == "locked").sum()),
+            "crossed": int((g.cls == "crossed").sum()), "one_sided": int((g.cls == "one-sided").sum()),
+            "spread_cents_median_normal": _q(sc, .5), "spread_cents_p90_normal": _q(sc, .9),
+            "share_1_cent_time_weighted_normal": None if nrm.dur.sum() <= 0
+            else round(float(nrm.dur[sc.round(2) <= 1.0].sum() / nrm.dur.sum()), 4)}
+    return out
+
+
+def analyze_coverage(out: Path, first_run: Path) -> dict:
+    fetched = json.loads((out / "fetch_results.json").read_text(encoding="utf-8"))
+    log = json.loads((out / "requests_log.json").read_text(encoding="utf-8"))
+    res = {"label": "FEASIBILITY EVIDENCE: quote coverage to the exit. Not research evaluation; no returns computed.",
+           "preregistration": "feasibility/execution_data/PREREGISTRATION_2_coverage.md (commit a67fc20)",
+           "http_requests": fetched["http_requests"], "request_cap": fetched["request_cap"],
+           "http_status_counts": pd.Series([r["status"] for r in log]).value_counts().to_dict() if log else {},
+           "local_retrieval_utc": {"first": log[0]["local_sent_utc"] if log else None,
+                                   "last": log[-1]["local_received_utc"] if log else None},
+           "conditions": fetched["conditions"], "stopped_paths": fetched["stopped_paths"], "dates": {}}
+    cp = out / "quote_conditions_tape_B.json"
+    if cp.is_file():
+        res["condition_meanings"] = json.loads(cp.read_text(encoding="utf-8"))
+    for d, r in fetched["dates"].items():
+        e = {"fetch": r}
+        p = out / f"quotes_cov_{d}.json.gz"
+        if p.is_file():
+            with gzip.open(p, "rt", encoding="utf-8") as fh:
+                e["window_0935_1001"] = coverage_stats(json.load(fh), d, *COVERAGE_WINDOW)
+        p0 = first_run / f"quotes_{d}.json.gz"
+        if p0.is_file():
+            with gzip.open(p0, "rt", encoding="utf-8") as fh:
+                full = coverage_stats(json.load(fh), d, dtime(9, 30), dtime(9, 34))
+            e["window_0930_0935_reclassified"] = {k: full[k] for k in
+                                                  ("quotes", "class_counts", "class_time_share", "minutes_without_quote")}
+        res["dates"][d] = e
+    return res
+
+
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv[:1] == ["fetch"]:
@@ -290,6 +411,27 @@ def main(argv=None) -> int:
                           "corporate_actions": res["corporate_actions"],
                           "dates": {d: {k: {kk: vv for kk, vv in v.items() if kk in ("status", "pages", "quotes", "bars", "complete", "http_status", "error", "reason")}
                                         for k, v in r.items() if isinstance(v, dict)} for d, r in res["dates"].items()}}, indent=1))
+        return 0
+    if argv[:1] == ["coverage"]:
+        import requests
+        from trading.alpaca_client import MissingCredentials, ReadOnlyAlpacaClient, load_credentials
+        check_dates()
+        try:
+            key, secret = load_credentials()
+        except MissingCredentials as exc:
+            print(str(exc))
+            return 2
+        http = CountingHttp(requests.Session(), cap=COVERAGE_MAX_REQUESTS)
+        out = OUT_ROOT / ("coverage_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"))
+        res = fetch_coverage(ReadOnlyAlpacaClient(key, secret, http=http), http, out)
+        print(json.dumps({"out": str(out.relative_to(PROJECT_ROOT)),
+                          **{k: res[k] for k in ("http_requests", "conditions", "stopped_paths", "dates")}}, indent=1))
+        return 0
+    if argv[:1] == ["analyze-coverage"] and len(argv) == 3:
+        out = Path(argv[1])
+        f = analyze_coverage(out, Path(argv[2]))
+        (out / "coverage_findings.json").write_text(json.dumps(f, indent=1, default=str), encoding="utf-8")
+        print("written", out / "coverage_findings.json")
         return 0
     if argv[:1] == ["analyze"] and len(argv) == 2:
         out = Path(argv[1])

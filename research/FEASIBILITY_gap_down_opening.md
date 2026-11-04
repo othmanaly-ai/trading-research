@@ -145,3 +145,26 @@ returns were computed and no rule was approved.
 - **Status:** further spread modeling is supported, but dividend handling **needs additional
   data** or an owner-approved conservative rule before any spec.
 - **Fills:** fill and queue realism stay unmeasured.
+
+## Update 2026-11-04 (2): distribution policy, quote interpretation, exit coverage
+
+**Owner decision:** ex-distribution days are **excluded**, not dividend-adjusted.
+
+**Proposed gap definition, not approved:**
+- it uses raw prices only: the raw 09:30 bar open and the raw prior-session close
+- it is defined on verified non-ex-distribution sessions only
+- verified ex-distribution sessions are removed before any signal is evaluated, whatever their
+  returns
+- sessions with uncertain coverage are unresolved and ineligible
+- in live operation, an unknown calendar status means no trade (fail closed)
+
+**Results** (details: `../feasibility/execution_data/FINDINGS_2.md`):
+- **Calendar:** the issuer's calendar gives 24 ex-dates; 1,487 sessions are eligible and 0
+  unresolved, retrospectively. Only 7 of 24 dates have point-in-time evidence.
+- **Selection bias:** every excluded day is a quarterly expiration Friday.
+- **Quote coverage:** complete on 7 sample days through 10:00.
+- **Timestamp:** the official docs do not state the quote timestamp's clock.
+- **Condition codes:** unmapped (`?`) for 2016-2020.
+
+**Verdict:** **defer this candidate.** Quote interpretation is not established from
+accessible official sources. Nothing was purchased or assumed.
