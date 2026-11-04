@@ -103,6 +103,32 @@ def monitor_snapshot() -> dict:
     return snap
 
 
+QUALITY_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+QUALITY_TS = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\+00:00$")
+
+
+def quality_report(date_s: str | None) -> dict:
+    from trading.monitor import quality, store as mst
+    if date_s and not QUALITY_DATE.match(date_s):
+        raise ValueError("date must be YYYY-MM-DD")
+    store = mst.MonitorStore()
+    try:
+        return quality.report(store, date_s or None)
+    finally:
+        store.close()
+
+
+def quality_minute(symbol: str, t_utc: str) -> dict:
+    from trading.monitor import quality, store as mst
+    if not re.match(r"^[A-Z]{1,5}$", symbol or "") or not QUALITY_TS.match(t_utc or ""):
+        raise ValueError("symbol must be 1-5 capital letters and t a minute timestamp like 2026-11-04T15:00:00+00:00")
+    store = mst.MonitorStore()
+    try:
+        return quality.minute_record(store, symbol, t_utc)
+    finally:
+        store.close()
+
+
 def monitor_control(action: str) -> dict:
     from trading.monitor import control, store as mst
     store = mst.MonitorStore()
@@ -420,6 +446,14 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
                     return self._json({"error": str(exc)}, 400)
             if path == "/api/monitor":
                 return self._json(monitor_snapshot())
+            if path in ("/api/quality", "/api/quality/minute"):
+                q = parse_qs(urlparse(self.path).query)
+                try:
+                    if path == "/api/quality":
+                        return self._json(quality_report(q.get("date", [""])[0]))
+                    return self._json(quality_minute(q.get("symbol", [""])[0], q.get("t", [""])[0]))
+                except ValueError as exc:
+                    return self._json({"error": str(exc)}, 400)
             if path == "/api/reviewer/status":
                 return self._json(reviewer_status())
             if path.startswith("/api/reviews/"):

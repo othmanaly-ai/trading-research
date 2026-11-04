@@ -442,6 +442,28 @@ pipeline -> watch progress -> cancel if needed -> open the report.
   - dashboard tests disable the monitor supervisor
 - **Tests:** 254 pass, 1 skipped (a no-credentials test skips because a real `.env` exists).
 
+## Delayed-SIP vs IEX data-quality comparison (2026-11-04)
+
+- **Access verified first:** delayed SIP was accepted at a 20-minute boundary (HTTP 200, 5/5 bars).
+  Recent SIP is refused, as recorded earlier.
+- **Implemented** (`trading/monitor/quality.py`), running in the monitoring worker:
+  - 20-minute boundary (15 + 5 margin), 120-minute chunks, 5-minute cycles, one end-of-day
+    re-observation
+  - original observations with revision history and retrieval and availability times
+  - deterministic categories, with no invented tolerances
+  - backoff that never substitutes another feed
+  - restart-safe watermark
+  - a daily report in the city, with supporting records per minute and run, access and error states
+- **Tested:** 13 labelled synthetic tests (boundary, chunking, restart, categories, bps and $
+  differences, volume share, zero volume, timestamps, conflicting duplicates, corrections and
+  revisions, labels, access failure, connection backoff, holiday, reserved date, early close,
+  endpoints) and multi-symbol pagination.
+- **Fixed:** the no-credentials history test now runs (isolated root; any read outside it fails
+  the test); 0 skipped.
+- **Real run:** 384 comparisons for 128 minutes. All consistent subsets; IEX volume share of
+  4.1% (SPY), 1.5% (QQQ) and 3.7% (IWM). See `docs/MONITORING.md`.
+- **Tests:** 267 pass, 0 skipped.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

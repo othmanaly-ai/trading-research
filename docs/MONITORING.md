@@ -88,3 +88,61 @@ The same controls are available from the command line: `python -m trading.monito
   - nothing starts when Windows starts; the city server must be running for supervision
   - stopping the city server through the desktop app also stops its worker; it resumes when the
     server starts again
+
+## Data quality: delayed SIP vs IEX (`trading/monitor/quality.py`)
+
+Runs inside the worker process and reuses its read-only client.
+
+**Access check (2026-11-04 16:51 UTC):** delayed SIP was accepted when the newest requested minute
+ended 20 minutes earlier (HTTP 200, 5 of 5 SPY bars).
+
+**Delay rule:** a minute is compared only once its end is at least **20 minutes old**: the plan's
+15-minute SIP delay plus a **5-minute safety margin**.
+
+**Requests:**
+- every 5 minutes, two GETs (SIP, then IEX) for the window since the last comparison
+- each window is at most 120 minutes, so a backlog is worked off chunk by chunk
+- one end-of-day re-observation of the whole session, 45 minutes after the close
+- failures back off 60 s, then 120, 300 and 600 s; access refusals (401/403) wait 1800 s
+- SIP is never replaced by another feed
+
+**Evidence:**
+- every observation is kept with `retrieved_utc` and `provider_available_utc`; for SIP that is bar
+  end + 15 min, the earliest moment this plan allows the bar to be known
+- a changed bar becomes a new **revision**, and earlier revisions are never overwritten
+- comparisons name the exact revisions they used
+- identical repeats are counted as duplicates
+- the live IEX bars are never modified
+
+**Categories** (deterministic rules, no invented tolerances):
+
+| Category | Meaning |
+|---|---|
+| consistent subset | IEX inside the SIP range and volume |
+| expected coverage difference | SIP bar, no IEX bar |
+| both absent | no bar in either feed |
+| unresolved anomaly | SIP missing while IEX present, or IEX outside the SIP range or volume; plausibly trade-condition filtering differences, not proven defects |
+| structural defect | a bar violates its own OHLC, volume or timestamp invariants, or conflicting duplicates arrive in one response |
+
+Access failures are recorded per run; their minutes stay pending.
+
+**No look-ahead:** results are labelled with when each SIP bar became available. They never change
+freshness, live bars or any research data, and nothing consumes them for decisions.
+
+**Scope limits:**
+- only the current session is compared; earlier days are not backfilled
+- the end-of-day re-observation needs the worker running after the close
+- a day restarted after midnight ET is not finished
+
+**First measurements (2026-11-04, 09:30–11:38 ET, 128 minutes per symbol):**
+
+| Symbol | IEX share of consolidated volume | Median close difference | Largest close difference |
+|---|---|---|---|
+| SPY | 4.1% | 0.39 bps | 3.3 bps ($0.25) |
+| QQQ | 1.5% | 0.83 bps | 11.2 bps ($0.78) |
+| IWM | 3.7% | 0.88 bps | 5.2 bps ($0.15) |
+
+- Every compared minute was a consistent subset. There were no missing minutes in either feed, no
+  anomalies, defects or corrections, and no zero-volume minutes.
+- These are one morning's observations. They are not a suitability verdict, and not evidence of
+  any strategy's profitability.

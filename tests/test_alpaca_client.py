@@ -128,3 +128,16 @@ def test_rate_limit_gives_up_after_bounded_retries():
     with pytest.raises(AlpacaAccessError) as err:
         client.get_account()
     assert err.value.status_code == 429 and len(http.calls) == alpaca_client.RATE_LIMIT_RETRIES + 1
+
+
+def test_multi_symbol_pagination_merges_pages_and_keeps_feed():
+    """SYNTHETIC responses: symbols can be split across pages; nothing is dropped or merged."""
+    http = FakeHttp([
+        FakeResponse(200, {"bars": {"SPY": [{"t": "1"}], "QQQ": [{"t": "1"}]}, "next_page_token": "P2"}),
+        FakeResponse(200, {"bars": {"QQQ": [{"t": "2"}], "IWM": [{"t": "1"}]}, "next_page_token": None}),
+    ])
+    client = ReadOnlyAlpacaClient(FAKE_KEY, FAKE_SECRET, http=http)
+    out = client.get_bars_multi(["SPY", "QQQ", "IWM"], "1Min", "s", "e", feed="sip", adjustment="raw")
+    assert out["pages"] == 2 and [b["t"] for b in out["bars"]["QQQ"]] == ["1", "2"]
+    assert len(out["bars"]["IWM"]) == 1 and http.calls[0]["params"]["symbols"] == "SPY,QQQ,IWM"
+    assert all(c["params"]["feed"] == "sip" for c in http.calls)

@@ -176,11 +176,21 @@ def test_research_status_reflects_stored_coverage(store, tmp_path_factory):
 
 
 def test_cli_blocked_without_credentials(monkeypatch, capsys, tmp_path):
+    """Runs even when the real project .env exists: the credential lookup is pointed at an empty
+    temporary folder, and any attempt to read a .env outside it fails the test (never read)."""
+    from trading import alpaca_client
     monkeypatch.delenv("APCA_API_KEY_ID", raising=False)
     monkeypatch.delenv("APCA_API_SECRET_KEY", raising=False)
-    monkeypatch.setattr(history_mod, "HISTORY_DIR", tmp_path)
-    if (history_mod.PROJECT_ROOT / ".env").exists():
-        pytest.skip("a real .env exists; not exercising the no-credentials path")
+    isolated = tmp_path / "isolated_root"
+    isolated.mkdir()
+    monkeypatch.setattr(alpaca_client, "PROJECT_ROOT", isolated)
+    real_read = alpaca_client._read_dotenv
+
+    def guarded(path):
+        assert isolated in path.parents, f"test tried to read {path}"
+        return real_read(path)
+    monkeypatch.setattr(alpaca_client, "_read_dotenv", guarded)
+    monkeypatch.setattr(history_mod, "HISTORY_DIR", tmp_path / "history")
     assert history_mod.main(["--start", "2016-01-04", "--end", "2016-01-29"]) == 2
     assert "BLOCKED" in capsys.readouterr().out
     assert read_manifest("SPY", "sip", "all", tmp_path) is None

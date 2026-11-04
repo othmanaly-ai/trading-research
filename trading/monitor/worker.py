@@ -100,6 +100,9 @@ class Worker:
         self.catchup_done: set = set()
         self.state = None
         self.stopping = False
+        from trading.monitor.quality import QualityChecker
+        # Delayed-SIP vs IEX data-quality comparison (only meaningful when the live feed is IEX).
+        self.quality = QualityChecker(store, self.symbols, clock) if feed == "iex" else None
 
     # ---- lifecycle -------------------------------------------------------------------
     def start(self) -> bool:
@@ -164,6 +167,10 @@ class Worker:
             self._set("refused", f"today is inside the reserved research periods (through {st.RESERVED_END}); "
                                  "monitoring is not allowed to fetch these dates")
             return 60
+        if self.quality is not None:
+            self._quality(now)
+            if self.stopping:
+                return 0
         mk = st.market_state(now)
         if mk["open"]:
             if self.next_poll is None or now >= self.next_poll:
@@ -179,6 +186,20 @@ class Worker:
         self._set("market_closed", f"market closed ({mk['reason']}); next open {st.iso(mk['next_open'])}; "
                                    "no API calls while closed", next_poll_utc=st.iso(mk["next_open"]))
         return 1
+
+    def _quality(self, now: datetime) -> None:
+        """One bounded step of the delayed-SIP comparison; its failures never stop live polling."""
+        from trading.alpaca_client import MissingCredentials
+        try:
+            if self.client is None:
+                self.client = self.client_factory(self._sleep_with_heartbeat)
+            self.quality.step(self.client, now)
+        except _StopRequested:
+            self.stopping = True
+        except MissingCredentials:
+            return                                     # the live path records this error
+        except Exception as exc:                       # recorded, never fatal to the worker
+            self.store.event("error", "quality-error", f"{type(exc).__name__}: {exc}")
 
     def _sleep_with_heartbeat(self, seconds: float) -> None:
         """Used by the client for its bounded 429 waits: keeps the heartbeat and honours Stop."""

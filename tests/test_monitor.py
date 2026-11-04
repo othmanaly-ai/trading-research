@@ -67,9 +67,11 @@ def env():
     store.close()
 
 
-def make_worker(store, clock, client=None, **kw):
+def make_worker(store, clock, client=None, quality=False, **kw):
     client = client or FakeClient(clock)
     w = Worker(store, clock=clock, client_factory=lambda sleep: client, pid=1234, **kw)
+    if not quality:
+        w.quality = None             # live-polling tests; the quality checker has its own tests
     return w, client
 
 
@@ -238,6 +240,7 @@ def test_connection_failures_back_off_and_reconnect(env):
         made.append(1)
         return client
     w = Worker(env, clock=clock, client_factory=factory, pid=1)
+    w.quality = None
     w.start()
     w.step()
     assert env.worker()["state"] == "disconnected" and env.worker()["consecutive_failures"] == 1

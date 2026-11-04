@@ -223,3 +223,8 @@ pre.json { max-height: 260px; overflow: auto; background: #0f0c26; padding: 8px;
 .monitor button.primary { border-color: #f59e0b; background: rgba(245, 158, 11, 0.25); font-weight: 700; }
 .monitor button:disabled { opacity: 0.5; cursor: not-allowed; }
 .mon-table tr.sel td { background: rgba(251, 191, 36, 0.08); }
+
+/* Data-quality report */
+.q-banner { border: 1px solid #0e7490; background: rgba(14, 116, 144, 0.12); border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
+.q-table td, .q-table th { font-size: 12px; }
+.quality .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0; }

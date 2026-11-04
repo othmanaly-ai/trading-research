@@ -1,6 +1,7 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLiveJson } from "../useLiveJson";
 import type { TowerSpec } from "./CityView";
+import QualityPanel from "./QualityPanel";
 
 // Read-only market monitoring (trading/monitor). The worker is a separate process; this view only
 // displays its records from /api/monitor. Not a research dataset, not a trading signal.
@@ -187,6 +188,9 @@ export default function MonitorView({ reducedMotion }: { reducedMotion: boolean 
               <tr key={b.t_utc}><td>{et(b.t_utc)}</td><td>{b.o}</td><td>{b.h}</td><td>{b.l}</td><td>{b.c}</td><td>{b.v}</td><td>{et(b.received_utc)}</td></tr>))}</tbody></table>
         </div>
       ) : null}
+
+      <h3>Data quality: delayed SIP vs IEX (daily report)</h3>
+      <QualityPanel tick={tick} />
 
       <h3>Events (state changes and errors)</h3>
       {data.events.length === 0 ? <p className="empty">No events recorded yet.</p> : (
