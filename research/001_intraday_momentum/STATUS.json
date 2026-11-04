@@ -29,5 +29,7 @@
     "diagnose_development.py",
     "EXPERIMENT_LOCK.json",
     "locks/001-eaa09c9d5a.json"
-  ]
+  ],
+  "closed": true,
+  "state": "FAILED_DEVELOPMENT"
 }

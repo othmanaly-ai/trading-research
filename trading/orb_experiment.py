@@ -285,11 +285,27 @@ def _account(res) -> dict:
             "m2_detail": {d: i["failed_check_minute_utc"] for d, i in res.session_info.items() if i.get("m2_stop")}}
 
 
+def is_closed(log_dir: Path = EXP_DIR) -> bool:
+    path = log_dir / "STATUS.json"
+    if not path.is_file():
+        return False
+    status = json.loads(path.read_text(encoding="utf-8"))
+    return bool(status.get("closed")) or status.get("status", "").startswith("CLOSED")
+
+
+def inspect(log_dir: Path = EXP_DIR) -> dict:
+    """Read-only view of the saved artifacts; never runs an evaluation."""
+    status = json.loads((log_dir / "STATUS.json").read_text(encoding="utf-8"))
+    runs = sorted(p.name for p in (log_dir / "runs").glob("*.json")) if (log_dir / "runs").is_dir() else []
+    return {"status": status, "saved_runs": runs,
+            "lock": json.loads(LOCK_PATH.read_text(encoding="utf-8"))["experiment_id"] if LOCK_PATH.is_file() else None}
+
+
 def run_development(days: dict, log_dir: Path = EXP_DIR, results_dir: Path = RESULTS_DIR,
                     lock_path: Path = LOCK_PATH, n_runs: int = N_RUNS) -> dict:
-    status_path = log_dir / "STATUS.json"
-    if status_path.is_file() and json.loads(status_path.read_text()).get("status", "").startswith("CLOSED"):
-        raise Refused("experiment 002 is closed")
+    if is_closed(log_dir):
+        raise Refused("experiment 002 is closed (FAILED_DEVELOPMENT); new evaluations are not allowed. "
+                      "Use --inspect for read-only access to its saved artifacts.")
     lock = check_lock(lock_path)
     start, end = PERIODS["development"]
     sessions = sessions_between(start - timedelta(days=10), end + timedelta(days=7))
@@ -347,8 +363,14 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Experiment 002 runner")
     parser.add_argument("--write-lock", action="store_true")
     parser.add_argument("--run", choices=["development", "validation", "final"])
+    parser.add_argument("--inspect", action="store_true", help="read-only view of saved artifacts")
     args = parser.parse_args(argv)
     try:
+        if args.inspect:
+            print(json.dumps(inspect(), indent=2))
+            return 0
+        if args.run and is_closed():
+            raise Refused("experiment 002 is closed (FAILED_DEVELOPMENT); use --inspect for read-only access")
         if args.write_lock:
             lock = write_lock()
             print(f"Wrote {lock['experiment_id']} (tested code commit {lock['tested_code_commit']})")

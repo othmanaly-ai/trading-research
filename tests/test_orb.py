@@ -298,4 +298,17 @@ def test_only_four_configurations_and_held_out_refused(capsys):
     assert [c.name for c in orbx.CONFIGURATIONS] == ["primary", "range_15", "range_45", "midpoint_stop"]
     assert orbx.fingerprint()["budget"] == {"development": 4, "validation": 1, "final": 1}
     assert orbx.main(["--run", "validation"]) == 2 and orbx.main(["--run", "final"]) == 2
-    assert "not permitted" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "REFUSED" in out and ("not permitted" in out or "closed" in out)   # closed since 2026-11-04
+
+
+def test_closed_experiment_refuses_runs_but_allows_inspection(tmp_path, capsys):
+    (tmp_path / "STATUS.json").write_text(json.dumps({"status": "CLOSED: FAILED_DEVELOPMENT", "closed": True}))
+    (tmp_path / "runs").mkdir()
+    (tmp_path / "runs" / "r.json").write_text("{}")
+    with pytest.raises(orbx.Refused, match="closed"):
+        orbx.run_development({}, log_dir=tmp_path)
+    assert orbx.inspect(tmp_path)["saved_runs"] == ["r.json"]
+    assert orbx.is_closed(orbx.EXP_DIR)                         # the real experiment 002 is closed
+    assert orbx.main(["--run", "development"]) == 2
+    assert "closed" in capsys.readouterr().out
