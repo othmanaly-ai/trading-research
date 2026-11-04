@@ -114,8 +114,11 @@ the per-trade spread is large, so the test can detect only a large effect.
 **Should fail when:** gaps reflect real news, so declines continue; or volatility regimes
 (such as 2020) dominate the small sample.
 
-**Cost sensitivity:** low turnover (11% of sessions). Entry is 30 minutes after the open, when
-spreads are normal. It is less cost-sensitive than A, but much more sample-limited.
+**Cost sensitivity:** low turnover (11% of sessions). Entry is 30 minutes after the open.
+*Correction 2026-11-04:* the earlier claim that B is "less cost-sensitive than A" is withdrawn as
+unsupported. Turnover alone does not set cost sensitivity; cost per trade relative to the gross
+move does, and neither is measured. B is much more sample-limited. See
+`FEASIBILITY_gap_down_opening.md`.
 
 **Baselines:** no trade; random long 10:01-to-close on the same number of randomly chosen
 sessions, with the same stop; always long 10:01-to-close (about 9x the exposure, stated).
