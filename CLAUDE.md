@@ -107,6 +107,13 @@ Exit codes for the data check: 0 = success, 1 = API refused or failed, 2 = no cr
     lock. Record it with `--supersede "reason"`, never by editing the lock.
   - Every evaluation attempt is logged in `experiment_attempts.csv`.
 
+## Research candidates (not experiments)
+
+- `research/candidates/<id>/STATUS.json`, shown read-only in the city's research jobs view; no pipeline runs on them.
+- `gap_down_opening`: DEFERRED_DATA_SEMANTICS (not failed, never evaluated). Downloads are blocked in
+  `trading/execution_feasibility.py`. Resuming needs written answers to
+  `feasibility/execution_data/ALPACA_SUPPORT_REQUEST_DRAFT.md` and a new owner decision. Never send that draft yourself.
+
 ## Data conventions
 
 - Exchange calendar: `exchange_calendars` XNYS (holidays, early closes). Market

@@ -1,0 +1,35 @@
+{
+  "candidate_id": "gap_down_opening",
+  "title": "Long-only SPY gap-down opening reversal (09:32 entry, 10:00 exit; draft rules, never approved)",
+  "state": "DEFERRED_DATA_SEMANTICS",
+  "is_experiment": false,
+  "performance_evaluated": false,
+  "status": "DEFERRED: quote data semantics not established from official documentation. Not failed, not rejected on performance; no returns were ever computed for this rule.",
+  "decided_utc": "2026-11-04",
+  "decided_by": "owner decision 2026-11-04",
+  "downloads": "STOPPED for this candidate (trading.execution_feasibility refuses to fetch while this state is set)",
+  "blockers": [
+    "Quote timestamp clock (SIP, participant or provider time) not stated in Alpaca documentation, nor whether it changed 2016-2021",
+    "Quote condition code '?' (6 of 7 sampled 2016-2020 dates) not in the provider's condition table",
+    "Not documented whether bid/ask are the consolidated NBBO, and how locked/crossed records should be read",
+    "Documented corrections or historical limitations for 2016-2021 quote data unknown"
+  ],
+  "open_uncertainties": [
+    "Point-in-time publication evidence exists for 7 of 24 development ex-distribution dates; for the other 17 it is missing (an uncertainty, not proof the dates were unknown)",
+    "Potential excise-distribution dates for 2016-2019 are not identifiable from the archived schedules found",
+    "Seven sampled days establish data access and sample characteristics, not an execution-cost model"
+  ],
+  "resume_requires": "Written answers to the questions in feasibility/execution_data/ALPACA_SUPPORT_REQUEST_DRAFT.md (section 'Answers needed to resume'), then a new owner decision. Resuming does not approve any rule.",
+  "records": [
+    "research/FEASIBILITY_gap_down_opening.md",
+    "research/NEXT_HYPOTHESES.md",
+    "feasibility/execution_data/PREREGISTRATION.md",
+    "feasibility/execution_data/PREREGISTRATION_2_coverage.md",
+    "feasibility/execution_data/FINDINGS.md",
+    "feasibility/execution_data/FINDINGS_2.md",
+    "feasibility/execution_data/findings.json",
+    "feasibility/execution_data/coverage_findings.json",
+    "feasibility/execution_data/spy_distributions_development.json",
+    "feasibility/execution_data/ALPACA_SUPPORT_REQUEST_DRAFT.md"
+  ]
+}

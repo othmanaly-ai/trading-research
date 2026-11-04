@@ -28,6 +28,7 @@ Endpoints:
 import argparse
 import csv
 import io
+import hashlib
 import json
 import math
 import mimetypes
@@ -224,7 +225,37 @@ def experiments_overview() -> dict:
             out.append(item)
         return out
     return {"mode_label": "REAL RESEARCH JOBS (not demo)", "pipelines": jobs_mod.PIPELINES,
-            "experiments": with_store(build)}
+            "experiments": with_store(build), "candidates": candidates_overview()}
+
+
+CANDIDATES_DIR = Path(__file__).resolve().parents[2] / "research" / "candidates"
+
+
+def candidates_overview(root: Path | None = None) -> list[dict]:
+    """Research candidates that are not experiments (no pipeline can run on them). Read-only;
+    never raises for missing or corrupt files."""
+    root = root or CANDIDATES_DIR
+    project = root.parents[1]
+    out = []
+    for status_path in sorted(root.glob("*/STATUS.json")) if root.is_dir() else []:
+        item = {"candidate": status_path.parent.name, "status": None, "artifacts": [], "problems": []}
+        try:
+            st = json.loads(status_path.read_text(encoding="utf-8"))
+            item["status"] = {k: st.get(k) for k in ("candidate_id", "title", "state", "status", "is_experiment",
+                                                      "performance_evaluated", "downloads", "blockers",
+                                                      "open_uncertainties", "resume_requires", "decided_utc")}
+            for rel in st.get("records") or []:
+                p = project / rel
+                if p.is_file():
+                    item["artifacts"].append({"name": rel, "present": True, "bytes": p.stat().st_size,
+                                              "sha256": hashlib.sha256(p.read_bytes()).hexdigest()[:16]})
+                else:
+                    item["artifacts"].append({"name": rel, "present": False})
+                    item["problems"].append(f"{rel} is missing")
+        except (OSError, ValueError) as exc:
+            item["problems"].append(f"STATUS.json unreadable: {type(exc).__name__}")
+        out.append(item)
+    return out
 
 
 def jobs_snapshot() -> dict:

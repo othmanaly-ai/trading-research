@@ -94,3 +94,11 @@ def test_coverage_reports_empty_minutes_and_dedupes_identical_only():
     v = ef.coverage_stats(rows, "2019-06-21", time(9, 35), time(9, 37))
     assert v["quotes"] == 3 and v["minutes_without_quote"] == ["09:36"]
     assert v["class_counts"]["normal"] == 3
+
+
+def test_downloads_blocked_while_deferred(tmp_path, monkeypatch):
+    """The real status file blocks; a missing file also blocks; no request is ever made."""
+    assert "DEFERRED_DATA_SEMANTICS" in ef.downloads_blocked()
+    assert "unreadable" in ef.downloads_blocked(tmp_path / "missing.json")
+    monkeypatch.setattr(ef, "load_credentials", lambda: (_ for _ in ()).throw(AssertionError("no credentials")), raising=False)
+    assert ef.main(["fetch"]) == 3 and ef.main(["coverage"]) == 3

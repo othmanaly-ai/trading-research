@@ -32,7 +32,12 @@ interface Experiment {
   status: { experiment_id: string; state: string; closed: boolean; failed_rules: string[] | null } | null;
   active_pipeline: string | null; latest_pipeline: { id: string; status: string } | null;
 }
-interface Experiments { mode_label: string; pipelines: Record<string, string>; experiments: Experiment[] }
+interface Candidate {
+  candidate: string; artifacts: Artifact[]; problems: string[];
+  status: { title: string; state: string; status: string; is_experiment: boolean; performance_evaluated: boolean;
+            downloads: string; blockers: string[]; open_uncertainties: string[]; resume_requires: string; decided_utc: string } | null;
+}
+interface Experiments { mode_label: string; pipelines: Record<string, string>; experiments: Experiment[]; candidates?: Candidate[] }
 interface Preview {
   experiment: string; pipeline: string; description: string; active_pipeline: string | null;
   tasks: { worker: string; kind: string; version: string; depends_on: string[]; action: string }[];
@@ -180,6 +185,28 @@ export default function JobsView({ reducedMotion }: { reducedMotion: boolean }) 
           </button>
         ))}
       </div>
+
+      {(exps.data.candidates ?? []).map((c) => (
+        <details key={c.candidate} className="candidate">
+          <summary>Candidate (not an experiment) · <code>{c.candidate}</code> · <strong>{c.status?.state ?? "unknown"}</strong>
+            {c.status && !c.status.performance_evaluated ? " · not evaluated on performance" : ""}</summary>
+          {c.status && (<>
+            <p className="small">{c.status.title}</p>
+            <p className="warn">{c.status.status}</p>
+            <p className="small">Downloads: {c.status.downloads}. No pipeline can run on a candidate.</p>
+            <p className="small"><strong>Blockers</strong></p>
+            <ul className="notes">{c.status.blockers.map((b) => <li key={b}>{b}</li>)}</ul>
+            <p className="small"><strong>Open uncertainties</strong></p>
+            <ul className="notes">{c.status.open_uncertainties.map((b) => <li key={b}>{b}</li>)}</ul>
+            <p className="small">To resume: {c.status.resume_requires}</p>
+          </>)}
+          <table className="artifacts"><thead><tr><th>Record</th><th>Present</th><th>Size</th><th>SHA-256 (first 16)</th></tr></thead>
+            <tbody>{c.artifacts.map((a) => (
+              <tr key={a.name}><td><code>{a.name}</code></td><td className={a.present ? "tone-ok" : "tone-danger"}>{a.present ? "yes" : "MISSING"}</td>
+                <td>{a.bytes ?? "—"}</td><td><code>{a.sha256 ?? "—"}</code></td></tr>))}</tbody></table>
+          {c.problems.length > 0 && <p className="warn">Problems: {c.problems.join("; ")}</p>}
+        </details>
+      ))}
 
       {exp && (<>
         <h3>2 · Available artifacts (read-only)</h3>

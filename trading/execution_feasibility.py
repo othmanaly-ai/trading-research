@@ -52,6 +52,22 @@ class RequestCapReached(RuntimeError):
     pass
 
 
+CANDIDATE_STATUS = PROJECT_ROOT / "research" / "candidates" / "gap_down_opening" / "STATUS.json"
+BLOCKING_STATES = ("DEFERRED_DATA_SEMANTICS",)
+
+
+def downloads_blocked(status_path: Path = CANDIDATE_STATUS) -> str | None:
+    """Reason downloads are refused for this candidate, or None. A missing or unreadable status
+    file also blocks (fail closed)."""
+    try:
+        state = json.loads(status_path.read_text(encoding="utf-8")).get("state")
+    except (OSError, ValueError) as exc:
+        return f"candidate status unreadable ({type(exc).__name__}); downloads refused"
+    if state in BLOCKING_STATES:
+        return f"candidate state is {state}: downloads for this candidate are stopped (owner decision)"
+    return None
+
+
 class CountingHttp:
     """Wraps a requests.Session: counts and paces every GET, refuses beyond the cap. Logs only the
     path, parameters, status and local times (never headers, so never credentials)."""
@@ -395,6 +411,10 @@ def analyze_coverage(out: Path, first_run: Path) -> dict:
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv[:1] == ["fetch"]:
+        blocked = downloads_blocked()
+        if blocked:
+            print(blocked)
+            return 3
         import requests
         from trading.alpaca_client import MissingCredentials, ReadOnlyAlpacaClient, load_credentials
         check_dates()
@@ -413,6 +433,10 @@ def main(argv=None) -> int:
                                         for k, v in r.items() if isinstance(v, dict)} for d, r in res["dates"].items()}}, indent=1))
         return 0
     if argv[:1] == ["coverage"]:
+        blocked = downloads_blocked()
+        if blocked:
+            print(blocked)
+            return 3
         import requests
         from trading.alpaca_client import MissingCredentials, ReadOnlyAlpacaClient, load_credentials
         check_dates()

@@ -231,3 +231,21 @@ def test_server_never_loads_broker_code():
             "print(any(m in sys.modules for m in ('trading.alpaca_client', 'requests')))")
     out = subprocess.run([sys.executable, "-c", code], cwd=ROOT, capture_output=True, text=True)
     assert out.stdout.strip() == "False", out.stderr
+
+
+def test_candidates_overview_lists_deferred_candidate_read_only():
+    from trading.dashboard import server as srv
+    from trading import jobs
+    c = {x["candidate"]: x for x in srv.candidates_overview()}
+    g = c["gap_down_opening"]
+    assert g["status"]["state"] == "DEFERRED_DATA_SEMANTICS" and g["status"]["performance_evaluated"] is False
+    assert g["status"]["blockers"] and not g["problems"]
+    assert "gap_down_opening" not in jobs.ALLOWED_EXPERIMENTS          # no pipeline can run on it
+
+
+def test_candidates_overview_tolerates_corrupt_status(tmp_path):
+    from trading.dashboard import server as srv
+    (tmp_path / "research" / "candidates" / "x").mkdir(parents=True)
+    (tmp_path / "research" / "candidates" / "x" / "STATUS.json").write_text("{not json", encoding="utf-8")
+    out = srv.candidates_overview(tmp_path / "research" / "candidates")
+    assert out[0]["status"] is None and "unreadable" in out[0]["problems"][0]

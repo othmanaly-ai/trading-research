@@ -166,5 +166,19 @@ returns were computed and no rule was approved.
 - **Timestamp:** the official docs do not state the quote timestamp's clock.
 - **Condition codes:** unmapped (`?`) for 2016-2020.
 
+**State:** `DEFERRED_DATA_SEMANTICS` (owner decision 2026-11-04). It is **not failed and not
+rejected on performance**: no returns were ever computed for this rule. All records are
+preserved. Downloads for this candidate are stopped in code (`trading.execution_feasibility`
+refuses to fetch). See `candidates/gap_down_opening/STATUS.json` and the unsent support request
+`../feasibility/execution_data/ALPACA_SUPPORT_REQUEST_DRAFT.md`.
+
+**Correction to scope:**
+- **Timestamp clock:** unknown timestamp semantics limit claims that need sub-second precision.
+  They do not make every coarse historical analysis invalid.
+- **Publication evidence:** missing archived publication evidence (17 of 24 dates) is an
+  uncertainty, not proof the dates were unknown.
+- **Seven sampled days:** they establish access and sample characteristics, not a validated
+  cost model.
+
 **Verdict:** **defer this candidate.** Quote interpretation is not established from
 accessible official sources. Nothing was purchased or assumed.

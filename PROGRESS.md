@@ -522,6 +522,18 @@ pipeline -> watch progress -> cancel if needed -> open the report.
 - **Verdict:** defer the gap-down candidate (`feasibility/execution_data/FINDINGS_2.md`).
   No returns computed, no experiment.
 
+## Gap-down candidate deferred (2026-11-04)
+
+- **State:** `gap_down_opening` marked DEFERRED_DATA_SEMANTICS
+  (`research/candidates/gap_down_opening/STATUS.json`). It is not failed and not
+  performance-rejected.
+- **Downloads:** blocked in code; tested.
+- **Support request:** an unsent draft, `feasibility/execution_data/ALPACA_SUPPORT_REQUEST_DRAFT.md`,
+  with resume criteria A1-A5.
+- **Corrections:** scope wording fixed in the feasibility records.
+- **City:** the research jobs view lists the candidate, its blockers and its records, using the
+  existing table component.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

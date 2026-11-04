@@ -44,11 +44,12 @@ distribution history; only development-period rows were stored.
 | Verified non-ex-distribution: eligible | 1,487 |
 | Unresolved: ineligible | 0. This depends on the issuer history being complete; corroboration is partial. |
 | Ex-dates with archived issuer schedules captured **before** the ex-date | **7 of 24**: 2020-06-19, 2020-09-18, 2020-12-18 (capture 2020-05-19); all four 2021 dates (capture 2021-01-30) |
-| Ex-dates with **no point-in-time evidence** | 17: all of 2016-2019 and 2020-03-20 |
+| Ex-dates **without archived publication evidence** | 17: all of 2016-2019 and 2020-03-20. This is an **uncertainty**, not proof that these dates were unknown in advance; we simply found no dated copy. |
 
 - **Archive search:** Internet Archive captures of the schedule exist only from 2020-05.
-- **Classification only:** the 1,487 / 24 split is a **retrospective** classification. Except
-  for those 7 dates, it does not show what a trader could have known at 09:31 that day.
+- **Classification only:** the 1,487 / 24 split is a **retrospective** classification. For 7
+  dates we can also show the date was public beforehand. For the other 17, availability is
+  **unverified**: it may well have been published, but we have no dated evidence either way.
 
 **Selection bias:**
 - **Expiration days:** every excluded session is a quarterly index option and futures expiration
@@ -142,3 +143,20 @@ Source: <https://docs.alpaca.markets/us/reference/stockquotes-1>, page modified 
 Under the owner's stated rule, quote interpretation could not be established from accessible
 official sources. The recommendation is therefore **to defer this candidate**. No data was
 purchased, and no assumption fills the gap.
+
+**State (owner decision 2026-11-04):** `DEFERRED_DATA_SEMANTICS`
+(`research/candidates/gap_down_opening/STATUS.json`). Downloads for this candidate are stopped.
+The open questions are drafted, not sent, in `ALPACA_SUPPORT_REQUEST_DRAFT.md`.
+
+### Scope of these claims (correction, 2026-11-04)
+
+- **What the unknown clock limits:** it limits the claims we can make at sub-second precision.
+  These include which quote was in force at an exact instant, and quote/trade alignment within
+  a second. It does **not** show that every coarse historical analysis (for example, minute-level
+  spread summaries) is invalid. It means those analyses must state the assumption, and cannot
+  be used where sub-second ordering matters.
+- **Missing publication evidence:** an uncertainty about historical availability, not evidence
+  that a distribution date was unknown.
+- **Seven sampled days:** they establish data access and sample characteristics: coverage,
+  ordering, typical spreads and class shares. They are not a validated execution-cost model and
+  must not be used as one.
