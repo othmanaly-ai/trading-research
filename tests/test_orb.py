@@ -274,6 +274,8 @@ def test_b1_b2_reproducible_unmatched_and_identical_treatment():
     assert a["strategy"]["account_return"] == pytest.approx(a["strategy"]["total_pnl"] / 100_000)
     assert 0 <= a["B1"]["1"]["strategy_percentile"] <= 100
     assert a["B1"]["1"]["mean_unmatched"] >= 0 and "conditional" in a["B2"]["1"]["note"]
+    # Descriptive fields must be finite numbers (regression: they were NaN in run 20261104T034149Z).
+    assert np.isfinite(a["B1"]["1"]["mean_hold_min"]) and np.isfinite(a["B1"]["1"]["mean_stop_bp"])
 
 
 # ---- lock and variant policy -------------------------------------------------------------

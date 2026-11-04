@@ -1,0 +1,14 @@
+{
+  "experiment_id": "002-895a4f9c5d",
+  "spec_version": "1.0",
+  "spec_sha256": "25b5f29ef8b5",
+  "status": "FAILED at development stage under the predefined criteria (spec v1.0 section 6); awaiting owner review",
+  "decided_utc": "2026-11-04",
+  "development_run_id": "20261104T034149Z",
+  "tested_code_commit": "33fede4",
+  "failed_rules": ["D1", "D4", "D5", "D6"],
+  "passed_rules": ["D2", "D3"],
+  "validation_data": "not retrieved, not inspected",
+  "final_data": "not retrieved, not inspected",
+  "known_reporting_defect": "B1 mean_hold_min and mean_stop_bp were NaN in the original run; fixed and recomputed (gate fields identical)"
+}

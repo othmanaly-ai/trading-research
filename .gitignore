@@ -38,6 +38,7 @@ journal/
 !research/*/variants.csv
 !research/*/experiment_attempts.csv
 !research/*/inspection_runs.csv
+!research/*/experiment_runs.csv
 
 # --- Python environment and caches ---
 .venv/

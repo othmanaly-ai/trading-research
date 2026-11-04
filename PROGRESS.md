@@ -286,6 +286,20 @@ Known defects and limitations:
   - Owner to choose; nothing implemented.
 - **Tests:** `pytest -q`: 139 passed.
 
+## Experiment 002-895a4f9c5d: development FAILED (2026-11-04)
+
+- **Spec and build:** spec v1.0 approved; implemented behind `trading/engine.py`
+  (SessionStrategy interface). The tested code commit is `33fede4`; the lock is committed in
+  `4ba245d`.
+- **Experiment 001 reproduces exactly** at base, stress and severe costs, and is still CLOSED.
+- **Development run `20261104T034149Z`:** base -0.014%, stress -2.19%, intraday max drawdown 0.82%.
+  - D1, D4, D5 and D6 fail; D2 and D3 pass.
+  - 0 unresolved cases; 2 M2 sessions; 3 incomplete opening ranges (March 2020).
+  - Details: `research/002_opening_range_breakout/RESULTS_development.md`.
+- **Reporting defect:** B1 mean hold and stop distance were NaN; fixed with a test and
+  recomputed, and the gate fields were verified identical.
+- **Validation and final:** untouched. **Tests:** `pytest -q`: 161 passed.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

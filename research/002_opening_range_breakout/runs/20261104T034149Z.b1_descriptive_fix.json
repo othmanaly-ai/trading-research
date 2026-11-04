@@ -1,0 +1,14 @@
+{
+  "run_id": "20261104T034149Z",
+  "note": "post-run recomputation of two descriptive B1 fields after fixing a NaN-sum reporting bug; gate fields verified identical",
+  "B1": {
+    "20261104": {
+      "mean_hold_min": 146.52962567425513,
+      "mean_stop_bp": 39.51444371528453
+    },
+    "20261105": {
+      "mean_hold_min": 146.53454457574858,
+      "mean_stop_bp": 39.52268492029435
+    }
+  }
+}

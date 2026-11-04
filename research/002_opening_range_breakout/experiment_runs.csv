@@ -1,0 +1,5 @@
+timestamp_utc,git_commit,experiment_id,run_id,period,configuration,variant_id,status,net_return_base,halted_base,trades,detail
+2026-11-04T03:41:49+00:00,4ba245d,002-895a4f9c5d,20261104T034149Z,development,primary,c9ac86655f77,completed,-0.00014099733272376902,False,1058,development failed
+2026-11-04T03:41:49+00:00,4ba245d,002-895a4f9c5d,20261104T034149Z,development,range_15,9558a6432bc9,completed,0.0033387996633091888,False,1146,development failed
+2026-11-04T03:41:49+00:00,4ba245d,002-895a4f9c5d,20261104T034149Z,development,range_45,ea9d54293ea7,completed,0.0003766283247872426,False,974,development failed
+2026-11-04T03:41:49+00:00,4ba245d,002-895a4f9c5d,20261104T034149Z,development,midpoint_stop,08c569d63814,completed,-0.0030589641854095184,False,1058,development failed

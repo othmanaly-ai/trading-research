@@ -228,7 +228,8 @@ def diagnostics(days, sessions, start, end, strategy_entries: int, costs: CostMo
             unmatched += list((part & np.isnan(pnl)).sum(axis=1))
             for lst, k in ((hold, "hold"), (stop_bp, "stop_bp"), (cost, "cost")):
                 vals = mats[k][np.arange(S), col]
-                lst += list(np.where(v, vals, np.nan).sum(axis=1) / np.maximum(v.sum(axis=1), 1)
+                # Mean over each run's matched trades (zeros where not traded, then divide).
+                lst += list(np.where(v, vals, 0.0).sum(axis=1) / np.maximum(v.sum(axis=1), 1)
                             if k != "cost" else np.where(v, vals, 0.0).sum(axis=1))
         totals = np.array(totals)
         out["B1"][str(seed)] = {

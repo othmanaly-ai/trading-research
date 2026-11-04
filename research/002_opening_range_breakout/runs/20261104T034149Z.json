@@ -1,0 +1,706 @@
+{
+  "run_id": "20261104T034149Z",
+  "experiment_id": "002-895a4f9c5d",
+  "git_commit": "4ba245d",
+  "tested_code_commit_in_lock": "33fede4",
+  "period": "development",
+  "dates": [
+    "2016-01-04",
+    "2021-12-31"
+  ],
+  "risk_limits": {
+    "risk_per_trade": 0.001,
+    "max_notional": 0.05,
+    "participation": 0.01,
+    "daily_loss_limit": 0.005,
+    "max_drawdown": 0.03,
+    "max_gross_exposure": 0.1,
+    "max_positions": 2,
+    "risk_includes_costs": true,
+    "placeholder": false
+  },
+  "primary": {
+    "base": {
+      "net_return": -0.00014099733272376902,
+      "net_pnl": -14.099733272378216,
+      "gross_pnl": 1166.4599999999907,
+      "modeled_costs": 1180.5597332723216,
+      "trades": 1058,
+      "unique_sessions": 1058,
+      "halted": false,
+      "halt_event": null,
+      "max_drawdown_intraday": 0.008170625060988885,
+      "max_drawdown_end_of_day": 0.007326823746924096,
+      "time_in_market": 0.41731132798528436,
+      "avg_notional_to_equity": 0.048508677936881746,
+      "win_rate": 0.46880907372400754,
+      "avg_win": 18.04981530281991,
+      "avg_loss": -15.955174596923502,
+      "profit_factor": 0.99842756384678,
+      "sharpe": -0.005866281603274948,
+      "sharpe_ci95": [
+        -0.8464746920536644,
+        0.7277492923697072
+      ],
+      "avg_holding_minutes": 231.58412098298678,
+      "by_year": {
+        "2016": {
+          "net_return": 0.000924895541531745,
+          "trades": 170
+        },
+        "2017": {
+          "net_return": -0.0006052453080966913,
+          "trades": 169
+        },
+        "2018": {
+          "net_return": -0.00037850932971783546,
+          "trades": 180
+        },
+        "2019": {
+          "net_return": -0.0003320020156557524,
+          "trades": 176
+        },
+        "2020": {
+          "net_return": -0.001551127564249133,
+          "trades": 190
+        },
+        "2021": {
+          "net_return": 0.0018045493540987945,
+          "trades": 173
+        }
+      },
+      "skips": {
+        "no breakout": 448,
+        "data: check failed before signal": 2,
+        "data: incomplete opening range": 3
+      },
+      "exit_reasons": {
+        "stop": 401,
+        "time exit": 657
+      },
+      "unresolved_trades": 0,
+      "provisional_trades": [],
+      "net_pnl_excluding_provisional": -14.099733272330838,
+      "top10_winners_pnl": 1089.626546452494,
+      "m2_sessions": [
+        "2016-02-02",
+        "2021-05-05"
+      ],
+      "m2_detail": {
+        "2016-02-02": "2016-02-02 16:19:00+00:00",
+        "2021-05-05": "2021-05-05 15:27:00+00:00"
+      }
+    },
+    "stress": {
+      "net_return": -0.02193855632707642,
+      "net_pnl": -2193.8556327076367,
+      "gross_pnl": 1156.7199999999912,
+      "modeled_costs": 3350.57563270765,
+      "trades": 1058,
+      "unique_sessions": 1058,
+      "halted": false,
+      "halt_event": null,
+      "max_drawdown_intraday": 0.024946149789489978,
+      "max_drawdown_end_of_day": 0.02447510101293246,
+      "time_in_market": 0.41731132798528436,
+      "avg_notional_to_equity": 0.048507565557457326,
+      "win_rate": 0.42060491493383745,
+      "avg_win": 17.68168012147167,
+      "avg_loss": -16.41468725409878,
+      "profit_factor": 0.7819706509414482,
+      "sharpe": -1.1694026572576863,
+      "sharpe_ci95": [
+        -2.0595853827241895,
+        -0.37601586789608804
+      ],
+      "avg_holding_minutes": 231.58412098298678,
+      "by_year": {
+        "2016": {
+          "net_return": -0.002650429261571996,
+          "trades": 170
+        },
+        "2017": {
+          "net_return": -0.0041736755703359885,
+          "trades": 169
+        },
+        "2018": {
+          "net_return": -0.004045249349508673,
+          "trades": 180
+        },
+        "2019": {
+          "net_return": -0.004024498707366875,
+          "trades": 176
+        },
+        "2020": {
+          "net_return": -0.005561573152691235,
+          "trades": 190
+        },
+        "2021": {
+          "net_return": -0.0016818430789246053,
+          "trades": 173
+        }
+      },
+      "skips": {
+        "no breakout": 448,
+        "data: check failed before signal": 2,
+        "data: incomplete opening range": 3
+      },
+      "exit_reasons": {
+        "stop": 401,
+        "time exit": 657
+      },
+      "unresolved_trades": 0,
+      "provisional_trades": [],
+      "net_pnl_excluding_provisional": -2193.855632707659,
+      "top10_winners_pnl": 1051.355047765744,
+      "m2_sessions": [
+        "2016-02-02",
+        "2021-05-05"
+      ],
+      "m2_detail": {
+        "2016-02-02": "2016-02-02 16:19:00+00:00",
+        "2021-05-05": "2021-05-05 15:27:00+00:00"
+      }
+    },
+    "severe": {
+      "net_return": -0.029091900383307223,
+      "net_pnl": -2909.190038330722,
+      "gross_pnl": 498.07999999999583,
+      "modeled_costs": 3407.270038330931,
+      "trades": 737,
+      "unique_sessions": 737,
+      "halted": true,
+      "halt_event": {
+        "day": "2020-03-20",
+        "mark_equity": 97090.94989027307,
+        "peak_equity": 100095.01047933432
+      },
+      "max_drawdown_intraday": 0.030013489216680695,
+      "max_drawdown_end_of_day": 0.029978619385621876,
+      "time_in_market": 0.28506974605283325,
+      "avg_notional_to_equity": 0.048745271544526805,
+      "win_rate": 0.3649932157394844,
+      "avg_win": 16.44700615003979,
+      "avg_loss": -15.669732249341111,
+      "profit_factor": 0.6032977506119774,
+      "sharpe": -1.9980648556092149,
+      "sharpe_ci95": [
+        -2.9483621256928276,
+        -1.1611019959303768
+      ],
+      "avg_holding_minutes": 227.10040705563094,
+      "by_year": {
+        "2016": {
+          "net_return": -0.005130117942956702,
+          "trades": 170
+        },
+        "2017": {
+          "net_return": -0.006617936709002792,
+          "trades": 169
+        },
+        "2018": {
+          "net_return": -0.0066860351705192445,
+          "trades": 180
+        },
+        "2019": {
+          "net_return": -0.006534287385401738,
+          "trades": 176
+        },
+        "2020": {
+          "net_return": -0.004465987289787199,
+          "trades": 42
+        },
+        "2021": {
+          "net_return": 0.0,
+          "trades": 0
+        }
+      },
+      "skips": {
+        "no breakout": 320,
+        "data: check failed before signal": 1,
+        "data: incomplete opening range": 3,
+        "risk: drawdown kill switch active (needs owner review)": 450
+      },
+      "exit_reasons": {
+        "stop": 281,
+        "time exit": 455,
+        "risk: drawdown limit breached": 1
+      },
+      "unresolved_trades": 0,
+      "provisional_trades": [],
+      "net_pnl_excluding_provisional": -2909.1900383309353,
+      "top10_winners_pnl": 841.0901149517681,
+      "m2_sessions": [
+        "2016-02-02"
+      ],
+      "m2_detail": {
+        "2016-02-02": "2016-02-02 16:19:00+00:00"
+      }
+    }
+  },
+  "B3": {
+    "net_return": -0.013034966315220942,
+    "net_pnl": -1303.4966315220954,
+    "gross_pnl": 279.9799999999888,
+    "modeled_costs": 1583.4766315222141,
+    "trades": 1424,
+    "unique_sessions": 1424,
+    "halted": false,
+    "halt_event": null,
+    "max_drawdown_intraday": 0.014040504325580669,
+    "max_drawdown_end_of_day": 0.013933366526469036,
+    "time_in_market": 0.38311617529337627,
+    "avg_notional_to_equity": 0.04864937746283891,
+    "win_rate": 0.2773876404494382,
+    "avg_win": 21.628327501045668,
+    "avg_loss": -9.56917978079229,
+    "profit_factor": 0.867620777969473,
+    "sharpe": -0.7083939251707293,
+    "sharpe_ci95": [
+      -1.6080252968345168,
+      0.09326075372479516
+    ],
+    "avg_holding_minutes": 157.96278089887642,
+    "by_year": {
+      "2016": {
+        "net_return": -0.0029812677860552306,
+        "trades": 235
+      },
+      "2017": {
+        "net_return": -0.0008790406475318591,
+        "trades": 241
+      },
+      "2018": {
+        "net_return": -0.004474066253742581,
+        "trades": 237
+      },
+      "2019": {
+        "net_return": -0.0008740942238280036,
+        "trades": 233
+      },
+      "2020": {
+        "net_return": -0.0011158754682583094,
+        "trades": 240
+      },
+      "2021": {
+        "net_return": -0.002776577522387136,
+        "trades": 238
+      }
+    },
+    "skips": {
+      "invalid stop at entry": 81,
+      "risk: size below 1 share (invalid inputs cap)": 3,
+      "data: incomplete opening range": 3
+    },
+    "exit_reasons": {
+      "stop": 969,
+      "time exit": 455
+    },
+    "unresolved_trades": 0,
+    "provisional_trades": [],
+    "net_pnl_excluding_provisional": -1303.4966315222255,
+    "top10_winners_pnl": 1216.764939487042,
+    "m2_sessions": [],
+    "m2_detail": {}
+  },
+  "moc_sensitivity": {
+    "net_return": 0.0007499263685259994,
+    "net_pnl": 74.99263685259211,
+    "gross_pnl": 1255.9899999999902,
+    "modeled_costs": 1180.997363147251,
+    "trades": 1058,
+    "unique_sessions": 1058,
+    "halted": false,
+    "halt_event": null,
+    "max_drawdown_intraday": 0.0072197585594578435,
+    "max_drawdown_end_of_day": 0.006441190430120417,
+    "time_in_market": 0.41843033059118084,
+    "avg_notional_to_equity": 0.04850830536250158,
+    "win_rate": 0.46313799621928164,
+    "avg_win": 18.634318124768523,
+    "avg_loss": -15.943350782189853,
+    "profit_factor": 1.0082811506839067,
+    "sharpe": 0.04099613863638537,
+    "sharpe_ci95": [
+      -0.7840881588439821,
+      0.78450781478102
+    ],
+    "avg_holding_minutes": 232.20510396975425,
+    "by_year": {
+      "2016": {
+        "net_return": 0.001163553109614357,
+        "trades": 170
+      },
+      "2017": {
+        "net_return": -0.0005759617627721925,
+        "trades": 169
+      },
+      "2018": {
+        "net_return": -0.00036544089972634364,
+        "trades": 180
+      },
+      "2019": {
+        "net_return": -0.0002124956417508539,
+        "trades": 176
+      },
+      "2020": {
+        "net_return": -0.0011605608389156918,
+        "trades": 190
+      },
+      "2021": {
+        "net_return": 0.001903967271492446,
+        "trades": 173
+      }
+    },
+    "skips": {
+      "no breakout": 448,
+      "data: check failed before signal": 2,
+      "data: incomplete opening range": 3
+    },
+    "exit_reasons": {
+      "stop": 401,
+      "time exit (MOC sensitivity)": 657
+    },
+    "unresolved_trades": 0,
+    "provisional_trades": [],
+    "net_pnl_excluding_provisional": 74.99263685273924,
+    "top10_winners_pnl": 1051.2217587562025,
+    "m2_sessions": [
+      "2016-02-02",
+      "2021-05-05"
+    ],
+    "m2_detail": {
+      "2016-02-02": "2016-02-02 16:19:00+00:00",
+      "2021-05-05": "2021-05-05 15:27:00+00:00"
+    }
+  },
+  "robustness": {
+    "range_15": {
+      "net_return": 0.0033387996633091888,
+      "net_pnl": 333.87996633091825,
+      "gross_pnl": 1613.1099999999958,
+      "modeled_costs": 1279.230033669024,
+      "trades": 1146,
+      "unique_sessions": 1146,
+      "halted": false,
+      "halt_event": null,
+      "max_drawdown_intraday": 0.00948652613896641,
+      "max_drawdown_end_of_day": 0.008710905476277382,
+      "time_in_market": 0.41564900447941683,
+      "avg_notional_to_equity": 0.04856583819907931,
+      "win_rate": 0.4223385689354276,
+      "avg_win": 20.193206549080948,
+      "avg_loss": -14.259262845051673,
+      "profit_factor": 1.0353700193195938,
+      "sharpe": 0.17105136071909954,
+      "sharpe_ci95": [
+        -0.6783367210567957,
+        0.9012092147096558
+      ],
+      "avg_holding_minutes": 212.94938917975568,
+      "by_year": {
+        "2016": {
+          "net_return": -0.0003527998197478954,
+          "trades": 184
+        },
+        "2017": {
+          "net_return": -0.0014289702297400897,
+          "trades": 186
+        },
+        "2018": {
+          "net_return": -0.0004039723378522764,
+          "trades": 198
+        },
+        "2019": {
+          "net_return": 0.0001591526633186735,
+          "trades": 192
+        },
+        "2020": {
+          "net_return": 0.00028500666029263044,
+          "trades": 200
+        },
+        "2021": {
+          "net_return": 0.005088945319166482,
+          "trades": 186
+        }
+      },
+      "skips": {
+        "no breakout": 360,
+        "data: check failed before signal": 2,
+        "data: incomplete opening range": 3
+      },
+      "exit_reasons": {
+        "stop": 557,
+        "time exit": 589
+      },
+      "unresolved_trades": 0,
+      "provisional_trades": [],
+      "net_pnl_excluding_provisional": 333.8799663309719,
+      "top10_winners_pnl": 1180.9348288984957,
+      "m2_sessions": [
+        "2016-02-02",
+        "2021-05-05"
+      ],
+      "m2_detail": {
+        "2016-02-02": "2016-02-02 16:19:00+00:00",
+        "2021-05-05": "2021-05-05 15:27:00+00:00"
+      }
+    },
+    "range_45": {
+      "net_return": 0.0003766283247872426,
+      "net_pnl": 37.66283247873071,
+      "gross_pnl": 1126.4999999999948,
+      "modeled_costs": 1088.8371675213461,
+      "trades": 974,
+      "unique_sessions": 974,
+      "halted": false,
+      "halt_event": null,
+      "max_drawdown_intraday": 0.007267625740254851,
+      "max_drawdown_end_of_day": 0.0070781988629131645,
+      "time_in_market": 0.3920971505458757,
+      "avg_notional_to_equity": 0.04851142107266815,
+      "win_rate": 0.4804928131416838,
+      "avg_win": 16.984217342067375,
+      "avg_loss": -15.634290283812021,
+      "profit_factor": 1.0047608477201753,
+      "sharpe": 0.023008292792752127,
+      "sharpe_ci95": [
+        -0.8158007816203697,
+        0.7645462925809519
+      ],
+      "avg_holding_minutes": 236.35728952772075,
+      "by_year": {
+        "2016": {
+          "net_return": 0.002834007065628752,
+          "trades": 150
+        },
+        "2017": {
+          "net_return": -0.00017938367411118872,
+          "trades": 155
+        },
+        "2018": {
+          "net_return": 3.937750036930865e-05,
+          "trades": 169
+        },
+        "2019": {
+          "net_return": -0.0009230757030306291,
+          "trades": 163
+        },
+        "2020": {
+          "net_return": -0.0018165578608621002,
+          "trades": 176
+        },
+        "2021": {
+          "net_return": 0.0004283851530679783,
+          "trades": 161
+        }
+      },
+      "skips": {
+        "no breakout": 529,
+        "data: check failed before signal": 3,
+        "data: incomplete opening range": 3,
+        "risk: gap beyond executable limit": 2
+      },
+      "exit_reasons": {
+        "time exit": 686,
+        "stop": 288
+      },
+      "unresolved_trades": 0,
+      "provisional_trades": [],
+      "net_pnl_excluding_provisional": 37.662832478648625,
+      "top10_winners_pnl": 1003.7100176864927,
+      "m2_sessions": [
+        "2016-02-02",
+        "2020-03-18",
+        "2021-05-05"
+      ],
+      "m2_detail": {
+        "2016-02-02": "2016-02-02 16:19:00+00:00",
+        "2020-03-18": "2020-03-18 16:57:00+00:00",
+        "2021-05-05": "2021-05-05 15:27:00+00:00"
+      }
+    },
+    "midpoint_stop": {
+      "net_return": -0.0030589641854095184,
+      "net_pnl": -305.8964185409568,
+      "gross_pnl": 876.7799999999847,
+      "modeled_costs": 1182.676418540871,
+      "trades": 1058,
+      "unique_sessions": 1058,
+      "halted": false,
+      "halt_event": null,
+      "max_drawdown_intraday": 0.008070491921322136,
+      "max_drawdown_end_of_day": 0.007678119234797766,
+      "time_in_market": 0.29715395227632724,
+      "avg_notional_to_equity": 0.04864658415474736,
+      "win_rate": 0.34593572778827975,
+      "avg_win": 19.8736128959862,
+      "avg_loss": -10.953235171202076,
+      "profit_factor": 0.9596423485214072,
+      "sharpe": -0.18485268570239852,
+      "sharpe_ci95": [
+        -1.0514797602861736,
+        0.5383030273341967
+      ],
+      "avg_holding_minutes": 164.90359168241966,
+      "by_year": {
+        "2016": {
+          "net_return": 0.0008843627543433374,
+          "trades": 170
+        },
+        "2017": {
+          "net_return": -0.0014846776667940542,
+          "trades": 169
+        },
+        "2018": {
+          "net_return": 0.0005326690760720787,
+          "trades": 180
+        },
+        "2019": {
+          "net_return": -0.0013860739273318101,
+          "trades": 176
+        },
+        "2020": {
+          "net_return": -0.0033565001014129736,
+          "trades": 190
+        },
+        "2021": {
+          "net_return": 0.001756351100970388,
+          "trades": 173
+        }
+      },
+      "skips": {
+        "no breakout": 448,
+        "data: check failed before signal": 2,
+        "data: incomplete opening range": 3
+      },
+      "exit_reasons": {
+        "stop": 631,
+        "time exit": 427
+      },
+      "unresolved_trades": 0,
+      "provisional_trades": [],
+      "net_pnl_excluding_provisional": -305.89641854088626,
+      "top10_winners_pnl": 1066.821058616133,
+      "m2_sessions": [
+        "2016-02-02",
+        "2021-05-05"
+      ],
+      "m2_detail": {
+        "2016-02-02": "2016-02-02 16:19:00+00:00",
+        "2021-05-05": "2021-05-05 15:27:00+00:00"
+      }
+    }
+  },
+  "diagnostics": {
+    "or_eligible_sessions": 1508,
+    "participation_p": 0.7015915119363395,
+    "strategy_entries_full_account": 1058,
+    "normalization": "account return = total net dollar P&L / $100,000; $5,000 notional per trade at entry fill",
+    "strategy": {
+      "trades": 1058,
+      "total_pnl": -175.4394154586757,
+      "account_return": -0.001754394154586757,
+      "mean_hold_min": 231.58412098298678,
+      "median_hold_min": 272.5,
+      "mean_stop_bp": 41.10733297198808,
+      "median_stop_bp": 32.375316627206495,
+      "total_cost": 1216.6978342232892,
+      "participation": 0.7015915119363395
+    },
+    "B1": {
+      "20261104": {
+        "runs": 10000,
+        "median_total_pnl": -548.6478534203158,
+        "median_account_return": -0.005486478534203158,
+        "p95_total_pnl": 87.7335183041694,
+        "strategy_percentile": 82.98,
+        "ties": 0,
+        "mean_trades": 784.7045,
+        "mean_unmatched": 273.4461,
+        "mean_unmatched_rate": 0.25841888668777396,
+        "mean_hold_min": NaN,
+        "mean_stop_bp": NaN,
+        "mean_total_cost": 902.3540169167712
+      },
+      "20261105": {
+        "runs": 10000,
+        "median_total_pnl": -556.3014931936108,
+        "median_account_return": -0.005563014931936108,
+        "p95_total_pnl": 76.45638393939608,
+        "strategy_percentile": 83.09,
+        "ties": 0,
+        "mean_trades": 784.8834,
+        "mean_unmatched": 273.3989,
+        "mean_unmatched_rate": 0.258342126670738,
+        "mean_hold_min": NaN,
+        "mean_stop_bp": NaN,
+        "mean_total_cost": 902.5585906928128
+      }
+    },
+    "B2": {
+      "20261104": {
+        "runs": 10000,
+        "median_total_pnl": 4350.594564153866,
+        "strategy_percentile": 0.0,
+        "sessions_without_room": 99,
+        "mean_unmatched": 61.2028,
+        "note": "conditional on later information (a breakout occurred); context only"
+      },
+      "20261105": {
+        "runs": 10000,
+        "median_total_pnl": 4348.1892306557,
+        "strategy_percentile": 0.0,
+        "sessions_without_room": 99,
+        "mean_unmatched": 61.1794,
+        "note": "conditional on later information (a breakout occurred); context only"
+      }
+    }
+  },
+  "rules": {
+    "D1": {
+      "pass": false,
+      "base_net_return": -0.00014099733272376902,
+      "stress_net_return": -0.02193855632707642
+    },
+    "D2": {
+      "pass": true,
+      "halted_base": false,
+      "halted_stress": false,
+      "max_dd_base": 0.008170625060988885,
+      "max_dd_stress": 0.024946149789489978
+    },
+    "D3": {
+      "pass": true,
+      "strategy": -0.00014099733272376902,
+      "B3": -0.013034966315220942
+    },
+    "D4": {
+      "pass": false,
+      "net_pnl": -14.099733272378216,
+      "top10_winners": 1089.626546452494,
+      "remainder": -1103.7262797248723
+    },
+    "D5": {
+      "pass": false,
+      "range_15": {
+        "net_return": 0.0033387996633091888,
+        "halted": false
+      },
+      "range_45": {
+        "net_return": 0.0003766283247872426,
+        "halted": false
+      },
+      "midpoint_stop": {
+        "net_return": -0.0030589641854095184,
+        "halted": false
+      }
+    },
+    "D6": {
+      "pass": false,
+      "percentile": 82.98,
+      "label": "engineering screening criterion; not a significance test or future-profit probability"
+    }
+  },
+  "all_pass": false
+}
