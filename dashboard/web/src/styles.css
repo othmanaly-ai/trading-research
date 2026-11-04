@@ -167,3 +167,18 @@ footer { padding: 8px 16px 16px; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
+
+.jobs-banner { border: 1px solid var(--cyan); border-radius: 8px; padding: 6px 10px; margin-bottom: 10px; font-size: 12.5px; }
+.jobs-banner strong { color: var(--cyan); letter-spacing: 0.06em; margin-right: 8px; }
+.pipeline h3 { text-transform: none; letter-spacing: 0; color: var(--text); }
+.job-towers { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin: 8px 0 14px; }
+.job-tower { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 128px; padding: 6px; background: var(--panel-2); }
+.job-tower.sel { border-color: var(--amber); }
+.jt-bar { width: 34px; height: 70px; border-radius: 4px 4px 0 0; border: 2px solid currentColor; box-shadow: 0 0 10px currentColor; }
+.jt-name { font-weight: 700; font-size: 12.5px; }
+.jt-kind, .jt-reused { font-size: 10.5px; color: var(--muted); text-align: center; }
+.jt-status { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; }
+.js-completed { color: var(--green); } .js-running { color: var(--cyan); } .js-queued { color: var(--indigo); }
+.js-failed { color: var(--red); } .js-blocked { color: var(--amber); } .js-cancelled { color: var(--muted); }
+.job-detail { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; }
+pre.json { max-height: 260px; overflow: auto; background: #0f0c26; padding: 8px; border-radius: 6px; font-size: 11.5px; white-space: pre-wrap; }

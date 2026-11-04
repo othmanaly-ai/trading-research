@@ -62,7 +62,7 @@ export function Controls({ status, connection, lastMessageAt, control, controlEr
   control: (a: string, s?: number) => void; controlError: string | null;
   view: string; setView: (v: string) => void; reducedMotion: boolean; setReducedMotion: (b: boolean) => void;
 }) {
-  const views = ["City", "Table", "Sessions", "Leaderboard", "Research"];
+  const views = ["City", "Table", "Sessions", "Leaderboard", "Research", "Research jobs"];
   return (
     <div className="controls">
       <div className="group" role="group" aria-label="Replay controls">

@@ -15,6 +15,7 @@ Endpoints:
   GET  /api/strategies/<id>/evaluation   evaluation report up to the current replay time
   GET  /api/strategies/<id>/journal      journal rows (JSON); /journal.csv downloads them
   GET  /api/research             mode availability, periods, responsibilities
+  GET  /api/jobs                 real research-job records (trading/jobs.py), read-only
   GET  /api/stream               server-sent events: reset, ev, snapshot, replay
   POST /api/control              {"action": "pause"|"resume"|"restart"|"speed", "speed": n}
 """
@@ -46,6 +47,32 @@ from trading.sessions import sessions_between
 HOST = "127.0.0.1"
 WEB_DIST = Path(__file__).resolve().parents[2] / "dashboard" / "web" / "dist"
 RESPONSIBILITIES = Path(__file__).resolve().parents[2] / "research" / "responsibilities.json"
+JOBS_DB = Path(__file__).resolve().parents[2] / "data" / "jobs" / "jobs.sqlite"
+ALPACA_CHECKS = Path(__file__).resolve().parents[2] / "data" / "alpaca"
+
+
+def paper_account_reason() -> str:
+    """Accurate status from saved verification outputs (read-only; no credentials are loaded)."""
+    runs = sorted(p.name for p in ALPACA_CHECKS.glob("*") if (p / "account.json").is_file())         if ALPACA_CHECKS.is_dir() else []
+    if runs:
+        return (f"read-only paper account access verified by `trading.verify_data_access` (latest saved "
+                f"check {runs[-1]}); live account monitoring in this dashboard is not implemented")
+    return "Alpaca paper account access not yet verified in this project"
+
+
+def jobs_snapshot() -> dict:
+    """Real research-job records, read from the job store (never demo data)."""
+    from trading.jobs import JobStore, MODEL_POLICY, UNIMPLEMENTED_ROLES, WORKERS
+    if not JOBS_DB.is_file():
+        snap = {"pipelines": [], "jobs": [], "roles": UNIMPLEMENTED_ROLES, "model_policy": MODEL_POLICY,
+                "workers": [{"worker": w, "kind": k, "version": v, "depends_on": d} for w, k, v, d in WORKERS]}
+    else:
+        store = JobStore(JOBS_DB)
+        try:
+            snap = store.snapshot()
+        finally:
+            store.close()
+    return {"mode_label": "REAL RESEARCH JOBS (not demo)", **snap}
 TICK_SECONDS = 0.05
 MAX_IDLE_REPLAY_SECONDS = 90      # skip quiet stretches (overnight, mid-day) faster
 MIN_SPEED, MAX_SPEED = 1, 3600
@@ -176,9 +203,9 @@ def research_status(history_root: Path = HISTORY_DIR, hist_config_path: Path = H
             "DEMO": {"available": True, "reason": "synthetic fixtures"},
             "HISTORICAL_REPLAY": {"available": usable > 0, "reason": hist_reason},
             "SIMULATION": {"available": False,
-                           "reason": "method proposed in docs/PRODUCT_SPEC.md section 8, awaiting review; "
-                                     "also needs historical replay"},
-            "PAPER_ACCOUNT": {"available": False, "reason": "Alpaca paper access not verified"},
+                           "reason": "scenario-simulation method proposed in docs/PRODUCT_SPEC.md section 8; "
+                                     "awaiting owner review, not implemented"},
+            "PAPER_ACCOUNT": {"available": False, "reason": paper_account_reason()},
         },
         "historical_periods": periods,
         "historical_data": None if not manifest else {
@@ -228,6 +255,8 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
             if path == "/api/snapshot":
                 with ctrl.cond:
                     return self._json({"snapshot": ctrl.snapshot(), "replay": ctrl.status()})
+            if path == "/api/jobs":
+                return self._json(jobs_snapshot())
             if path == "/api/research":
                 return self._json(research)
             if path.startswith("/api/strategies/") and path.endswith(("/journal", "/journal.csv")):

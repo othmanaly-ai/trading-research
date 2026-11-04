@@ -1,25 +1,87 @@
 {
-  "_note": "Research responsibilities and how each is currently implemented. 'deterministic' = Python module with tests; 'manual' = owner decision recorded in a file; 'not_implemented' = nothing runs. No AI agents are used. The eleven-skill package from the reference video has not been received or installed.",
+  "_note": "Research responsibilities and how each is currently implemented. 'deterministic' = Python module with tests; 'manual' = owner decision recorded in a file; 'not_implemented' = nothing runs. No AI agents are used; the model-powered review job is blocked. The eleven-skill package from the reference video has not been received or installed.",
   "responsibilities": [
-    {"id": "data_validation", "name": "Data validation", "implementation": "deterministic", "module": "trading/validate.py", "status": "implemented", "veto": true,
-     "notes": "Structural checks and session coverage; a failed check blocks the day's trade."},
-    {"id": "screening", "name": "Screening", "implementation": "not_implemented", "module": null, "status": "not needed for experiment 001",
-     "notes": "Universe is fixed by SPEC section 2 (SPY only)."},
-    {"id": "news_analysis", "name": "News analysis", "implementation": "not_implemented", "module": null, "status": "no verified news source",
-     "notes": "Nothing is displayed until a time-stamped, source-linked feed is verified."},
-    {"id": "entry_spec", "name": "Entry specification", "implementation": "deterministic", "module": "trading/strategies/intraday_momentum.py", "status": "implemented",
-     "notes": "Signal at open + 30 min; entry one minute after the decision."},
-    {"id": "exit_spec", "name": "Exit specification", "implementation": "deterministic", "module": "trading/backtest.py", "status": "implemented",
-     "notes": "Time exit, protective stop, halt and missing-bar rules."},
-    {"id": "risk_checks", "name": "Risk checks", "implementation": "deterministic", "module": "trading/risk.py", "status": "implemented (placeholder limits)", "veto": true,
-     "notes": "Sizing caps, daily loss limit, drawdown kill switch. Limits await owner decision D1."},
-    {"id": "historical_evaluation", "name": "Historical evaluation", "implementation": "deterministic", "module": "trading/experiment.py", "status": "implemented, not run on real data",
-     "notes": "Period lock and variant budget enforced; needs verified data."},
-    {"id": "execution_modeling", "name": "Execution modeling", "implementation": "deterministic", "module": "trading/costs.py", "status": "implemented (assumed costs)",
-     "notes": "Spread and slippage are guesses until measured from quotes."},
-    {"id": "performance_analysis", "name": "Performance analysis", "implementation": "deterministic", "module": "trading/evaluation.py", "status": "implemented",
-     "notes": "Report contents defined in docs/PRODUCT_SPEC.md section 7."},
-    {"id": "review", "name": "Review", "implementation": "manual", "module": "research/001_intraday_momentum/SPEC.md", "status": "owner approves specs and promotions",
-     "notes": "Spec approval and variant promotion are owner decisions logged in the repo."}
+    {
+      "id": "data_validation",
+      "name": "Data validation",
+      "implementation": "deterministic",
+      "module": "trading/validate.py",
+      "status": "implemented",
+      "veto": true,
+      "notes": "Structural checks and session coverage; a failed check blocks the day's trade. Verified on 1,511 real development sessions."
+    },
+    {
+      "id": "screening",
+      "name": "Screening",
+      "implementation": "not_implemented",
+      "module": null,
+      "status": "not needed for experiment 001",
+      "notes": "Universe is fixed by SPEC section 2 (SPY only)."
+    },
+    {
+      "id": "news_analysis",
+      "name": "News analysis",
+      "implementation": "not_implemented",
+      "module": null,
+      "status": "no verified news source",
+      "notes": "Nothing is displayed until a time-stamped, source-linked feed is verified."
+    },
+    {
+      "id": "entry_spec",
+      "name": "Entry specification",
+      "implementation": "deterministic",
+      "module": "trading/strategies/intraday_momentum.py",
+      "status": "implemented",
+      "notes": "Signal at open + 30 min; entry one minute after the decision."
+    },
+    {
+      "id": "exit_spec",
+      "name": "Exit specification",
+      "implementation": "deterministic",
+      "module": "trading/backtest.py",
+      "status": "implemented",
+      "notes": "Time exit, protective stop, halt and missing-bar rules."
+    },
+    {
+      "id": "risk_checks",
+      "name": "Risk checks",
+      "implementation": "deterministic",
+      "module": "trading/risk.py",
+      "status": "implemented (owner limits OWNER_BASELINE_2026_11_03)",
+      "veto": true,
+      "notes": "Account-level sizing caps, daily loss limit, permanent drawdown halt; limits set by the owner 2026-11-03."
+    },
+    {
+      "id": "historical_evaluation",
+      "name": "Historical evaluation",
+      "implementation": "deterministic",
+      "module": "trading/experiment.py, trading/orb_experiment.py",
+      "status": "implemented; run on real development data (experiments 001 and 002, both failed)",
+      "notes": "Period lock, variant budget, experiment lock and closure guard enforced; validation and final data never retrieved."
+    },
+    {
+      "id": "execution_modeling",
+      "name": "Execution modeling",
+      "implementation": "deterministic",
+      "module": "trading/costs.py",
+      "status": "implemented (assumed costs)",
+      "notes": "Spread and slippage are guesses until measured from quotes."
+    },
+    {
+      "id": "performance_analysis",
+      "name": "Performance analysis",
+      "implementation": "deterministic",
+      "module": "trading/evaluation.py",
+      "status": "implemented; also run as research jobs (trading/jobs.py)",
+      "notes": "Report contents defined in docs/PRODUCT_SPEC.md section 7."
+    },
+    {
+      "id": "review",
+      "name": "Review",
+      "implementation": "manual",
+      "module": "research/001_intraday_momentum/SPEC.md",
+      "status": "owner approves specs and promotions",
+      "notes": "Spec approval and variant promotion are owner decisions logged in the repo. Deterministic rule checks run as jobs; model review is blocked (no key or authorization)."
+    }
   ]
 }
