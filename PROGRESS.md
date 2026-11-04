@@ -320,6 +320,40 @@ Known defects and limitations:
 - **Alpaca:** read-only verification re-run 2026-11-04 04:01 UTC with the current user-level
   credentials (session values match): account ACTIVE, SPY SIP development sample complete.
 
+## Research-job control panel in the city (2026-11-04)
+
+Workflow, all in the browser at http://127.0.0.1:8765, "Research jobs" tab:
+select a saved experiment -> inspect its artifacts -> preview the task -> start the one allowed
+pipeline -> watch progress -> cancel if needed -> open the report.
+
+- **Implemented and tested:**
+  - **Allowlist:** experiments 001 and 002; the single pipeline `reconcile_report`. The server
+    accepts only `{experiment, pipeline}` and has no command, path or shell input.
+  - **Backend validation:** cross-site requests are refused. The server checks the Host header,
+    requires the X-Dashboard-Control header (forces a CORS preflight), checks Origin and
+    Sec-Fetch-Site, requires JSON content-type, and caps body size.
+  - **Execution:** one background thread executes jobs, outside the web request.
+  - **Deduplication:** check-and-insert runs in one SQLite `BEGIN IMMEDIATE` transaction, so
+    simultaneous clicks create one pipeline (regression test: 8 parallel requests). Completed
+    steps are reused, never redone.
+  - **Cancellation:** a queued pipeline is cancelled at once. A running pipeline gets
+    "cancellation requested"; the current step finishes, and the remaining steps become
+    cancelled. Completed evidence is kept.
+  - **Restart:** running work becomes FAILED "interrupted", never completed.
+  - **Model review:** reported as NOT IMPLEMENTED / UNAVAILABLE. A key alone changes nothing.
+- **Fixed during verification:**
+  - Concurrent first opens of a new job database could report "database is locked". Schema
+    setup is now serialized, and the server answers database errors with 503.
+  - Stale 3D labels stayed on screen after switching experiments.
+- **Verified in the built-in browser** (Playwright is not installed):
+  - **Real server:** start, duplicate clicks and 6 parallel requests (no new job rows), 8
+    invalid requests refused, report opens. Database, table and 3D towers agree.
+  - **Throwaway harness:** a separate process with copied artifacts, a temporary database and
+    4-second steps. Live progress, cancellation (3 steps kept, 3 cancelled), a failure (missing
+    run file: ingest failed, rest blocked), and a hard kill plus restart (pipeline FAILED
+    "interrupted").
+- **Tests:** 190 pass.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

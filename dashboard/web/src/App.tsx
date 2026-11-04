@@ -4,7 +4,9 @@ import JobsView from "./components/JobsView";
 import {
   AccountPanel, ActivityFeed, Banner, Controls, Leaderboard, ModeStrip, ResearchView, SessionHistory, StrategyTable,
 } from "./components/Panels";
-import type { Research } from "./types";
+import type { Research, StrategyView } from "./types";
+import type { TowerSpec } from "./components/CityView";
+import { money } from "./format";
 import { useReplay } from "./useReplay";
 
 const SUPPORTED_MODES = ["DEMO_REPLAY", "HISTORICAL_REPLAY"];
@@ -18,6 +20,36 @@ class Boundary extends Component<{ onError: (m: string) => void; children: React
   componentDidCatch(e: Error) { this.props.onError(`3D view crashed (${e.message}). Showing the Table view.`); }
   render() { return this.state.failed ? null : this.props.children; }
 }
+
+// DEMO strategy towers: color follows the ledger's status text; the label spells it out.
+const STRATEGY_COLORS: Record<string, number> = {
+  long: 0x22d3ee, short: 0xe879f9, signal: 0xfbbf24, idle: 0x6366f1, skipped: 0x64748b, halted: 0xef4444,
+};
+function category(s: StrategyView): string {
+  if (s.status.startsWith("HALTED")) return "halted";
+  if (s.status === "IN POSITION LONG") return "long";
+  if (s.status === "IN POSITION SHORT") return "short";
+  if (s.status.startsWith("SIGNAL") || s.status === "ENTERING") return "signal";
+  if (s.status === "SKIPPED") return "skipped";
+  return "idle";
+}
+function strategyTower(s: StrategyView): TowerSpec {
+  const c = category(s);
+  return {
+    id: s.id, color: STRATEGY_COLORS[c],
+    lines: [
+      { cls: "tl-name", text: s.name }, { cls: "tl-inst", text: s.instrument_label },
+      { cls: `tl-status tone-${c}`, text: s.status },
+      ...(s.feed_status === "stale" ? [{ cls: "tl-stale", text: "DATA STALE" }] : []),
+      { cls: "tl-pnl", text: `Realized ${money(s.realized_pnl, true)}` },
+      { cls: "tl-pnl", text: `Unrealized ${s.position ? money(s.unrealized_pnl, true) : "— (flat)"}` },
+      { cls: "tl-sim", text: "simulated" },
+    ],
+    ariaLabel: `${s.name}, ${s.instrument_label}, ${s.status}. Open details.`,
+    pulseKey: `${s.trades}:${s.position ? 1 : 0}`,      // a fill or close changed the position
+  };
+}
+const CORE = (risk: string) => (risk === "OK" ? 0x4f46e5 : risk === "ATTENTION" ? 0xef4444 : 0x334155);
 
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -48,6 +80,7 @@ export default function App() {
   const onCityFailure = useCallback((m: string) => { setCityError(m); setView("Table"); }, []);
   const snap = r.snapshot;
   const selected = snap?.strategies.find((s) => s.id === selectedId) ?? null;
+  const towers = useMemo(() => (snap?.strategies ?? []).map(strategyTower), [snap]);
   const names = useMemo(() => Object.fromEntries((snap?.strategies ?? []).map((s) => [s.id, s.name + " · " + s.instrument_label])), [snap]);
 
   if (r.metaError) {
@@ -87,7 +120,7 @@ export default function App() {
               snap.strategies.length ? (
                 <Boundary onError={onCityFailure}>
                   <Suspense fallback={<p className="empty panel">Loading 3D view…</p>}>
-                    <CityView strategies={snap.strategies} accountRisk={snap.account.risk_status}
+                    <CityView towers={towers} coreColor={CORE(snap.account.risk_status)}
                               selectedId={selectedId} onSelect={setSelectedId}
                               reducedMotion={reducedMotion} onFailure={onCityFailure} />
                   </Suspense>
@@ -100,7 +133,7 @@ export default function App() {
             {view === "Sessions" && <SessionHistory snapshot={snap} />}
             {view === "Leaderboard" && <Leaderboard snapshot={snap} />}
             {view === "Research" && <ResearchView research={research} />}
-            {view === "Research jobs" && <JobsView />}
+            {view === "Research jobs" && <JobsView reducedMotion={reducedMotion} />}
           </div>
           <div className="side">
             <AccountPanel account={snap.account} snapshot={snap} instruments={snap.instruments} />

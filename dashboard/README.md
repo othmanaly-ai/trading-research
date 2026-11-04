@@ -83,6 +83,31 @@ Towers are configured in `dashboard/demo_config.json` (instruments, instances,
 parameters, per-instance risk overrides). Adding an instance needs no code
 change, and no AI agents or model calls are involved.
 
+## Research jobs tab (REAL records, not demo)
+
+The "Research jobs" tab is a control panel for `trading/jobs.py`. It reads saved artifacts of
+the closed experiments 001 and 002 and never re-runs a trading evaluation or fetches data.
+Job towers are teal cylinders tagged REAL JOB, unlike the purple DEMO strategy boxes. A Table
+view shows the same records and controls.
+
+Endpoints (localhost only):
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/experiments` | allowlisted experiments, artifact inventory |
+| GET | `/api/pipelines/preview?experiment=` | what starting would do |
+| POST | `/api/pipelines` | body `{experiment}`. 201 = created; 200 = already active, nothing new |
+| POST | `/api/pipelines/<id>/cancel` | body `{}`. Returns `cancelled`, `cancel_requested` or `already <status>` |
+| GET | `/api/reports/<id>` | report of a completed pipeline only |
+
+Every POST must have:
+- the header `X-Dashboard-Control: 1`
+- `Content-Type: application/json`
+- a same-origin `Origin` / `Sec-Fetch-Site`
+- a Host of `127.0.0.1:<port>` or `localhost:<port>`
+
+CLI equivalents: `python -m trading.jobs run --experiment ...`, `list`, `cancel <pipeline_id>`.
+
 ## Verification
 
 ```powershell

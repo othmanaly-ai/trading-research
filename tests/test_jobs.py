@@ -40,14 +40,18 @@ def test_end_to_end_on_real_artifacts(env):
         assert rec["started_utc"] and rec["finished_utc"] and rec["evidence"]["checks"]
 
 
-def test_model_review_blocked_without_key_or_authorization(env):
+def test_model_review_not_implemented_even_with_key(env):
     store, research = env
     jobs.run_pipeline(EXPS[1], store, research, env={})
     mr = next(j for j in store.snapshot()["jobs"] if j["worker"] == "model_review")
-    assert mr["status"] == "blocked" and "ANTHROPIC_API_KEY is not set" in mr["error"] and mr["outputs"] is None
-    jobs.run_pipeline(EXPS[1], store, research, env={"ANTHROPIC_API_KEY": "x"})
-    mr2 = [j for j in store.snapshot()["jobs"] if j["worker"] == "model_review"][-1]
-    assert mr2["status"] == "blocked" and "not authorized" in mr2["error"] and mr2["outputs"] is None
+    assert mr["status"] == "blocked" and mr["error"].startswith("NOT IMPLEMENTED / UNAVAILABLE")
+    assert "ANTHROPIC_API_KEY is not set" in mr["error"] and mr["outputs"] is None
+    # A key alone changes nothing: the implementation is absent, so it is still unavailable.
+    assert jobs.model_review({"ANTHROPIC_API_KEY": "x"})[2].startswith("NOT IMPLEMENTED / UNAVAILABLE")
+    assert jobs.model_review({"ANTHROPIC_API_KEY": "x"})[1] is None
+    # Re-running reuses the blocked record instead of piling up new ones.
+    jobs.run_pipeline(EXPS[1], store, research, env={})
+    assert sum(j["worker"] == "model_review" for j in store.snapshot()["jobs"]) == 1
 
 
 def test_missing_artifact_fails_ingest_and_blocks_downstream(env):
@@ -115,7 +119,7 @@ def test_dashboard_endpoint_matches_store(env, monkeypatch, tmp_path):
     jobs.run_pipeline(EXPS[1], store, research, env={})
     from trading.dashboard import server
     monkeypatch.setattr(server, "JOBS_DB", tmp_path / "jobs.sqlite")
-    httpd, ctrl, stop = server.create_server(None, 0, speed=3600)
+    httpd, ctrl, stop = server.create_server(None, 0, speed=3600, run_jobs=False)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     try:
         url = f"http://127.0.0.1:{httpd.server_address[1]}/api/jobs"
@@ -142,7 +146,7 @@ def test_api_and_store_emit_strict_json(env, monkeypatch, tmp_path):
                 json.loads(text, parse_constant=reject)
     from trading.dashboard import server
     monkeypatch.setattr(server, "JOBS_DB", tmp_path / "jobs.sqlite")
-    httpd, ctrl, stop = server.create_server(None, 0, speed=3600)
+    httpd, ctrl, stop = server.create_server(None, 0, speed=3600, run_jobs=False)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     try:
         base = f"http://127.0.0.1:{httpd.server_address[1]}"

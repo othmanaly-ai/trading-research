@@ -182,3 +182,21 @@ footer { padding: 8px 16px 16px; }
 .js-failed { color: var(--red); } .js-blocked { color: var(--amber); } .js-cancelled { color: var(--muted); }
 .job-detail { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; }
 pre.json { max-height: 260px; overflow: auto; background: #0f0c26; padding: 8px; border-radius: 6px; font-size: 11.5px; white-space: pre-wrap; }
+
+/* Research-job control panel (REAL jobs: teal cylinders, never the purple DEMO boxes) */
+.city-jobs { height: 440px; border-color: #0e7490; }
+.tower-label.job-label { background: rgba(4, 30, 36, 0.9); border-color: #14b8a6; box-shadow: 0 0 12px rgba(20, 184, 166, 0.35); min-width: 130px; }
+.tower-label.job-label.selected { border-color: var(--amber); box-shadow: 0 0 16px rgba(251, 191, 36, 0.5); }
+.tl-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: #042f2e; background: #5eead4; padding: 0 4px; border-radius: 3px; display: inline-block; }
+.jobs .seg { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.jobs .seg button.on { border-color: #14b8a6; background: rgba(20, 184, 166, 0.18); }
+.jobs .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0; }
+.jobs button.primary { border-color: #14b8a6; background: rgba(20, 184, 166, 0.25); font-weight: 700; }
+.jobs button:disabled { opacity: 0.5; cursor: not-allowed; }
+.jobs progress { width: 100%; height: 10px; accent-color: #14b8a6; }
+.jobs .notice { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; }
+.tone-ok { color: var(--green); font-weight: 600; }
+.tone-warn { color: var(--amber); font-weight: 600; }
+.job-table tr.sel td { background: rgba(251, 191, 36, 0.08); }
+.jobs pre.report { white-space: pre-wrap; max-height: 520px; overflow: auto; }
+.jobs details { margin-top: 10px; }

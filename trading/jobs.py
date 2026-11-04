@@ -30,6 +30,7 @@ import json
 import os
 import sqlite3
 import sys
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -39,6 +40,12 @@ DB_PATH = PROJECT_ROOT / "data" / "jobs" / "jobs.sqlite"
 REPORT_DIR = PROJECT_ROOT / "results" / "jobs"
 HISTORY_MANIFEST = PROJECT_ROOT / "data" / "history" / "SPY" / "sip" / "all" / "manifest.json"
 STATES = ("queued", "running", "completed", "failed", "blocked", "cancelled")
+# The only work the browser may request: predefined pipelines over predefined saved experiments.
+ALLOWED_EXPERIMENTS = ("001_intraday_momentum", "002_opening_range_breakout")
+PIPELINES = {"reconcile_report": "Ingest saved artifacts, reconcile recorded gates, analyse, run the "
+                                 "deterministic checklist, and write a report. Never re-runs trading evaluations."}
+EXPECTED_ARTIFACTS = ("STATUS.json", "EXPERIMENT_LOCK.json", "SPEC.md", "RESULTS_development.md")
+STEP_HOOK = None          # tests only: called before each job runs
 
 WORKERS = [
     # name, kind, version, depends on
@@ -79,11 +86,19 @@ def _rel(path: Path) -> str:
         return str(path)
 
 
+_INIT_LOCK = threading.Lock()
+
+
 class JobStore:
     def __init__(self, path: Path = DB_PATH):
         path.parent.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(path)
+        self.db = sqlite3.connect(path, timeout=10)
         self.db.row_factory = sqlite3.Row
+        with _INIT_LOCK:                 # concurrent first opens of a new file can report "locked"
+            self._init_schema()
+
+    def _init_schema(self) -> None:
+        self.db.execute("PRAGMA journal_mode=WAL")
         self.db.executescript("""
         CREATE TABLE IF NOT EXISTS jobs (
             id TEXT PRIMARY KEY, pipeline_id TEXT, worker TEXT, kind TEXT, experiment TEXT,
@@ -95,22 +110,61 @@ class JobStore:
             id TEXT PRIMARY KEY, experiment TEXT, created_utc TEXT, finished_utc TEXT,
             status TEXT, job_ids_json TEXT);
         """)
+        cols = {r[1] for r in self.db.execute("PRAGMA table_info(pipelines)")}
+        for col, decl in (("pipeline", "TEXT"), ("started_utc", "TEXT"), ("cancel_requested", "INTEGER DEFAULT 0"),
+                          ("cancel_requested_utc", "TEXT"), ("error", "TEXT")):
+            if col not in cols:
+                self.db.execute(f"ALTER TABLE pipelines ADD COLUMN {col} {decl}")
         self.db.commit()
 
     def close(self) -> None:
         self.db.close()
 
     def recover_interrupted(self) -> int:
+        """After a backend restart: work that was running is FAILED (interrupted), never completed.
+        Queued jobs of an interrupted pipeline are cancelled (not run). Returns jobs marked failed."""
+        now = _now()
         cur = self.db.execute("UPDATE jobs SET status='failed', finished_utc=?, "
-                              "error='interrupted: process stopped while running' WHERE status='running'", (_now(),))
+                              "error='interrupted: process stopped while running' WHERE status='running'", (now,))
+        n = cur.rowcount
+        for row in self.db.execute("SELECT id, job_ids_json FROM pipelines WHERE status='running'").fetchall():
+            for jid in json.loads(row["job_ids_json"]):
+                self.db.execute("UPDATE jobs SET status='cancelled', finished_utc=?, error='not run: pipeline "
+                                "interrupted by backend restart' WHERE id=? AND status='queued'", (now, jid))
+            self.db.execute("UPDATE pipelines SET status='failed', finished_utc=?, error='interrupted by backend "
+                            "restart; work was not completed' WHERE id=?", (now, row["id"]))
+        self.db.execute("UPDATE pipelines SET status='cancelled', finished_utc=? WHERE status='queued' "
+                        "AND cancel_requested=1", (now,))
         self.db.commit()
-        return cur.rowcount
+        return n
+
+    def pipeline(self, pipeline_id):
+        row = self.db.execute("SELECT * FROM pipelines WHERE id=?", (pipeline_id,)).fetchone()
+        return dict(row) | {"job_ids": json.loads(row["job_ids_json"])} if row else None
+
+    def active_pipeline(self, experiment):
+        row = self.db.execute("SELECT id FROM pipelines WHERE experiment=? AND status IN ('queued','running') "
+                              "ORDER BY rowid DESC LIMIT 1", (experiment,)).fetchone()
+        return row["id"] if row else None
+
+    def next_queued_pipeline(self):
+        row = self.db.execute("SELECT id FROM pipelines WHERE status='queued' AND COALESCE(cancel_requested,0)=0 "
+                              "ORDER BY rowid LIMIT 1").fetchone()
+        return row["id"] if row else None
+
+    def reusable(self, worker, experiment, key):
+        """A completed job, or (for the unimplemented model review) an existing blocked record."""
+        row = self.completed(worker, experiment, key)
+        if row is None and worker == "model_review":
+            row = self.db.execute("SELECT * FROM jobs WHERE worker=? AND experiment=? AND input_key=? AND "
+                                  "status='blocked' ORDER BY rowid DESC LIMIT 1", (worker, experiment, key)).fetchone()
+        return row
 
     def completed(self, worker, experiment, key):
         return self.db.execute("SELECT * FROM jobs WHERE worker=? AND experiment=? AND input_key=? "
                                "AND status='completed'", (worker, experiment, key)).fetchone()
 
-    def create(self, pipeline_id, worker, kind, experiment, key, inputs) -> str:
+    def create(self, pipeline_id, worker, kind, experiment, key, inputs, commit: bool = True) -> str:
         attempt = 1 + self.db.execute("SELECT COUNT(*) FROM jobs WHERE worker=? AND experiment=? AND input_key=?",
                                       (worker, experiment, key)).fetchone()[0]
         job_id = f"{experiment}:{worker}:{key[:10]}:a{attempt}"
@@ -118,7 +172,8 @@ class JobStore:
                         "created_utc, inputs_json) VALUES (?,?,?,?,?,?,?,?,?,?)",
                         (job_id, pipeline_id, worker, kind, experiment, key, "queued", attempt, _now(),
                          json.dumps(inputs, default=str)))
-        self.db.commit()
+        if commit:
+            self.db.commit()
         return job_id
 
     def set(self, job_id, status, outputs=None, evidence=None, error=None):
@@ -143,7 +198,7 @@ class JobStore:
         return cur.rowcount == 1
 
     def snapshot(self) -> dict:
-        pipes = [dict(r) | {"job_ids": json.loads(r["job_ids_json"])}
+        pipes = [dict(r) | {"job_ids": json.loads(r["job_ids_json"]), "cancel_requested": bool(r["cancel_requested"])}
                  for r in self.db.execute("SELECT * FROM pipelines ORDER BY rowid")]
         jobs = [_row(r) for r in self.db.execute("SELECT * FROM jobs ORDER BY rowid")]
         return {"pipelines": pipes, "jobs": jobs, "workers": [{"worker": w, "kind": k, "version": v, "depends_on": d}
@@ -298,12 +353,14 @@ def rule_checks(ing: dict, rec: dict, ana: dict) -> tuple[dict, dict]:
 
 
 def model_review(env: dict) -> tuple[str, dict | None, str]:
-    """Never calls a model in this milestone. Returns (status, outputs, reason)."""
+    """NOT IMPLEMENTED. Never calls a model, never spends money, never produces output."""
+    extra = []
     if not env.get("ANTHROPIC_API_KEY"):
-        return "blocked", None, "model review unavailable: ANTHROPIC_API_KEY is not set in this process"
+        extra.append("ANTHROPIC_API_KEY is not set")
     if not (RESEARCH_DIR / "MODEL_REVIEW_AUTHORIZATION.json").is_file():
-        return "blocked", None, "model review unavailable: paid usage not authorized by the owner"
-    return "blocked", None, "model review not implemented in this milestone"
+        extra.append("no owner spending authorization")
+    reason = "NOT IMPLEMENTED / UNAVAILABLE: model review is not implemented in this project"
+    return "blocked", None, reason + (f"; also {', '.join(extra)}" if extra else "")
 
 
 def report(pipeline_id: str, ing: dict, rec: dict, ana: dict, chk: dict, review_reason: str) -> tuple[dict, dict]:
@@ -326,32 +383,160 @@ def report(pipeline_id: str, ing: dict, rec: dict, ana: dict, chk: dict, review_
 
 # ---- pipeline ---------------------------------------------------------------------------
 
-def run_pipeline(experiment: str, store: JobStore, research_dir: Path = RESEARCH_DIR, env=None) -> dict:
-    env = os.environ if env is None else env
-    exp_dir = research_dir / experiment
-    store.recover_interrupted()
-    pipeline_id = f"{experiment}@{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}"
+def _validate(experiment: str, pipeline: str = "reconcile_report") -> None:
+    if experiment not in ALLOWED_EXPERIMENTS:
+        raise ValueError(f"experiment not allowed: {experiment!r}")
+    if pipeline not in PIPELINES:
+        raise ValueError(f"pipeline not allowed: {pipeline!r}")
+
+
+def _keys(exp_dir: Path) -> tuple[str, dict]:
     files = sorted(p for p in exp_dir.rglob("*") if p.is_file()) if exp_dir.is_dir() else []
     artifact_key = _sha(json.dumps([(str(p.relative_to(exp_dir)), _sha(p.read_bytes())) for p in files]).encode())
-    results, job_ids, keys, reasons = {}, [], {}, {}
+    keys = {}
+    for worker, _, version, deps in WORKERS:
+        keys[worker] = _sha(json.dumps([worker, version, artifact_key, [keys[d] for d in deps]]).encode())
+    return artifact_key, keys
+
+
+def inventory(experiment: str, research_dir: Path = RESEARCH_DIR) -> dict:
+    """Read-only artifact listing for the browser. Never raises for missing or corrupt files."""
+    _validate(experiment)
+    exp_dir = research_dir / experiment
+    out = {"experiment": experiment, "artifacts": [], "status": None, "problems": []}
+    try:
+        status = json.loads((exp_dir / "STATUS.json").read_text(encoding="utf-8"))
+        out["status"] = {k: status.get(k) for k in ("experiment_id", "state", "closed", "status", "failed_rules",
+                                                    "development_run_id")}
+    except (OSError, ValueError) as exc:
+        out["problems"].append(f"STATUS.json unreadable: {type(exc).__name__}")
+    names = list(EXPECTED_ARTIFACTS)
+    if out["status"] and out["status"].get("development_run_id"):
+        names.append(f"runs/{out['status']['development_run_id']}.json")
+    names.append("experiment_runs.csv" if (exp_dir / "experiment_runs.csv").is_file() else "variants.csv")
+    for name in names:
+        path = exp_dir / name
+        if path.is_file():
+            out["artifacts"].append({"name": name, "present": True, "bytes": path.stat().st_size,
+                                     "sha256": _sha(path.read_bytes())[:16]})
+        else:
+            out["artifacts"].append({"name": name, "present": False})
+            out["problems"].append(f"{name} is missing")
+    return out
+
+
+def preview(experiment: str, store: "JobStore", research_dir: Path = RESEARCH_DIR) -> dict:
+    """What starting the pipeline would do, without creating anything."""
+    _validate(experiment)
+    _, keys = _keys(research_dir / experiment)
+    tasks = []
     for worker, kind, version, deps in WORKERS:
-        key = _sha(json.dumps([worker, version, artifact_key, [keys.get(d) for d in deps]]).encode())
-        keys[worker] = key
-        done = store.completed(worker, experiment, key)
-        if done is not None:                                 # reuse: never duplicate a completed job
-            job_ids.append(done["id"])
-            results[worker] = _row(done)["outputs"]
+        row = store.reusable(worker, experiment, keys[worker])
+        action = f"reuse {row['status']} record {row['id']}" if row is not None else "will run"
+        if worker == "model_review":
+            action += " (NOT IMPLEMENTED / UNAVAILABLE: no model call, no output)"
+        tasks.append({"worker": worker, "kind": kind, "version": version, "depends_on": deps, "action": action})
+    return {"experiment": experiment, "pipeline": "reconcile_report", "description": PIPELINES["reconcile_report"],
+            "active_pipeline": store.active_pipeline(experiment), "tasks": tasks}
+
+
+def plan_pipeline(experiment: str, store: "JobStore", research_dir: Path = RESEARCH_DIR,
+                  pipeline: str = "reconcile_report") -> tuple[str, bool]:
+    """Create a queued pipeline, reusing completed work. If one is already queued or running for
+    this experiment, return it instead: repeated clicks never duplicate work."""
+    _validate(experiment, pipeline)
+    exp_dir = research_dir / experiment
+    artifact_key, keys = _keys(exp_dir)
+    # One write transaction for check + insert: simultaneous requests (threads or processes)
+    # serialize here, so only the first creates a pipeline and the rest see it as active.
+    if store.db.in_transaction:
+        store.db.commit()
+    store.db.execute("BEGIN IMMEDIATE")
+    try:
+        active = store.active_pipeline(experiment)
+        if active:
+            store.db.rollback()
+            return active, False
+        pipeline_id = _plan_rows(experiment, store, exp_dir, artifact_key, keys, pipeline)
+        store.db.commit()
+    except BaseException:
+        store.db.rollback()
+        raise
+    return pipeline_id, True
+
+
+def _plan_rows(experiment, store, exp_dir, artifact_key, keys, pipeline) -> str:
+    pipeline_id = f"{experiment}@{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}"
+    job_ids = []
+    for worker, kind, version, deps in WORKERS:
+        row = store.reusable(worker, experiment, keys[worker])
+        if row is not None:
+            job_ids.append(row["id"])
             continue
-        inputs = {"experiment_dir": _rel(exp_dir), "artifact_key": artifact_key[:16], "depends_on": {d: keys[d][:10] for d in deps}}
-        job_id = store.create(pipeline_id, worker, kind, experiment, key, inputs)
-        job_ids.append(job_id)
-        if store.get(job_id)["status"] == "cancelled":
+        inputs = {"experiment_dir": _rel(exp_dir), "artifact_key": artifact_key[:16],
+                  "depends_on": {d: keys[d][:10] for d in deps}}
+        job_ids.append(store.create(pipeline_id, worker, kind, experiment, keys[worker], inputs, commit=False))
+    store.db.execute("INSERT INTO pipelines (id, experiment, created_utc, status, job_ids_json, pipeline, "
+                     "cancel_requested) VALUES (?,?,?,?,?,?,0)",
+                     (pipeline_id, experiment, _now(), "queued", json.dumps(job_ids), pipeline))
+    return pipeline_id
+
+
+def request_cancel(pipeline_id: str, store: "JobStore") -> str:
+    """Queued pipeline: cancelled immediately. Running pipeline: cancellation REQUESTED; the job
+    currently running finishes (each step is atomic and short), then every remaining queued job is
+    cancelled and the pipeline becomes cancelled. Completed jobs and their evidence are kept."""
+    p = store.pipeline(pipeline_id)
+    if p is None:
+        raise KeyError(pipeline_id)
+    now = _now()
+    if p["status"] == "queued":
+        for jid in p["job_ids"]:
+            store.db.execute("UPDATE jobs SET status='cancelled', finished_utc=?, error='cancelled before start' "
+                             "WHERE id=? AND status='queued'", (now, jid))
+        store.db.execute("UPDATE pipelines SET status='cancelled', cancel_requested=1, cancel_requested_utc=?, "
+                         "finished_utc=? WHERE id=?", (now, now, pipeline_id))
+        store.db.commit()
+        return "cancelled"
+    if p["status"] == "running":
+        store.db.execute("UPDATE pipelines SET cancel_requested=1, cancel_requested_utc=? WHERE id=?",
+                         (now, pipeline_id))
+        store.db.commit()
+        return "cancel_requested"
+    return f"already {p['status']}"
+
+
+def execute_pipeline(pipeline_id: str, store: "JobStore", research_dir: Path = RESEARCH_DIR, env=None) -> dict:
+    env = os.environ if env is None else env
+    p = store.pipeline(pipeline_id)
+    exp_dir = research_dir / p["experiment"]
+    store.db.execute("UPDATE pipelines SET status='running', started_utc=? WHERE id=? AND status='queued'",
+                     (_now(), pipeline_id))
+    store.db.commit()
+    order = {w: i for i, (w, *_r) in enumerate(WORKERS)}
+    jobs = sorted((store.get(j) for j in p["job_ids"]), key=lambda j: order[j["worker"]])
+    results, reasons, cancelled = {}, {}, False
+    for job in jobs:
+        worker, job_id = job["worker"], job["id"]
+        if job["status"] == "completed":
+            results[worker] = job["outputs"]
             continue
-        missing = [d for d in deps if d not in results and not (d == "model_review")]
+        if job["status"] != "queued":
+            if worker == "model_review":
+                reasons["model_review"] = job["error"]
+            continue
+        if cancelled or store.pipeline(pipeline_id)["cancel_requested"]:
+            cancelled = True
+            store.set(job_id, "cancelled", error="cancelled on request before this job started")
+            continue
+        deps = next(d for w, _k, _v, d in WORKERS if w == worker)
+        missing = [d for d in deps if d not in results]
         if missing:
             store.set(job_id, "blocked", error=f"upstream not completed: {missing}")
             continue
         store.set(job_id, "running")
+        if STEP_HOOK:
+            STEP_HOOK(worker)
         try:
             if worker == "ingest":
                 out, ev = ingest(exp_dir)
@@ -374,33 +559,69 @@ def run_pipeline(experiment: str, store: JobStore, research_dir: Path = RESEARCH
             continue
         store.set(job_id, "completed", outputs=out, evidence=ev)
         results[worker] = out
-    statuses = [store.get(j)["status"] for j in job_ids]
-    overall = "failed" if "failed" in statuses else ("completed" if all(s in ("completed", "blocked") for s in statuses)
-                                                     and results.get("report") else "blocked")
-    store.db.execute("INSERT INTO pipelines VALUES (?,?,?,?,?,?)",
-                     (pipeline_id, experiment, _now(), _now(), overall, json.dumps(job_ids)))
+    statuses = [store.get(j)["status"] for j in p["job_ids"]]
+    if cancelled:
+        overall = "cancelled"
+    elif "failed" in statuses:
+        overall = "failed"
+    else:
+        overall = "completed" if results.get("report") else "blocked"
+    store.db.execute("UPDATE pipelines SET status=?, finished_utc=? WHERE id=?", (overall, _now(), pipeline_id))
     store.db.commit()
-    return {"pipeline_id": pipeline_id, "status": overall, "jobs": dict(zip(job_ids, statuses))}
+    return {"pipeline_id": pipeline_id, "status": overall, "jobs": dict(zip(p["job_ids"], statuses))}
+
+
+def run_pipeline(experiment: str, store: "JobStore", research_dir: Path = RESEARCH_DIR, env=None) -> dict:
+    """Synchronous plan + execute (CLI and tests). Reuses an already active pipeline."""
+    store.recover_interrupted()
+    pipeline_id, created = plan_pipeline(experiment, store, research_dir)
+    if not created:
+        p = store.pipeline(pipeline_id)
+        return {"pipeline_id": pipeline_id, "status": p["status"],
+                "jobs": {j: store.get(j)["status"] for j in p["job_ids"]}}
+    return execute_pipeline(pipeline_id, store, research_dir, env)
+
+
+class JobRunner(threading.Thread):
+    """Executes queued pipelines outside web requests, one at a time, with its own connection."""
+
+    def __init__(self, db_path: Path = DB_PATH, research_dir: Path = RESEARCH_DIR, poll: float = 0.3):
+        super().__init__(daemon=True, name="job-runner")
+        self.db_path, self.research_dir, self.poll = db_path, research_dir, poll
+        self.stop_event = threading.Event()
+
+    def run(self):
+        store = JobStore(self.db_path)
+        store.recover_interrupted()
+        try:
+            while not self.stop_event.wait(self.poll):
+                pid = store.next_queued_pipeline()
+                if pid:
+                    execute_pipeline(pid, store, self.research_dir)
+        finally:
+            store.close()
 
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Research-job pipeline over saved experiment artifacts")
     sub = parser.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run")
-    r.add_argument("--experiment", required=True, choices=["001_intraday_momentum", "002_opening_range_breakout"])
+    r.add_argument("--experiment", required=True, choices=list(ALLOWED_EXPERIMENTS))
     sub.add_parser("list")
     c = sub.add_parser("cancel")
-    c.add_argument("job_id")
+    c.add_argument("pipeline_id")
     args = parser.parse_args(argv)
     store = JobStore()
-    if args.cmd == "run":
-        print(json.dumps(run_pipeline(args.experiment, store), indent=2))
-    elif args.cmd == "list":
-        snap = store.snapshot()
-        for j in snap["jobs"]:
-            print(f"{j['created_utc']}  {j['status']:9s}  {j['id']}  {j['error'] or ''}")
-    else:
-        print("cancelled" if store.cancel(args.job_id) else "not cancelled (only queued jobs can be cancelled)")
+    try:
+        if args.cmd == "run":
+            print(json.dumps(run_pipeline(args.experiment, store), indent=2))
+        elif args.cmd == "list":
+            for j in store.snapshot()["jobs"]:
+                print(f"{j['created_utc']}  {j['status']:9s}  {j['id']}  {j['error'] or ''}")
+        else:
+            print(request_cancel(args.pipeline_id, store))
+    finally:
+        store.close()
     return 0
 
 

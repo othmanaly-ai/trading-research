@@ -16,6 +16,11 @@ Endpoints:
   GET  /api/strategies/<id>/journal      journal rows (JSON); /journal.csv downloads them
   GET  /api/research             mode availability, periods, responsibilities
   GET  /api/jobs                 real research-job records (trading/jobs.py), read-only
+  GET  /api/experiments          allowed saved experiments with artifact inventories
+  GET  /api/pipelines/preview?experiment=<allowed id>
+  POST /api/pipelines            {"experiment": <allowed id>} queues the predefined pipeline
+  POST /api/pipelines/<id>/cancel
+  GET  /api/reports/<pipeline id>  the completed report's markdown
   GET  /api/stream               server-sent events: reset, ev, snapshot, replay
   POST /api/control              {"action": "pause"|"resume"|"restart"|"speed", "speed": n}
 """
@@ -26,13 +31,14 @@ import io
 import json
 import math
 import mimetypes
+import sqlite3
 import sys
 import threading
 import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from trading.dashboard.demo_replay import DEFAULT_CONFIG, ConfigError, build_demo, load_config
 from trading.dashboard.historical_replay import DEFAULT_CONFIG as HIST_CONFIG
@@ -43,12 +49,15 @@ from trading.experiment import PERIODS
 from trading.history import HISTORY_DIR, HistoryError, read_manifest
 from trading.journal import COLUMNS as JOURNAL_COLUMNS
 from trading.journal import build_journal
+from trading import jobs as jobs_mod
 from trading.sessions import sessions_between
 
 HOST = "127.0.0.1"
 WEB_DIST = Path(__file__).resolve().parents[2] / "dashboard" / "web" / "dist"
 RESPONSIBILITIES = Path(__file__).resolve().parents[2] / "research" / "responsibilities.json"
 JOBS_DB = Path(__file__).resolve().parents[2] / "data" / "jobs" / "jobs.sqlite"
+JOBS_RESEARCH_DIR = Path(__file__).resolve().parents[2] / "research"
+MAX_BODY = 2048
 ALPACA_CHECKS = Path(__file__).resolve().parents[2] / "data" / "alpaca"
 
 
@@ -72,9 +81,33 @@ def paper_account_reason() -> str:
     return "Alpaca paper account access not yet verified in this project"
 
 
+def with_store(fn):
+    store = jobs_mod.JobStore(JOBS_DB)
+    try:
+        return fn(store)
+    finally:
+        store.close()
+
+
+def experiments_overview() -> dict:
+    """Allowed experiments only, with read-only artifact inventories and pipeline state."""
+    def build(st):
+        out = []
+        for exp in jobs_mod.ALLOWED_EXPERIMENTS:
+            item = jobs_mod.inventory(exp, JOBS_RESEARCH_DIR)
+            item["active_pipeline"] = st.active_pipeline(exp)
+            row = st.db.execute("SELECT id, status FROM pipelines WHERE experiment=? ORDER BY rowid DESC LIMIT 1",
+                                (exp,)).fetchone()
+            item["latest_pipeline"] = dict(row) if row else None
+            out.append(item)
+        return out
+    return {"mode_label": "REAL RESEARCH JOBS (not demo)", "pipelines": jobs_mod.PIPELINES,
+            "experiments": with_store(build)}
+
+
 def jobs_snapshot() -> dict:
     """Real research-job records, read from the job store (never demo data)."""
-    from trading.jobs import JobStore, MODEL_POLICY, UNIMPLEMENTED_ROLES, WORKERS
+    from trading.jobs import MODEL_POLICY, UNIMPLEMENTED_ROLES, WORKERS, JobStore
     if not JOBS_DB.is_file():
         snap = {"pipelines": [], "jobs": [], "roles": UNIMPLEMENTED_ROLES, "model_policy": MODEL_POLICY,
                 "workers": [{"worker": w, "kind": k, "version": v, "depends_on": d} for w, k, v, d in WORKERS]}
@@ -261,8 +294,49 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
             self._headers(status, "application/json", len(body))
             self.wfile.write(body)
 
+        def _host_ok(self) -> bool:
+            """Only requests addressed to this local server (blocks DNS-rebinding hosts)."""
+            port = self.server.server_address[1]
+            return self.headers.get("Host") in (f"127.0.0.1:{port}", f"localhost:{port}")
+
+        def _state_change_ok(self) -> str | None:
+            """Reason to refuse a state-changing request from anything but this page, or None."""
+            if not self._host_ok():
+                return "host not allowed"
+            if self.headers.get("X-Dashboard-Control") != "1":      # forces a CORS preflight cross-site
+                return "missing X-Dashboard-Control header"
+            origin = self.headers.get("Origin")
+            if origin is not None and origin != f"http://{self.headers.get('Host')}":
+                return "cross-origin request refused"
+            if self.headers.get("Sec-Fetch-Site") not in (None, "same-origin", "none"):
+                return "cross-site request refused"
+            if not (self.headers.get("Content-Type") or "").startswith("application/json"):
+                return "Content-Type must be application/json"
+            return None
+
+        def _body(self) -> dict:
+            n = int(self.headers.get("Content-Length") or 0)
+            if n > MAX_BODY:
+                raise ValueError("request body too large")
+            body = json.loads(self.rfile.read(n) or b"{}")
+            if not isinstance(body, dict):
+                raise ValueError("JSON object required")
+            return body
+
         def do_GET(self):
             path = urlparse(self.path).path
+            if path.startswith("/api/") and not self._host_ok():
+                return self._json({"error": "host not allowed"}, 403)
+            if path == "/api/experiments":
+                return self._json(experiments_overview())
+            if path == "/api/pipelines/preview":
+                exp = parse_qs(urlparse(self.path).query).get("experiment", [""])[0]
+                try:
+                    return self._json(with_store(lambda st: jobs_mod.preview(exp, st, JOBS_RESEARCH_DIR)))
+                except ValueError as exc:
+                    return self._json({"error": str(exc)}, 400)
+            if path.startswith("/api/reports/"):
+                return self._report(unquote(path[len("/api/reports/"):]))
             if path == "/api/meta":
                 return self._json(ctrl.meta)
             if path == "/api/snapshot":
@@ -309,16 +383,59 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
             return self._static(path)
 
         def do_POST(self):
-            if urlparse(self.path).path != "/api/control":
-                return self._json({"error": "not found"}, 404)
-            # A custom header forces a CORS preflight, so other websites can't drive this.
-            if self.headers.get("X-Dashboard-Control") != "1":
-                return self._json({"error": "missing X-Dashboard-Control header"}, 403)
+            path = urlparse(self.path).path
+            refusal = self._state_change_ok()
+            if refusal:
+                return self._json({"error": refusal}, 403)
             try:
-                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
-                return self._json(ctrl.control(body.get("action"), body.get("speed")))
+                body = self._body()
+                if path == "/api/control":
+                    return self._json(ctrl.control(body.get("action"), body.get("speed")))
+                if path == "/api/pipelines":
+                    if set(body) - {"experiment", "pipeline"} or not isinstance(body.get("experiment"), str) \
+                            or not isinstance(body.get("pipeline", "reconcile_report"), str):
+                        raise ValueError("expected only {experiment, pipeline} as strings")
+                    pid, created = with_store(lambda st: jobs_mod.plan_pipeline(
+                        body["experiment"], st, JOBS_RESEARCH_DIR, body.get("pipeline", "reconcile_report")))
+                    return self._json({"pipeline_id": pid, "created": created,
+                                       "note": "queued for the background runner" if created
+                                       else "an active pipeline already exists; no new work created"},
+                                      201 if created else 200)
+                if path.startswith("/api/pipelines/") and path.endswith("/cancel"):
+                    if body:
+                        raise ValueError("cancel takes no parameters")
+                    pid = unquote(path[len("/api/pipelines/"):-len("/cancel")])
+                    try:
+                        result = with_store(lambda st: jobs_mod.request_cancel(pid, st))
+                    except KeyError:
+                        return self._json({"error": "unknown pipeline"}, 404)
+                    return self._json({"pipeline_id": pid, "result": result})
+                return self._json({"error": "not found"}, 404)
             except (ValueError, TypeError) as exc:
                 return self._json({"error": str(exc)}, 400)
+            except sqlite3.Error as exc:
+                return self._json({"error": f"job store busy or unavailable ({type(exc).__name__}); "
+                                            "nothing was changed, retry"}, 503)
+
+        def _report(self, pipeline_id: str):
+            """Serve a report only for a known pipeline whose report job completed, from REPORT_DIR."""
+            def find(st):
+                p = st.pipeline(pipeline_id)
+                if p is None:
+                    return None
+                for jid in p["job_ids"]:
+                    j = st.get(jid)
+                    if j["worker"] == "report" and j["status"] == "completed":
+                        return j["outputs"]["report_path"]
+                return None
+            rel = with_store(find)
+            if rel is None:
+                return self._json({"error": "no completed report for this pipeline"}, 404)
+            root = jobs_mod.REPORT_DIR.resolve()
+            target = (jobs_mod.PROJECT_ROOT / rel).resolve()
+            if root not in target.parents or not target.is_file():
+                return self._json({"error": "report file not available"}, 404)
+            return self._json({"pipeline_id": pipeline_id, "report_markdown": target.read_text(encoding="utf-8")})
 
         def _send_sse(self, name: str, data) -> None:
             self.wfile.write(f"event: {name}\ndata: {json.dumps(data, default=str)}\n\n".encode())
@@ -377,7 +494,7 @@ def _ticker(ctrl: ReplayController, stop: threading.Event):
 
 
 def create_server(config_path: Path | None, port: int, speed: float | None = None, mode: str = "demo",
-                  history_root: Path = HISTORY_DIR):
+                  history_root: Path = HISTORY_DIR, run_jobs: bool = True):
     """mode "demo" uses synthetic fixtures; mode "historical" uses stored Alpaca bars and
     raises HistoryError if they are missing. One server runs exactly one mode."""
     if mode == "historical":
@@ -394,6 +511,11 @@ def create_server(config_path: Path | None, port: int, speed: float | None = Non
     httpd.daemon_threads = True
     stop = threading.Event()
     threading.Thread(target=_ticker, args=(ctrl, stop), daemon=True).start()
+    if run_jobs:
+        # Research jobs run here, outside web requests. Interrupted work is marked failed on start.
+        runner = jobs_mod.JobRunner(JOBS_DB, JOBS_RESEARCH_DIR)
+        runner.stop_event = stop
+        runner.start()
     return httpd, ctrl, stop
 
 
