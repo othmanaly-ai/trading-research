@@ -24,9 +24,9 @@ not broker results.
 |---|---|
 | Trades / unique sessions | 816 / 816 (of 1,511 sessions) |
 | Net P&L after modeled costs | **-$1,410.63 (-1.41%)** |
-| Gross P&L, same trades before costs | -$495.46 |
-| Modeled costs (spread, slippage, sell fees) | $915.17 |
-| Mean move per trade, before costs | **-1.24 bp of notional** (standard error 1.08 bp) |
+| Gross P&L, same trades before costs | -$509.98 (corrected 2026-11-04, see note) |
+| Modeled costs (spread, slippage, sell fees) | $900.65 (corrected) |
+| Mean move per trade, before costs | **-1.24 bp of notional** (standard error 1.08 bp; from the zero-cost re-run) |
 | Mean net per trade | -3.54 bp of notional (about -$1.73) |
 | Max drawdown | 1.43% (limit 3%) |
 | Time in market / average position | 3.9% of session time / 4.8% of equity (the notional cap bound on 802 of 816 trades) |
@@ -46,6 +46,12 @@ not broker results.
 | 3. Drawdown within 3% | Pass (1.43%) |
 | 4. Positive without the top 10 trades | **Fail** (-$2,027) |
 | 5. Parameter neighbors same sign (positive) | **Fail:** all four neighbors are negative (-1.36% to -1.62%) |
+
+**Correction note (2026-11-04):** the first version of this record gave gross -$495.46 and
+costs $915.17. Those figures came from a separate zero-cost re-run, in which 14 risk-capped
+trades sized slightly differently because costs were not included in the risk cap. For the
+evaluated trades, gross is -$509.98 and costs $900.65. Net, and every pass/fail result, is
+unchanged.
 
 ## Cost sensitivity
 
@@ -94,6 +100,48 @@ To reproduce:
 3. Run `python -m trading.experiment_lock` (it should report a match).
 4. Run `python -m trading.evaluate --period development`. This logs a new attempt. A
    re-run is a reproducibility check, not additional evidence.
+
+## Diagnosis (development data only; `diagnose_development.py`)
+
+**Implementation check: no defect found.** All 816 trades were recomputed independently from
+the stored CSV files, not through the engine's data objects:
+- signal r1 from the previous daily close and the 09:59 bar
+- sigma30 from the 20 prior sessions
+- entry at the 15:31 bar's open (one minute after the 15:30 decision)
+- stop, shares under every cap, and the stop/time exit rule
+- costs and the equity chain
+
+There were 0 mismatches, and the equity chain ended at $98,589.37 in both. The run also
+contained 0 overnight carries and 0 unresolved cases.
+
+**The predictive relation is absent.** SPY's last-30-minute return (bp), on development
+sessions with a valid signal:
+
+| Group | Mean | Std error | Sessions |
+|---|---|---|---|
+| All | -0.78 | 0.89 | 1,490 |
+| r1 > 0 (the strategy's long days) | -1.60 | 1.07 | 831 |
+| r1 < 0 (not traded) | +0.18 | 1.51 | 654 |
+
+- Correlation between r1 and the last-30 return: +0.02.
+- By r1 quintile, low to high: +2.46, -1.48, -1.48, -2.45, -0.96. Not monotonic.
+- The rule picked days that did slightly *worse* than average. That explains why it ranked at
+  the 10th percentile of random long/flat entry, and only "beat" always-long because it held
+  about half the exposure.
+
+**Losses are broad, not concentrated:**
+- 59.2% of trades lost; the median trade was -$1.64.
+- 72% of 71 months were negative, and every year was negative.
+- Without the 10 worst and 10 best trades the result is still -$1,626.
+- Costs ($900.65) are about 64% of the loss; the remaining -$509.98 is the price movement itself.
+- Stop exits (59 trades, -$1,076.92) look large, but stopped trades are losers by
+  construction, so this does not show the stop caused harm. The stop-multiplier neighbors
+  (1.5x and 2.5x) were both also negative.
+
+**Defects vs evidence:** the accounting, timing, fills and costs check out, so the result is
+evidence against the v1.3 hypothesis on 2016-2021 SPY data, not a software artifact. The open
+limitations (guessed costs; exit at the 15:59 bar instead of the closing auction) cannot turn a
+negative pre-cost signal positive.
 
 ## Recommendation
 
