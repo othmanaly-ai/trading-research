@@ -31,6 +31,7 @@ import io
 import json
 import math
 import mimetypes
+import re
 import sqlite3
 import sys
 import threading
@@ -79,6 +80,34 @@ def paper_account_reason() -> str:
         return (f"read-only paper account access verified by `trading.verify_data_access` (latest saved "
                 f"check {runs[-1]}); live account monitoring in this dashboard is not implemented")
     return "Alpaca paper account access not yet verified in this project"
+
+
+REVIEW_ID = re.compile(r"^rv-[A-Za-z0-9-]{1,80}$")
+
+
+def reviewer_status() -> dict:
+    """Readiness gates (presence checks only; no secret is read or returned) and recent records."""
+    import os
+    from trading.reviewer import budget, review
+    store = budget.ReviewStore()
+    try:
+        r = review.readiness(dict(os.environ), store)
+        r["recent"] = store.recent(10)
+    finally:
+        store.close()
+    r["label"] = "automated second review; not proof of independent correctness"
+    return r
+
+
+def review_record(review_id: str):
+    from trading.reviewer import budget
+    if not REVIEW_ID.match(review_id):
+        return None
+    store = budget.ReviewStore()
+    try:
+        return store.get(review_id)
+    finally:
+        store.close()
 
 
 def with_store(fn):
@@ -335,6 +364,11 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
                     return self._json(with_store(lambda st: jobs_mod.preview(exp, st, JOBS_RESEARCH_DIR)))
                 except ValueError as exc:
                     return self._json({"error": str(exc)}, 400)
+            if path == "/api/reviewer/status":
+                return self._json(reviewer_status())
+            if path.startswith("/api/reviews/"):
+                rec = review_record(unquote(path[len("/api/reviews/"):]))
+                return self._json(rec) if rec else self._json({"error": "unknown review"}, 404)
             if path.startswith("/api/reports/"):
                 return self._report(unquote(path[len("/api/reports/"):]))
             if path == "/api/meta":

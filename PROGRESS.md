@@ -354,6 +354,38 @@ pipeline -> watch progress -> cancel if needed -> open the report.
     "interrupted").
 - **Tests:** 190 pass.
 
+## Model-powered reviewer: implemented, UNAVAILABLE pending owner decision (2026-11-04)
+
+- **Implemented and tested with MOCKED responses only** (`trading/reviewer/`, `tests/test_reviewer.py`,
+  33 tests). No real model has been called. No money has been spent. The Anthropic SDK is not installed.
+- **What it is:** an automated second review of a closed experiment.
+  - **Input:** a selected, sanitized evidence package (34–39 items, about 18k characters per experiment).
+  - **Output:** explanations of the failed gates, limitations and discrepancies. Every fact and
+    deduction cites an evidence item. Each finding is labelled fact, deduction or suggestion.
+  - **Authority:** deterministic checks stay in charge. A review that contradicts them, approves
+    anything, or asks for held-out data is rejected.
+- **Safeguards (tested, mocked):**
+  - all blockers reported at once
+  - worst-case reservation before the call, checked atomically against per-run and monthly caps
+  - provider-reported usage recorded with its cost
+  - uncertain timeouts charged and never auto-repeated; retries only for unbilled 429/529, at most 3 attempts
+  - cache by evidence + prompt + model
+  - artifact instruction injection flagged and unable to flip gates
+  - secrets and local paths redacted; oversized input refused
+  - real provider error mapping checked against a mock SDK module
+- **City:**
+  - the review panel shows MOCK and second-review labels, provenance, usage, cost and validation
+    errors, plus clickable citations that open the cited evidence item
+  - a readiness section lists the five gates, proposed limits and prices
+- **Verified in the built-in browser:**
+  - real server: the model_review job BLOCKED with all four missing items, the report states it,
+    and deterministic steps were reused
+  - throwaway harness with a MOCK provider: the review panel and evidence links render, and
+    injected text is flagged
+- **Waiting for the owner:** provider/model choice, a budget authorization file, the API key in
+  your own environment, SDK install, then one approved verification call. See `docs/MODEL_REVIEW.md`.
+- **Tests:** 223 pass.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

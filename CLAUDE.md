@@ -67,6 +67,16 @@ Exit codes for the data check: 0 = success, 1 = API refused or failed, 2 = no cr
 - Product spec, modes, outcome rules and milestone checklist: `docs/PRODUCT_SPEC.md`.
   Don't implement scenario simulation until the owner approves its section 8.
 
+## Model reviewer (automated second review)
+
+- `trading/reviewer/` (see `docs/MODEL_REVIEW.md`). It is a second opinion; deterministic checks
+  stay the authority and a contradicting review is rejected.
+- Never make a paid model call without the owner's explicit approval of provider, model and budget.
+  Never write `research/MODEL_REVIEW_AUTHORIZATION.json` for the owner. Never ask for API keys in chat.
+- Keep the review UNAVAILABLE until `python -m trading.reviewer verify ... --i-authorize-one-paid-call`
+  has succeeded with a real provider. Mock results never count as verification.
+- Never repeat a billable call after an uncertain or failed outcome without an acknowledgement.
+
 ## Experiments
 
 - Spec first, code second: `research/<id>/SPEC.md` is approved by the owner before coding.

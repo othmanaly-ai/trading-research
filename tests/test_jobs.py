@@ -40,16 +40,17 @@ def test_end_to_end_on_real_artifacts(env):
         assert rec["started_utc"] and rec["finished_utc"] and rec["evidence"]["checks"]
 
 
-def test_model_review_not_implemented_even_with_key(env):
+def test_model_review_unavailable_lists_every_blocker(env):
     store, research = env
     jobs.run_pipeline(EXPS[1], store, research, env={})
     mr = next(j for j in store.snapshot()["jobs"] if j["worker"] == "model_review")
-    assert mr["status"] == "blocked" and mr["error"].startswith("NOT IMPLEMENTED / UNAVAILABLE")
-    assert "ANTHROPIC_API_KEY is not set" in mr["error"] and mr["outputs"] is None
-    # A key alone changes nothing: the implementation is absent, so it is still unavailable.
-    assert jobs.model_review({"ANTHROPIC_API_KEY": "x"})[2].startswith("NOT IMPLEMENTED / UNAVAILABLE")
-    assert jobs.model_review({"ANTHROPIC_API_KEY": "x"})[1] is None
-    # Re-running reuses the blocked record instead of piling up new ones.
+    assert mr["status"] == "blocked" and mr["error"].startswith("UNAVAILABLE") and mr["outputs"] is None
+    for blocker in ("no owner authorization", "ANTHROPIC_API_KEY is not set", "not verified"):
+        assert blocker in mr["error"]
+    # A key alone changes nothing: no authorization and no verified integration.
+    status, out, reason = jobs.model_review(EXPS[1], research, {"ANTHROPIC_API_KEY": "x"}, "p")
+    assert status == "blocked" and out is None and "no owner authorization" in reason and "not verified" in reason
+    # Re-running with unchanged gates reuses the blocked record instead of piling up new ones.
     jobs.run_pipeline(EXPS[1], store, research, env={})
     assert sum(j["worker"] == "model_review" for j in store.snapshot()["jobs"]) == 1
 

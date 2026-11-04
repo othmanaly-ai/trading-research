@@ -13,10 +13,10 @@ Pipeline: ingest -> reconcile -> analysis -> rule_checks -> model_review -> repo
 - A unique index allows only one *completed* job per (worker, experiment, input key), so
   retries or restarts reuse a completed result instead of duplicating it.
 - Jobs left "running" by a dead process are marked failed ("interrupted") on the next start.
-- model_review is a model-powered role. It stays BLOCKED unless an API key and an explicit
-  spending authorization exist, and even then it is not implemented in this milestone.
-  No agent output is ever substituted. rule_checks is a deterministic checklist, not an
-  independent review.
+- model_review is an AUTOMATED SECOND REVIEW by a language model (trading/reviewer). It is
+  BLOCKED until the owner authorizes a provider, model and budget, the SDK and key are present,
+  and one owner-approved verification call has succeeded. It never overrides the deterministic
+  checks and no output is ever substituted. rule_checks is a deterministic checklist.
 
 This module reads saved artifacts only. It never fetches market data, touches validation or
 final data, or imports broker code.
@@ -53,21 +53,26 @@ WORKERS = [
     ("reconcile", "deterministic", "1", ["ingest"]),
     ("analysis", "deterministic", "1", ["ingest"]),
     ("rule_checks", "deterministic", "1", ["reconcile", "analysis"]),
-    ("model_review", "model", "0", ["analysis", "rule_checks"]),
+    ("model_review", "model", "1", ["analysis", "rule_checks"]),
     ("report", "deterministic", "1", ["reconcile", "analysis", "rule_checks"]),
 ]
 UNIMPLEMENTED_ROLES = [
-    {"role": "independent model review", "kind": "model", "status": "blocked: needs API key, billing and owner authorization"},
     {"role": "news analysis", "kind": "unimplemented", "status": "no verified news source"},
     {"role": "broker reconciliation", "kind": "unimplemented", "status": "order submission disabled; nothing to reconcile"},
     {"role": "live performance monitoring", "kind": "unimplemented", "status": "no running service"},
 ]
 MODEL_POLICY = {
-    "credential": "ANTHROPIC_API_KEY (not read from Claude Desktop configuration)",
-    "authorization": "an owner-written research/MODEL_REVIEW_AUTHORIZATION.json with max_usd and max_calls",
-    "proposed_limits": {"max_calls_per_pipeline": 1, "max_usd_per_pipeline": 1.00, "max_usd_per_month": 10.00},
-    "billing": "API usage is billed per token to the key owner's Anthropic account",
+    "credential": "ANTHROPIC_API_KEY in the process environment only (never Claude Desktop configuration, never chat)",
+    "authorization": "owner-written research/MODEL_REVIEW_AUTHORIZATION.json: provider, model, token limits, "
+                     "max calls, per-run and monthly USD caps",
+    "proposed_limits": {"max_input_tokens": 30000, "max_output_tokens": 8000, "max_calls_per_run": 1,
+                        "max_usd_per_run": 0.50, "max_usd_per_month": 5.00},
+    "billing": "Anthropic API usage is billed per token to a Claude Console account with prepaid credits; "
+               "a Claude.ai or Claude Code subscription does not cover it",
+    "authority": "deterministic checks decide arithmetic and pass/fail; the review is an automated second "
+                 "opinion and is rejected if it contradicts them",
 }
+REVIEW_OVERRIDES = None    # tests only: {"provider": <mock provider>, "auth": {...}}
 
 
 def _now() -> str:
@@ -352,15 +357,47 @@ def rule_checks(ing: dict, rec: dict, ana: dict) -> tuple[dict, dict]:
     return {"label": "deterministic checklist; not an independent review", "findings": findings}, {}
 
 
-def model_review(env: dict) -> tuple[str, dict | None, str]:
-    """NOT IMPLEMENTED. Never calls a model, never spends money, never produces output."""
-    extra = []
-    if not env.get("ANTHROPIC_API_KEY"):
-        extra.append("ANTHROPIC_API_KEY is not set")
-    if not (RESEARCH_DIR / "MODEL_REVIEW_AUTHORIZATION.json").is_file():
-        extra.append("no owner spending authorization")
-    reason = "NOT IMPLEMENTED / UNAVAILABLE: model review is not implemented in this project"
-    return "blocked", None, reason + (f"; also {', '.join(extra)}" if extra else "")
+def model_review(experiment: str, research_dir: Path, env: dict, pipeline_id: str):
+    """Automated second review via trading.reviewer. Returns (job status, outputs, reason)."""
+    from trading.reviewer import budget, review
+    over = REVIEW_OVERRIDES or {}
+    store = budget.ReviewStore()
+    try:
+        res = review.run_review(experiment, research_dir, env, store, run_ref=pipeline_id,
+                                provider=over.get("provider"), auth=over.get("auth"))
+    finally:
+        store.close()
+    if res["status"] == "completed":
+        out = {k: res.get(k) for k in ("review_id", "review", "model", "prompt_version", "evidence_fingerprint",
+                                       "cost_usd", "cached", "mock", "note")}
+        out["label"] = "automated second review; not proof of independent correctness"
+        return "completed", out, None
+    if res["status"] == "blocked":
+        return "blocked", None, "UNAVAILABLE: " + "; ".join(res["reasons"])
+    return "failed", ({"review_id": res.get("review_id"), "validation_errors": res.get("validation_errors"),
+                       "charged_usd": res.get("charged_usd")}), f"{res['status'].upper()}: {res.get('error')}"
+
+
+def _review_availability() -> str:
+    from trading.reviewer import budget, review
+    store = budget.ReviewStore()
+    try:
+        r = review.readiness(dict(os.environ), store)
+    finally:
+        store.close()
+    if r["available"]:
+        return "automated second review AVAILABLE: may make one budgeted, billable call unless a cached review matches"
+    missing = [c["check"] for c in r["checks"] if not c["ok"]]
+    return "UNAVAILABLE: no model call, no output; missing: " + "; ".join(missing)
+
+
+def _review_gate(env) -> str:
+    from trading.reviewer import budget, review
+    store = budget.ReviewStore()
+    try:
+        return review.gate_fingerprint(env, store)
+    finally:
+        store.close()
 
 
 def report(pipeline_id: str, ing: dict, rec: dict, ana: dict, chk: dict, review_reason: str) -> tuple[dict, dict]:
@@ -375,7 +412,8 @@ def report(pipeline_id: str, ing: dict, rec: dict, ana: dict, chk: dict, review_
               "max_drawdown", "max_drawdown_basis", "sharpe", "sharpe_ci95"):
         lines.append(f"| {k} | {ana.get(k)} |")
     lines += ["", f"Checklist ({chk['label']}):"] + [f"- [{'x' if f['ok'] else ' '}] {f['item']}" for f in chk["findings"]]
-    lines += ["", f"Model review: {review_reason}. No model output was produced or substituted."]
+    lines += ["", f"Model review (automated second review, not proof of independent correctness): {review_reason}.",
+              "The checklist and gate results above come from deterministic code and are the authority."]
     path = out_dir / "report.md"
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return {"report_path": _rel(path), "reconciled": rec["reconciled"]}, {"lines": len(lines)}
@@ -390,12 +428,18 @@ def _validate(experiment: str, pipeline: str = "reconcile_report") -> None:
         raise ValueError(f"pipeline not allowed: {pipeline!r}")
 
 
-def _keys(exp_dir: Path) -> tuple[str, dict]:
+def _keys(exp_dir: Path, env=None) -> tuple[str, dict]:
     files = sorted(p for p in exp_dir.rglob("*") if p.is_file()) if exp_dir.is_dir() else []
     artifact_key = _sha(json.dumps([(str(p.relative_to(exp_dir)), _sha(p.read_bytes())) for p in files]).encode())
     keys = {}
+    gate = _review_gate(os.environ if env is None else env)
     for worker, _, version, deps in WORKERS:
-        keys[worker] = _sha(json.dumps([worker, version, artifact_key, [keys[d] for d in deps]]).encode())
+        parts = [worker, version, artifact_key, [keys[d] for d in deps]]
+        if worker == "model_review":
+            parts.append(gate)          # re-evaluated when any reviewer gate changes; other keys unchanged
+        if worker == "report":
+            parts.append(keys["model_review"])     # the report states the current review status
+        keys[worker] = _sha(json.dumps(parts).encode())
     return artifact_key, keys
 
 
@@ -434,7 +478,7 @@ def preview(experiment: str, store: "JobStore", research_dir: Path = RESEARCH_DI
         row = store.reusable(worker, experiment, keys[worker])
         action = f"reuse {row['status']} record {row['id']}" if row is not None else "will run"
         if worker == "model_review":
-            action += " (NOT IMPLEMENTED / UNAVAILABLE: no model call, no output)"
+            action += f" ({_review_availability()})"
         tasks.append({"worker": worker, "kind": kind, "version": version, "depends_on": deps, "action": action})
     return {"experiment": experiment, "pipeline": "reconcile_report", "description": PIPELINES["reconcile_report"],
             "active_pipeline": store.active_pipeline(experiment), "tasks": tasks}
@@ -547,9 +591,16 @@ def execute_pipeline(pipeline_id: str, store: "JobStore", research_dir: Path = R
             elif worker == "rule_checks":
                 out, ev = rule_checks(results["ingest"], results["reconcile"], results["analysis"])
             elif worker == "model_review":
-                status, out, reason = model_review(env)
-                reasons["model_review"] = reason
-                store.set(job_id, status, evidence={"policy": MODEL_POLICY}, error=reason)
+                status, out, reason = model_review(p["experiment"], research_dir, env, pipeline_id)
+                if status == "completed":
+                    reasons["model_review"] = (f"automated second review completed ({out['model']}, "
+                                               f"{out['prompt_version']}, review {out['review_id']}); "
+                                               "deterministic checks remain the authority")
+                else:
+                    reasons["model_review"] = reason
+                store.set(job_id, status, outputs=out, evidence={"policy": MODEL_POLICY}, error=reason)
+                if status == "completed":
+                    results[worker] = out
                 continue
             else:
                 out, ev = report(pipeline_id, results["ingest"], results["reconcile"], results["analysis"],
@@ -593,6 +644,12 @@ class JobRunner(threading.Thread):
     def run(self):
         store = JobStore(self.db_path)
         store.recover_interrupted()
+        from trading.reviewer import budget
+        rstore = budget.ReviewStore()
+        try:
+            rstore.recover_in_flight()          # a review call cut off by a restart is UNCERTAIN, not done
+        finally:
+            rstore.close()
         try:
             while not self.stop_event.wait(self.poll):
                 pid = store.next_queued_pipeline()

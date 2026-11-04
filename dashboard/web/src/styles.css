@@ -200,3 +200,13 @@ pre.json { max-height: 260px; overflow: auto; background: #0f0c26; padding: 8px;
 .job-table tr.sel td { background: rgba(251, 191, 36, 0.08); }
 .jobs pre.report { white-space: pre-wrap; max-height: 520px; overflow: auto; }
 .jobs details { margin-top: 10px; }
+
+/* Automated second review */
+.review-banner { border: 1px solid var(--amber); border-radius: 6px; padding: 6px 8px; }
+.review .cites { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; }
+.review button.cite { font-size: 11px; padding: 1px 6px; border-color: #14b8a6; }
+.review .findings { list-style: none; padding-left: 0; }
+.review .findings li { margin: 6px 0; }
+.badge { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; padding: 1px 5px; border-radius: 3px; border: 1px solid currentColor; }
+.cat-fact { color: var(--green); } .cat-deduction { color: var(--cyan); } .cat-suggestion { color: var(--amber); }
+.evidence-item { border: 1px solid #14b8a6; border-radius: 6px; padding: 6px 8px; margin-top: 8px; }

@@ -1,6 +1,7 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLiveJson } from "../useLiveJson";
 import type { TowerSpec } from "./CityView";
+import ReviewPanel, { ReviewerReadiness } from "./ReviewPanel";
 
 // Operational control panel for REAL research jobs (trading/jobs.py) over saved experiment
 // artifacts. Never demo data. The browser only asks; the backend validates every request,
@@ -37,7 +38,7 @@ interface Preview {
   tasks: { worker: string; kind: string; version: string; depends_on: string[]; action: string }[];
 }
 
-const KIND_LABEL: Record<string, string> = { deterministic: "deterministic code", model: "model-powered (not implemented)", unimplemented: "not implemented" };
+const KIND_LABEL: Record<string, string> = { deterministic: "deterministic code", model: "automated model review (second opinion)", unimplemented: "not implemented" };
 const JOB_COLORS: Record<string, number> = {
   completed: 0x22c55e, running: 0x22d3ee, queued: 0x818cf8, failed: 0xef4444, blocked: 0xf59e0b, cancelled: 0x64748b,
 };
@@ -270,6 +271,14 @@ export default function JobsView({ reducedMotion }: { reducedMotion: boolean }) 
             <dt>Task inputs</dt><dd><code>{JSON.stringify(job.inputs)}</code></dd>
             {job.error && (<><dt>Failure / block / cancel reason</dt><dd className="tone-danger">{job.error}</dd></>)}
           </dl>
+          {job.worker === "model_review" && job.status === "blocked" && job.error && (<>
+            <h3>Why the model review did not run</h3>
+            <ul className="notes">{job.error.replace(/^UNAVAILABLE:\s*/, "").split("; ").map((r, k) => <li key={k}>{r}</li>)}</ul>
+          </>)}
+          {job.worker === "model_review" && typeof job.outputs?.review_id === "string" && (<>
+            <h3>Automated second review</h3>
+            <ReviewPanel reviewId={job.outputs.review_id} />
+          </>)}
           <h3>Output</h3>
           {job.outputs ? <pre className="json">{JSON.stringify(job.outputs, null, 2).slice(0, 6000)}</pre> : <p className="empty">No output (nothing was produced or substituted).</p>}
           <h3>Evidence</h3>
@@ -292,16 +301,20 @@ export default function JobsView({ reducedMotion }: { reducedMotion: boolean }) 
           <li>Backend restart: a pipeline that was running is marked FAILED ("interrupted"), never completed; its unstarted steps are marked cancelled.</li>
         </ul>
       </details>
+      <details open>
+        <summary>Model reviewer: readiness, budget and records</summary>
+        <ReviewerReadiness tick={tick} />
+      </details>
       <details>
         <summary>Roles and model-review policy</summary>
         <table><thead><tr><th>Role / worker</th><th>Kind</th><th>Status</th></tr></thead>
           <tbody>
             {data.workers.map((w) => <tr key={w.worker}><td>{w.worker}</td><td>{KIND_LABEL[w.kind] ?? w.kind}</td>
-              <td>{w.worker === "model_review" ? "NOT IMPLEMENTED / UNAVAILABLE (always blocked, no output)" : `active job worker (v${w.version})`}</td></tr>)}
+              <td>{w.worker === "model_review" ? `automated second review worker (v${w.version}); blocked until authorized and verified` : `active job worker (v${w.version})`}</td></tr>)}
             {data.roles.map((r) => <tr key={r.role}><td>{r.role}</td><td>{KIND_LABEL[r.kind] ?? r.kind}</td><td>{r.status}</td></tr>)}
           </tbody></table>
         <ul className="notes">
-          <li>Model review is not implemented. Even with a key and authorization it would stay blocked until code exists and the owner approves it.</li>
+          <li>The model review is implemented but stays UNAVAILABLE until the owner chooses a provider and model, writes a budget authorization, and one owner-approved verification call succeeds. It is a second opinion: it cannot change gates, rules or results.</li>
           <li>Credential: {data.model_policy.credential}</li>
           <li>Authorization: {data.model_policy.authorization}</li>
           <li>Billing: {data.model_policy.billing}</li>
