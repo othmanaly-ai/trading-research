@@ -96,7 +96,11 @@ def readiness(env: dict, store: budget.ReviewStore, auth_path: Path | None = Non
                    "detail": f"verified {ver['verified_utc']} (review {ver['review_id']})" if ver
                    else "not verified; model review stays UNAVAILABLE"})
     del prov
-    return {"available": all(c["ok"] for c in checks), "checks": checks, "authorization": auth,
+    available = all(c["ok"] for c in checks)
+    revoked = any("DISABLED" in p for p in problems)
+    return {"available": available, "checks": checks, "authorization": auth,
+            "state": "AVAILABLE (optional)" if available else "OPTIONAL / DISABLED",
+            "revoked": revoked,
             "context": "dashboard server (no keys; cached reviews only)" if env.get(SERVER_MARKER) else "command line",
             "month_spent_usd": round(store.month_spent(), 6), "prices_per_million": budget.PRICES,
             "price_source": budget.PRICE_SOURCE, "proposed_limits": budget.PROPOSED,

@@ -1,6 +1,7 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import TowerPanel from "./components/TowerPanel";
 import JobsView from "./components/JobsView";
+import MonitorView from "./components/MonitorView";
 import {
   AccountPanel, ActivityFeed, Banner, Controls, Leaderboard, ModeStrip, ResearchView, SessionHistory, StrategyTable,
 } from "./components/Panels";
@@ -134,6 +135,7 @@ export default function App() {
             {view === "Leaderboard" && <Leaderboard snapshot={snap} />}
             {view === "Research" && <ResearchView research={research} />}
             {view === "Research jobs" && <JobsView reducedMotion={reducedMotion} />}
+            {view === "Market monitor" && <MonitorView reducedMotion={reducedMotion} />}
           </div>
           <div className="side">
             <AccountPanel account={snap.account} snapshot={snap} instruments={snap.instruments} />

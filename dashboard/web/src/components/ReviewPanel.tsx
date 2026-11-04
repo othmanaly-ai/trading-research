@@ -95,7 +95,7 @@ interface Readiness {
   available: boolean; label: string; checks: { check: string; ok: boolean; detail: string }[];
   month_spent_usd: number; prices_per_million: Record<string, [number, number]>; price_source: string;
   proposed_limits: Record<string, string | number>; hard_limits: Record<string, number>; prompt_version: string;
-  authorization: Record<string, unknown> | null; context: string;
+  authorization: Record<string, unknown> | null; context: string; state: string; revoked: boolean;
   recent: { id: string; status: string; model: string; experiment: string; charged_usd: number; mock: boolean; finished_utc: string | null }[];
 }
 
@@ -107,7 +107,7 @@ export function ReviewerReadiness({ tick }: { tick: number }) {
   if (!r) return <p className="empty">Loading reviewer status…</p>;
   return (
     <div className="readiness">
-      <p className={r.available ? "tone-ok" : "tone-warn"}><strong>Model reviewer: {r.available ? "AVAILABLE" : "UNAVAILABLE"}</strong>
+      <p className={r.available ? "tone-ok" : "tone-warn"}><strong>Model reviewer: {r.state}</strong>{r.revoked ? " (owner revoked paid calls)" : ""}
         {" "}({r.label}). Prompt {r.prompt_version}. Charged this month: ${r.month_spent_usd.toFixed(4)}.</p>
       <p className="small">Context: {r.context}. Paid reviews run only from the command line
         (<code>python -m trading.jobs run --experiment …</code>); pipelines started here reuse a completed review from

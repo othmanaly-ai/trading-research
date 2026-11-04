@@ -111,7 +111,7 @@ def test_historical_research_run_refuses_without_data(tmp_path):
 
 
 def test_journal_endpoints():
-    httpd, ctrl, stop = create_server(None, 0, speed=3600, run_jobs=False)
+    httpd, ctrl, stop = create_server(None, 0, speed=3600, run_jobs=False, supervise_monitor=False)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{httpd.server_address[1]}"
     try:

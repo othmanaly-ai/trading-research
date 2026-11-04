@@ -114,3 +114,22 @@ class ReadOnlyAlpacaClient:
                 break
             params = {**params, "page_token": token}
         return {"bars": bars, "pages": pages, "currency": body.get("currency")}
+
+    def get_bars_multi(self, symbols: list[str], timeframe: str, start: str, end: str,
+                       feed: str, adjustment: str, limit: int = 10000) -> dict:
+        """Bars for several symbols in one GET (following next_page_token). Read-only."""
+        params = {
+            "symbols": ",".join(symbols), "timeframe": timeframe, "start": start, "end": end,
+            "feed": feed, "adjustment": adjustment, "limit": limit, "sort": "asc",
+        }
+        out, pages = {s: [] for s in symbols}, 0
+        while True:
+            body = self._get(DATA_URL, "/v2/stocks/bars", params)
+            pages += 1
+            for sym, rows in (body.get("bars") or {}).items():
+                out.setdefault(sym, []).extend(rows)
+            token = body.get("next_page_token")
+            if not token:
+                break
+            params = {**params, "page_token": token}
+        return {"bars": out, "pages": pages}

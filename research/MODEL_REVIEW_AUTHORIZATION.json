@@ -1,0 +1,18 @@
+{
+  "provider": "anthropic",
+  "model": "claude-opus-5-5",
+  "effort": "medium",
+  "max_input_tokens": 30000,
+  "max_output_tokens": 8000,
+  "max_calls_per_run": 1,
+  "max_attempts_per_call": 3,
+  "max_usd_per_run": 0.50,
+  "max_usd_per_month": 5.00,
+  "authorized_by": "Othman (owner); file written by Claude Code on the owner's explicit instruction",
+  "authorized_utc": "2026-11-04T16:07:01+00:00",
+  "status": "REVOKED",
+  "revoked_utc": "2026-11-04T16:19:02+00:00",
+  "revoked_by": "Othman (owner): paid AI integration postponed; paid model calls disabled until explicitly reauthorized",
+  "history": "One verification call was attempted 2026-11-04T16:09:56Z (review rv-002-20261104T160956-e20ef85d-228913): rejected HTTP 400, insufficient credit, not billed, not retried.",
+  "note": "max_attempts_per_call retries ONLY unbilled 429/529 answers. Uncertain or potentially billed outcomes (timeouts, dropped connections, other 5xx, refusals, malformed responses) are never retried automatically; a new attempt requires python -m trading.reviewer acknowledge <review_id>."
+}

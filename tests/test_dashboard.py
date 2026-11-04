@@ -175,7 +175,7 @@ def test_controller_pause_restart_speed(demo):
 
 @pytest.fixture(scope="module")
 def server():
-    httpd, ctrl, stop = create_server(DEFAULT_CONFIG, 0, speed=3600, run_jobs=False)
+    httpd, ctrl, stop = create_server(DEFAULT_CONFIG, 0, speed=3600, run_jobs=False, supervise_monitor=False)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{httpd.server_address[1]}"
     stop.set()

@@ -85,6 +85,43 @@ def paper_account_reason() -> str:
 REVIEW_ID = re.compile(r"^rv-[A-Za-z0-9-]{1,80}$")
 
 
+def monitor_snapshot() -> dict:
+    """Monitoring records (separate process writes them; this server only reads)."""
+    from trading.monitor import store as mst
+    store = mst.MonitorStore()
+    try:
+        snap = store.status()
+        feed = snap["config"]["feed"]
+        snap["recent_bars"] = {r["symbol"]: store.bars(r["symbol"], feed, 30) for r in snap["symbols"]}
+        snap["controls"] = {
+            "start": "desired state running; launches one worker process if none is alive",
+            "pause": "worker stays alive but makes no API calls",
+            "stop": "worker exits within about a second; nothing restarts it until Start",
+        }
+    finally:
+        store.close()
+    return snap
+
+
+def monitor_control(action: str) -> dict:
+    from trading.monitor import control, store as mst
+    store = mst.MonitorStore()
+    try:
+        if action == "start":
+            note = control.start(store, "dashboard")
+        elif action == "pause":
+            store.set_desired("paused", "dashboard")
+            note = "paused: the worker keeps running but fetches nothing"
+        elif action == "stop":
+            store.set_desired("stopped", "dashboard")
+            note = "stop requested: the worker exits within about a second"
+        else:
+            raise ValueError("action must be start, pause or stop")
+        return {"action": action, "desired": store.desired(), "note": note}
+    finally:
+        store.close()
+
+
 def _server_env() -> dict:
     from trading.reviewer import review
     return review.server_env()
@@ -347,9 +384,22 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
                 return "Content-Type must be application/json"
             return None
 
+        def _drain(self) -> None:
+            """Read and discard a refused request's body (bounded) so the client sees the reply
+            instead of a connection reset; oversized bodies close the connection."""
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                n = 0
+            if 0 < n <= 64 * 1024:
+                self.rfile.read(n)
+            elif n > 64 * 1024:
+                self.close_connection = True
+
         def _body(self) -> dict:
             n = int(self.headers.get("Content-Length") or 0)
             if n > MAX_BODY:
+                self._drain()
                 raise ValueError("request body too large")
             body = json.loads(self.rfile.read(n) or b"{}")
             if not isinstance(body, dict):
@@ -368,6 +418,8 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
                     return self._json(with_store(lambda st: jobs_mod.preview(exp, st, JOBS_RESEARCH_DIR, env=_server_env())))
                 except ValueError as exc:
                     return self._json({"error": str(exc)}, 400)
+            if path == "/api/monitor":
+                return self._json(monitor_snapshot())
             if path == "/api/reviewer/status":
                 return self._json(reviewer_status())
             if path.startswith("/api/reviews/"):
@@ -424,11 +476,16 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
             path = urlparse(self.path).path
             refusal = self._state_change_ok()
             if refusal:
+                self._drain()
                 return self._json({"error": refusal}, 403)
             try:
                 body = self._body()
                 if path == "/api/control":
                     return self._json(ctrl.control(body.get("action"), body.get("speed")))
+                if path == "/api/monitor/control":
+                    if set(body) != {"action"} or not isinstance(body["action"], str):
+                        raise ValueError("expected only {action}")
+                    return self._json(monitor_control(body["action"]))
                 if path == "/api/pipelines":
                     if set(body) - {"experiment", "pipeline"} or not isinstance(body.get("experiment"), str) \
                             or not isinstance(body.get("pipeline", "reconcile_report"), str):
@@ -532,7 +589,7 @@ def _ticker(ctrl: ReplayController, stop: threading.Event):
 
 
 def create_server(config_path: Path | None, port: int, speed: float | None = None, mode: str = "demo",
-                  history_root: Path = HISTORY_DIR, run_jobs: bool = True):
+                  history_root: Path = HISTORY_DIR, run_jobs: bool = True, supervise_monitor: bool = True):
     """mode "demo" uses synthetic fixtures; mode "historical" uses stored Alpaca bars and
     raises HistoryError if they are missing. One server runs exactly one mode."""
     if mode == "historical":
@@ -554,6 +611,9 @@ def create_server(config_path: Path | None, port: int, speed: float | None = Non
         runner = jobs_mod.JobRunner(JOBS_DB, JOBS_RESEARCH_DIR)
         runner.stop_event = stop
         runner.start()
+    if supervise_monitor:
+        from trading.monitor.control import Supervisor
+        Supervisor(stop).start()          # restart recovery for the separate monitoring worker
     return httpd, ctrl, stop
 
 

@@ -160,7 +160,7 @@ def test_missing_data_refuses_without_fallback(tmp_path):
     cfg = tmp_path / "h.json"
     cfg.write_text(json.dumps(hist_config()))
     with pytest.raises(HistoryError):
-        create_server(cfg, 0, mode="historical", history_root=tmp_path)
+        create_server(cfg, 0, mode="historical", history_root=tmp_path, supervise_monitor=False)
 
 
 def test_research_status_reflects_stored_coverage(store, tmp_path_factory):

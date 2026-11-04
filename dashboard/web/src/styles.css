@@ -179,7 +179,7 @@ footer { padding: 8px 16px 16px; }
 .jt-kind, .jt-reused { font-size: 10.5px; color: var(--muted); text-align: center; }
 .jt-status { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; }
 .js-completed { color: var(--green); } .js-running { color: var(--cyan); } .js-queued { color: var(--indigo); }
-.js-failed { color: var(--red); } .js-blocked { color: var(--amber); } .js-cancelled { color: var(--muted); }
+.js-failed { color: var(--red); } .js-skipped { color: #94a3b8; } .js-blocked { color: var(--amber); } .js-cancelled { color: var(--muted); }
 .job-detail { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; }
 pre.json { max-height: 260px; overflow: auto; background: #0f0c26; padding: 8px; border-radius: 6px; font-size: 11.5px; white-space: pre-wrap; }
 
@@ -210,3 +210,16 @@ pre.json { max-height: 260px; overflow: auto; background: #0f0c26; padding: 8px;
 .badge { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; padding: 1px 5px; border-radius: 3px; border: 1px solid currentColor; }
 .cat-fact { color: var(--green); } .cat-deduction { color: var(--cyan); } .cat-suggestion { color: var(--amber); }
 .evidence-item { border: 1px solid #14b8a6; border-radius: 6px; padding: 6px 8px; margin-top: 8px; }
+
+/* Market monitor (LIVE read-only data: amber octagons, distinct from DEMO boxes and REAL JOB cylinders) */
+.mon-banner { border: 1px solid #b45309; background: rgba(180, 83, 9, 0.15); border-radius: 6px; padding: 6px 8px; margin-bottom: 8px; }
+.city-monitor { height: 440px; border-color: #b45309; }
+.tower-label.mon-label { background: rgba(28, 18, 4, 0.92); border-color: #f59e0b; box-shadow: 0 0 12px rgba(245, 158, 11, 0.35); min-width: 130px; }
+.tower-label.mon-label.selected { border-color: #fde68a; }
+.tl-tag.mon-tag { background: #fbbf24; color: #1c1204; }
+.monitor .seg { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.monitor .seg button.on { border-color: #f59e0b; background: rgba(245, 158, 11, 0.18); }
+.monitor .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0; }
+.monitor button.primary { border-color: #f59e0b; background: rgba(245, 158, 11, 0.25); font-weight: 700; }
+.monitor button:disabled { opacity: 0.5; cursor: not-allowed; }
+.mon-table tr.sel td { background: rgba(251, 191, 36, 0.08); }

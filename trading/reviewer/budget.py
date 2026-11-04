@@ -66,6 +66,9 @@ def load_authorization(path: Path | None = None) -> tuple[dict | None, list[str]
         auth = json.loads(path.read_text(encoding="utf-8-sig"))      # tolerate a Notepad byte-order mark
     except (OSError, ValueError) as exc:
         return None, [f"authorization file unreadable: {type(exc).__name__}"]
+    if auth.get("revoked_utc") or str(auth.get("status", "")).upper() == "REVOKED":
+        return None, [f"paid model calls DISABLED: the owner revoked this authorization at "
+                      f"{auth.get('revoked_utc', '?')}; a new explicit owner authorization is required"]
     problems = [f"authorization missing field {k!r}" for k in REQUIRED if k not in auth]
     if problems:
         return None, problems

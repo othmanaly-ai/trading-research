@@ -18,6 +18,7 @@ export interface TowerSpec {
 const VARIANTS = {
   strategy: { clear: 0x0b0820, grid: [0x7c3aed, 0x312e81], shape: "box" as const, labelClass: "tower-label" },
   jobs: { clear: 0x041a1f, grid: [0x0e7490, 0x134e4a], shape: "cylinder" as const, labelClass: "tower-label job-label" },
+  monitor: { clear: 0x160f04, grid: [0xb45309, 0x451a03], shape: "octagon" as const, labelClass: "tower-label mon-label" },
 };
 
 const PER_ROW = 6;
@@ -189,7 +190,8 @@ export default function CityView({ towers, coreColor, selectedId, onSelect, redu
       const inRow = Math.min(PER_ROW, n - row * PER_ROW);
       if (!t) {
         const material = new THREE.MeshStandardMaterial({ color: 0x0f0b2e, emissive: spec.color, emissiveIntensity: 0.25 });
-        const geometry = v.shape === "box" ? new THREE.BoxGeometry(2, 6, 2) : new THREE.CylinderGeometry(1.2, 1.2, 6, 20);
+        const geometry = v.shape === "box" ? new THREE.BoxGeometry(2, 6, 2)
+          : v.shape === "octagon" ? new THREE.CylinderGeometry(1.4, 1.4, 6, 8) : new THREE.CylinderGeometry(1.2, 1.2, 6, 20);
         const mesh = new THREE.Mesh(geometry, material);
         const edges = new THREE.LineBasicMaterial({ color: spec.color });
         mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 30), edges));

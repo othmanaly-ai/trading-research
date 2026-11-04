@@ -38,9 +38,10 @@ interface Preview {
   tasks: { worker: string; kind: string; version: string; depends_on: string[]; action: string }[];
 }
 
-const KIND_LABEL: Record<string, string> = { deterministic: "deterministic code", model: "automated model review (second opinion)", unimplemented: "not implemented" };
+const KIND_LABEL: Record<string, string> = { deterministic: "deterministic code", model: "OPTIONAL model review (disabled unless authorized)", unimplemented: "not implemented" };
 const JOB_COLORS: Record<string, number> = {
   completed: 0x22c55e, running: 0x22d3ee, queued: 0x818cf8, failed: 0xef4444, blocked: 0xf59e0b, cancelled: 0x64748b,
+  skipped: 0x475569,
 };
 const ACTIVE = new Set(["queued", "running"]);
 
@@ -271,9 +272,9 @@ export default function JobsView({ reducedMotion }: { reducedMotion: boolean }) 
             <dt>Task inputs</dt><dd><code>{JSON.stringify(job.inputs)}</code></dd>
             {job.error && (<><dt>Failure / block / cancel reason</dt><dd className="tone-danger">{job.error}</dd></>)}
           </dl>
-          {job.worker === "model_review" && job.status === "blocked" && job.error && (<>
-            <h3>Why the model review did not run</h3>
-            <ul className="notes">{job.error.replace(/^UNAVAILABLE:\s*/, "").split("; ").map((r, k) => <li key={k}>{r}</li>)}</ul>
+          {job.worker === "model_review" && (job.status === "blocked" || job.status === "skipped") && job.error && (<>
+            <h3>Model review: OPTIONAL / DISABLED (no model review was performed)</h3>
+            <ul className="notes">{job.error.replace(/^(UNAVAILABLE|OPTIONAL \/ DISABLED):\s*(no model review was performed\.\s*)?/, "").split("; ").map((r, k) => <li key={k}>{r}</li>)}</ul>
           </>)}
           {job.worker === "model_review" && typeof job.outputs?.review_id === "string" && (<>
             <h3>Automated second review</h3>
@@ -310,7 +311,7 @@ export default function JobsView({ reducedMotion }: { reducedMotion: boolean }) 
         <table><thead><tr><th>Role / worker</th><th>Kind</th><th>Status</th></tr></thead>
           <tbody>
             {data.workers.map((w) => <tr key={w.worker}><td>{w.worker}</td><td>{KIND_LABEL[w.kind] ?? w.kind}</td>
-              <td>{w.worker === "model_review" ? `automated second review worker (v${w.version}); blocked until authorized and verified` : `active job worker (v${w.version})`}</td></tr>)}
+              <td>{w.worker === "model_review" ? `OPTIONAL automated review (v${w.version}): DISABLED; paid calls revoked until the owner reauthorizes` : `active job worker (v${w.version})`}</td></tr>)}
             {data.roles.map((r) => <tr key={r.role}><td>{r.role}</td><td>{KIND_LABEL[r.kind] ?? r.kind}</td><td>{r.status}</td></tr>)}
           </tbody></table>
         <ul className="notes">

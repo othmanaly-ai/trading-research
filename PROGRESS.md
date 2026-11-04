@@ -407,6 +407,41 @@ pipeline -> watch progress -> cancel if needed -> open the report.
   - run the verification call
 - **No paid call has been made.** Model review remains UNAVAILABLE.
 
+## Paid AI postponed; read-only market monitoring in the city (2026-11-04)
+
+- **Model review: OPTIONAL / DISABLED.**
+  - The owner revoked the paid-call authorization. `MODEL_REVIEW_AUTHORIZATION.json` is marked
+    REVOKED, and every paid path refuses it.
+  - The one attempted call (16:09:56 UTC) was rejected for insufficient credit: not billed, not
+    retried. The record is kept.
+  - Pipelines mark model_review as `skipped`. An optional step can never fail the pipeline.
+    Reports state that no model review was performed.
+  - The key in `.env` was not read or changed.
+- **Monitoring (`trading/monitor/`, `docs/MONITORING.md`):**
+  - a separate worker process over the read-only Alpaca client (one new GET method: multi-symbol bars)
+  - exchange-calendar aware, polling every 60 s
+  - freshness labels from source timestamps
+  - bounded backoff, duplicate-proof storage
+  - persistent status and events
+  - Start/Pause/Stop in the city, plus the command line
+  - single-instance lock, supervisor restart recovery
+  - 3D towers and a matching table
+  - never fetches or keeps dates on or before 2026-10-30
+- **Verified with real data (2026-11-04, 16:36–16:42 UTC):**
+  - **Access:** IEX real-time accepted; recent SIP refused (403, free plan).
+  - **Live run:** the worker launched from the city stored today's session: 130 bars per symbol,
+    0 duplicates.
+  - **Controls:** Pause made no calls; Start resumed; a duplicate worker exited.
+  - **Crash recovery:** after a hard kill, the supervisor relaunched it in 22 s and it resumed
+    without gaps.
+  - **Dashboard restart:** one listener and one worker afterwards.
+  - **Stop:** clean exit, no relaunch.
+  - **Consistency:** the 3D labels, the table, the API and SQLite agree.
+- **Fixed during this work:**
+  - refused POSTs now drain the request body; it caused an intermittent connection reset
+  - dashboard tests disable the monitor supervisor
+- **Tests:** 254 pass, 1 skipped (a no-credentials test skips because a real `.env` exists).
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

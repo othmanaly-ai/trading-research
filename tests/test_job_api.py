@@ -30,7 +30,7 @@ def setup(tmp_path, monkeypatch):
     started = []
 
     def start(run_jobs=True):
-        httpd, ctrl, stop = server.create_server(None, 0, speed=3600, run_jobs=run_jobs)
+        httpd, ctrl, stop = server.create_server(None, 0, speed=3600, run_jobs=run_jobs, supervise_monitor=False)
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
         started.append((httpd, stop))
         return f"http://127.0.0.1:{httpd.server_address[1]}"
@@ -109,7 +109,7 @@ def test_launch_runs_in_background_and_report_opens(setup):
     p = wait_status(base, body["pipeline_id"], {"completed"})
     snap = call(base, "/api/jobs")[1]
     statuses = {j["worker"]: j["status"] for j in snap["jobs"] if j["id"] in p["job_ids"]}
-    assert statuses["report"] == "completed" and statuses["model_review"] == "blocked"
+    assert statuses["report"] == "completed" and statuses["model_review"] == "skipped"
     code, rep = call(base, f"/api/reports/{body['pipeline_id']}")
     assert code == 200 and rep["report_markdown"].startswith("# Research job report")
     assert call(base, "/api/reports/..%2F..%2Fsecret")[0] == 404

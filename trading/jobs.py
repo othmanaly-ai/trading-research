@@ -39,7 +39,9 @@ RESEARCH_DIR = PROJECT_ROOT / "research"
 DB_PATH = PROJECT_ROOT / "data" / "jobs" / "jobs.sqlite"
 REPORT_DIR = PROJECT_ROOT / "results" / "jobs"
 HISTORY_MANIFEST = PROJECT_ROOT / "data" / "history" / "SPY" / "sip" / "all" / "manifest.json"
-STATES = ("queued", "running", "completed", "failed", "blocked", "cancelled")
+STATES = ("queued", "running", "completed", "failed", "blocked", "cancelled", "skipped")
+# "skipped": an OPTIONAL step that was deliberately not run (the model review while disabled).
+OPTIONAL_WORKERS = ("model_review",)      # their outcome never decides the pipeline status
 # The only work the browser may request: predefined pipelines over predefined saved experiments.
 ALLOWED_EXPERIMENTS = ("001_intraday_momentum", "002_opening_range_breakout")
 PIPELINES = {"reconcile_report": "Ingest saved artifacts, reconcile recorded gates, analyse, run the "
@@ -53,7 +55,7 @@ WORKERS = [
     ("reconcile", "deterministic", "1", ["ingest"]),
     ("analysis", "deterministic", "1", ["ingest"]),
     ("rule_checks", "deterministic", "1", ["reconcile", "analysis"]),
-    ("model_review", "model", "2", ["analysis", "rule_checks"]),
+    ("model_review", "model", "3", ["analysis", "rule_checks"]),
     ("report", "deterministic", "1", ["reconcile", "analysis", "rule_checks"]),
 ]
 UNIMPLEMENTED_ROLES = [
@@ -162,7 +164,8 @@ class JobStore:
         row = self.completed(worker, experiment, key)
         if row is None and worker == "model_review":
             row = self.db.execute("SELECT * FROM jobs WHERE worker=? AND experiment=? AND input_key=? AND "
-                                  "status='blocked' ORDER BY rowid DESC LIMIT 1", (worker, experiment, key)).fetchone()
+                                  "status IN ('blocked','skipped') ORDER BY rowid DESC LIMIT 1",
+                                  (worker, experiment, key)).fetchone()
         return row
 
     def completed(self, worker, experiment, key):
@@ -373,7 +376,8 @@ def model_review(experiment: str, research_dir: Path, env: dict, pipeline_id: st
         out["label"] = "automated second review; not proof of independent correctness"
         return "completed", out, None
     if res["status"] == "blocked":
-        return "blocked", None, "UNAVAILABLE: " + "; ".join(res["reasons"])
+        return "skipped", None, ("OPTIONAL / DISABLED: no model review was performed. "
+                                 + "; ".join(res["reasons"]))
     return "failed", ({"review_id": res.get("review_id"), "validation_errors": res.get("validation_errors"),
                        "charged_usd": res.get("charged_usd")}), f"{res['status'].upper()}: {res.get('error')}"
 
@@ -415,7 +419,8 @@ def report(pipeline_id: str, ing: dict, rec: dict, ana: dict, chk: dict, review_
               "max_drawdown", "max_drawdown_basis", "sharpe", "sharpe_ci95"):
         lines.append(f"| {k} | {ana.get(k)} |")
     lines += ["", f"Checklist ({chk['label']}):"] + [f"- [{'x' if f['ok'] else ' '}] {f['item']}" for f in chk["findings"]]
-    lines += ["", f"Model review (automated second review, not proof of independent correctness): {review_reason}.",
+    lines += ["", f"Model review (OPTIONAL automated second review, not proof of independent correctness): "
+              f"{review_reason}.",
               "The checklist and gate results above come from deterministic code and are the authority."]
     path = out_dir / "report.md"
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -608,16 +613,19 @@ def execute_pipeline(pipeline_id: str, store: "JobStore", research_dir: Path = R
                 continue
             else:
                 out, ev = report(pipeline_id, results["ingest"], results["reconcile"], results["analysis"],
-                                 results["rule_checks"], reasons.get("model_review", "not run"))
+                                 results["rule_checks"],
+                                 reasons.get("model_review", "OPTIONAL / DISABLED: no model review was performed"))
         except Exception as exc:                                # recorded, never hidden
             store.set(job_id, "failed", error=f"{type(exc).__name__}: {exc}")
             continue
         store.set(job_id, "completed", outputs=out, evidence=ev)
         results[worker] = out
-    statuses = [store.get(j)["status"] for j in p["job_ids"]]
+    rows = [store.get(j) for j in p["job_ids"]]
+    statuses = [r["status"] for r in rows]
+    required = [r["status"] for r in rows if r["worker"] not in OPTIONAL_WORKERS]
     if cancelled:
         overall = "cancelled"
-    elif "failed" in statuses:
+    elif "failed" in required:      # an optional step (model review) can never fail the pipeline
         overall = "failed"
     else:
         overall = "completed" if results.get("report") else "blocked"

@@ -353,7 +353,8 @@ def test_job_reports_review_failure_without_hiding_it(job_env, monkeypatch):
     js = {j["worker"]: j for j in jstore.snapshot()["jobs"]}
     assert js["model_review"]["status"] == "failed" and "not valid JSON" in js["model_review"]["error"]
     assert js["model_review"]["outputs"]["charged_usd"] > 0
-    assert js["report"]["status"] == "completed" and r["status"] == "failed"     # pipeline shows the failure
+    # The optional review's failure is visible on its own job but never fails the deterministic pipeline.
+    assert js["report"]["status"] == "completed" and r["status"] == "completed"
 
 
 # ---- the real provider's error mapping, against a MOCK SDK module ------------------
@@ -453,7 +454,7 @@ def test_reviewer_endpoints_report_gates_without_secrets(setup, monkeypatch):
     pkg = evidence.build_package(EXPS[1], research)
     done = run(store, research, MockProvider([ok(good_answer(pkg))]))
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-TEST-VALUE-MUST-NOT-APPEAR")
-    httpd, _ctrl, stop = server.create_server(None, 0, speed=3600, run_jobs=False)
+    httpd, _ctrl, stop = server.create_server(None, 0, speed=3600, run_jobs=False, supervise_monitor=False)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{httpd.server_address[1]}"
     try:
@@ -552,3 +553,25 @@ def test_dashboard_blocker_wording_without_authorization(setup):
     res = review.run_review(EXPS[1], research, review.server_env(), store, run_ref="dash")
     text = "; ".join(res["reasons"])
     assert "no owner authorization" in text and review.CLI_ONLY in text and "ANTHROPIC_API_KEY is not set" not in text
+
+
+
+def test_revoked_authorization_disables_paid_calls(setup):
+    store, research, _ = setup
+    write_auth(status="REVOKED", revoked_utc="2026-11-04T16:19:02+00:00")
+    prov = MockProvider([ok("{}")])
+    res = run(store, research, prov)
+    assert res["status"] == "blocked" and "DISABLED" in res["reasons"][0] and prov.calls == []
+    r = review.readiness({"ANTHROPIC_API_KEY": "x"}, store)
+    assert r["state"] == "OPTIONAL / DISABLED" and r["revoked"] is True and r["available"] is False
+
+
+def test_disabled_review_is_skipped_and_report_says_no_review(job_env):
+    jstore, research = job_env
+    write_auth(status="REVOKED", revoked_utc="2026-11-04T16:19:02+00:00")
+    r = jobs.run_pipeline(EXPS[0], jstore, research, env={"ANTHROPIC_API_KEY": "x"})
+    js = {j["worker"]: j for j in jstore.snapshot()["jobs"]}
+    assert r["status"] == "completed" and js["model_review"]["status"] == "skipped"
+    path = js["report"]["outputs"]["report_path"]
+    text = open(path if path.startswith(("C:", "/")) else jobs.PROJECT_ROOT / path, encoding="utf-8").read()
+    assert "OPTIONAL / DISABLED: no model review was performed" in text

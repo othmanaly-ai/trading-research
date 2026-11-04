@@ -67,8 +67,19 @@ Exit codes for the data check: 0 = success, 1 = API refused or failed, 2 = no cr
 - Product spec, modes, outcome rules and milestone checklist: `docs/PRODUCT_SPEC.md`.
   Don't implement scenario simulation until the owner approves its section 8.
 
+## Market monitoring (read-only)
+
+- `trading/monitor/` (see `docs/MONITORING.md`). The worker is a separate process; only it loads
+  Alpaca credentials. The city server reads `data/monitoring/monitor.sqlite` and launches or
+  supervises the worker, but never imports broker code.
+- Never request or store dates on or before the end of the reserved periods (2026-10-30). Never
+  switch feeds silently. No signals or recommendations from monitoring data; it is not a research
+  dataset.
+
 ## Model reviewer (automated second review)
 
+- Status: OPTIONAL / DISABLED. The owner revoked paid calls on 2026-11-04; do not re-enable them without a new
+  explicit owner authorization.
 - `trading/reviewer/` (see `docs/MODEL_REVIEW.md`). It is a second opinion; deterministic checks
   stay the authority and a contradicting review is rejected.
 - Never make a paid model call without the owner's explicit approval of provider, model and budget.

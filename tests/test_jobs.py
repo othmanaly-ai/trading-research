@@ -34,7 +34,7 @@ def test_end_to_end_on_real_artifacts(env):
         r = jobs.run_pipeline(e, store, research, env={})
         st = statuses(r)
         assert st == {"ingest": "completed", "reconcile": "completed", "analysis": "completed",
-                      "rule_checks": "completed", "model_review": "blocked", "report": "completed"}
+                      "rule_checks": "completed", "model_review": "skipped", "report": "completed"}
         rec = next(j for j in store.snapshot()["jobs"] if j["worker"] == "reconcile" and j["experiment"] == e)
         assert rec["outputs"]["reconciled"] is True and rec["outputs"]["discrepancies"] == []
         assert rec["started_utc"] and rec["finished_utc"] and rec["evidence"]["checks"]
@@ -44,12 +44,13 @@ def test_model_review_unavailable_lists_every_blocker(env):
     store, research = env
     jobs.run_pipeline(EXPS[1], store, research, env={})
     mr = next(j for j in store.snapshot()["jobs"] if j["worker"] == "model_review")
-    assert mr["status"] == "blocked" and mr["error"].startswith("UNAVAILABLE") and mr["outputs"] is None
+    assert mr["status"] == "skipped" and mr["error"].startswith("OPTIONAL / DISABLED: no model review was performed")
+    assert mr["outputs"] is None
     for blocker in ("no owner authorization", "ANTHROPIC_API_KEY is not set", "not verified"):
         assert blocker in mr["error"]
     # A key alone changes nothing: no authorization and no verified integration.
     status, out, reason = jobs.model_review(EXPS[1], research, {"ANTHROPIC_API_KEY": "x"}, "p")
-    assert status == "blocked" and out is None and "no owner authorization" in reason and "not verified" in reason
+    assert status == "skipped" and out is None and "no owner authorization" in reason and "not verified" in reason
     # Re-running with unchanged gates reuses the blocked record instead of piling up new ones.
     jobs.run_pipeline(EXPS[1], store, research, env={})
     assert sum(j["worker"] == "model_review" for j in store.snapshot()["jobs"]) == 1
@@ -120,7 +121,7 @@ def test_dashboard_endpoint_matches_store(env, monkeypatch, tmp_path):
     jobs.run_pipeline(EXPS[1], store, research, env={})
     from trading.dashboard import server
     monkeypatch.setattr(server, "JOBS_DB", tmp_path / "jobs.sqlite")
-    httpd, ctrl, stop = server.create_server(None, 0, speed=3600, run_jobs=False)
+    httpd, ctrl, stop = server.create_server(None, 0, speed=3600, run_jobs=False, supervise_monitor=False)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     try:
         url = f"http://127.0.0.1:{httpd.server_address[1]}/api/jobs"
@@ -147,7 +148,7 @@ def test_api_and_store_emit_strict_json(env, monkeypatch, tmp_path):
                 json.loads(text, parse_constant=reject)
     from trading.dashboard import server
     monkeypatch.setattr(server, "JOBS_DB", tmp_path / "jobs.sqlite")
-    httpd, ctrl, stop = server.create_server(None, 0, speed=3600, run_jobs=False)
+    httpd, ctrl, stop = server.create_server(None, 0, speed=3600, run_jobs=False, supervise_monitor=False)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     try:
         base = f"http://127.0.0.1:{httpd.server_address[1]}"

@@ -1,6 +1,7 @@
 # Automated second review (model-powered reviewer)
 
-Status: **implemented and tested with mocked responses only. UNAVAILABLE**, waiting for the
+Status: **OPTIONAL / DISABLED. The owner revoked paid calls on 2026-11-04 (16:19 UTC)** until explicitly
+reauthorized. Earlier status: implemented and tested with mocked responses only, UNAVAILABLE, waiting for the
 owner's provider/model choice, budget authorization, and one approved verification call.
 
 ## What it is, and what it is not
