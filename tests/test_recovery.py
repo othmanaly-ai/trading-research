@@ -230,11 +230,13 @@ def test_report_operations_downtime_restarts_and_failures(env):
     env.end_run(r2, s.open_utc + timedelta(minutes=300), "stop requested")   # planned stop
     env.event("error", "disconnected", "connection failed: SYNTHETIC", s.open_utc + timedelta(minutes=60))
     env.event("error", "error", "access refused (HTTP 403) for feed iex: SYNTHETIC", s.open_utc + timedelta(minutes=61))
+    env.event("error", "supervisor", "launch limit reached (6 per hour); not launching. SYNTHETIC", s.open_utc + timedelta(minutes=95))
     ops = reliability.daily_report(env, "2026-11-04", s.close_utc + timedelta(hours=4))["evidence"]["operations"]
     kinds = [d["kind"].split(" ")[0] for d in ops["downtime_intervals"]]
     assert kinds == ["unplanned", "planned"]
     assert ops["unplanned_downtime_minutes"] == 29 and ops["restarts_during_session"] == 1
     assert ops["request_failures"] == 2 and ops["access_refusals"] == 1
+    assert ops["other_errors"] == 1 and ops["other_error_events"][0]["kind"] == "supervisor"   # not a request failure
     assert {r["code_version"] for r in ops["worker_runs"]} == {"abc1234"}
 
 

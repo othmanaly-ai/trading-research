@@ -119,7 +119,7 @@ export default function SessionHistory({ tick }: { tick: number }) {
           {ev.operations && (<>
             <h5>4 · Operations</h5>
             <p className="small">Downtime {ev.operations.downtime_minutes} min (unplanned {ev.operations.unplanned_downtime_minutes}) · restarts during the session {ev.operations.restarts_during_session} ·
-              request failures {ev.operations.request_failures} · access refusals {ev.operations.access_refusals} · comparison runs {ev.operations.comparison_runs.ok}/{ev.operations.comparison_runs.total} ok
+              API request failures {ev.operations.request_failures} · access refusals {ev.operations.access_refusals} · other errors (supervisor, crash) {ev.operations.other_errors ?? 0} · comparison runs {ev.operations.comparison_runs.ok}/{ev.operations.comparison_runs.total} ok
               ({ev.operations.comparison_runs.requests} requests; cycle {ev.operations.comparison_runs.by_kind.cycle}, recovery {ev.operations.comparison_runs.by_kind.recovery}, post-close {ev.operations.comparison_runs.by_kind.eod_recheck})</p>
             {[...ev.operations.downtime_intervals, ...(ev.operations.unrecorded_intervals ?? [])].length > 0 && <ul className="notes">{[...ev.operations.downtime_intervals, ...(ev.operations.unrecorded_intervals ?? [])].map((d: Dict, i: number) => <li key={i}>{et(d.from_utc)} – {et(d.to_utc)}: {d.minutes} min, {d.kind}</li>)}</ul>}
             <table className="q-table"><thead><tr><th>Worker pid</th><th>Started</th><th>Last alive</th><th>Stopped</th><th>Exit</th><th>Code version</th></tr></thead>

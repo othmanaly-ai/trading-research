@@ -83,6 +83,10 @@ def _state(store, date_s, session, now):
             "access_failures": row.get("access_failures") or 0, "reports": reports}
 
 
+# Error events that are not API requests: they are reported separately from request failures.
+NOT_REQUEST_KINDS = ("supervisor", "crash", "quality-defect")
+
+
 def daily_report(store: st.MonitorStore, date_s: str, now: datetime | None = None) -> dict:
     from trading.monitor import quality as q
     q.ensure_schema(store)
@@ -213,6 +217,8 @@ def daily_report(store: st.MonitorStore, date_s: str, now: datetime | None = Non
     win = (st.iso(session.open_utc - timedelta(minutes=30)), st.iso(session.close_utc + timedelta(hours=3)))
     errors = [dict(r) for r in store.db.execute(
         "SELECT ts_utc, kind, message FROM events WHERE level='error' AND ts_utc BETWEEN ? AND ? ORDER BY id", win)]
+    other = [e for e in errors if e["kind"] in NOT_REQUEST_KINDS]      # supervisor, crash, data defects
+    errors = [e for e in errors if e["kind"] not in NOT_REQUEST_KINDS]  # failed or refused API requests only
     refusals = [e for e in errors if "HTTP 401" in e["message"] or "HTTP 403" in e["message"]
                 or e["kind"] == "quality-access_failure"]
     qruns = [dict(r) for r in store.db.execute(
@@ -229,6 +235,7 @@ def daily_report(store: st.MonitorStore, date_s: str, now: datetime | None = Non
         "downtime_minutes": sum(d["minutes"] for d in downtime),
         "unplanned_downtime_minutes": sum(d["minutes"] for d in downtime if d["kind"].startswith("unplanned")),
         "request_failures": len(errors), "access_refusals": len(refusals), "failure_events": errors[:30],
+        "other_errors": len(other), "other_error_events": other[:30],
         "comparison_runs": {"total": len(qruns), "ok": sum(r["status"] == "ok" for r in qruns),
                             "failed": [r for r in qruns if r["status"] not in ("ok", "running")][:20],
                             "by_kind": {k: sum(r["kind"] == k for r in qruns) for k in ("cycle", "recovery", "eod_recheck")},
