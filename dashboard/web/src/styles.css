@@ -228,3 +228,6 @@ pre.json { max-height: 260px; overflow: auto; background: #0f0c26; padding: 8px;
 .q-banner { border: 1px solid #0e7490; background: rgba(14, 116, 144, 0.12); border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
 .q-table td, .q-table th { font-size: 12px; }
 .quality .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0; }
+
+.health-box { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
+.sessions h5 { margin: 10px 0 4px; font-size: 13px; }

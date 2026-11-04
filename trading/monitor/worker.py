@@ -79,6 +79,19 @@ def default_client_factory(sleep):
     return ReadOnlyAlpacaClient(*load_credentials(), timeout=20, sleep=sleep)
 
 
+def code_version() -> str:
+    """Git commit of the running code (+dirty if the working tree has uncommitted changes)."""
+    import subprocess
+    try:
+        head = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=st.PROJECT_ROOT, capture_output=True,
+                              text=True, timeout=10).stdout.strip()
+        dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"], cwd=st.PROJECT_ROOT,
+                               capture_output=True, text=True, timeout=10).stdout.strip()
+        return (head or "unknown") + ("+dirty" if dirty else "")
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
+
+
 def _floor_minute(t: datetime) -> datetime:
     return t.replace(second=0, microsecond=0)
 
@@ -86,13 +99,15 @@ def _floor_minute(t: datetime) -> datetime:
 class Worker:
     def __init__(self, store: st.MonitorStore, symbols=st.DEFAULT_SYMBOLS, feed: str = "iex",
                  poll_seconds: int = st.POLL_SECONDS, client_factory=default_client_factory,
-                 clock=st.now_utc, lock_path: Path | None = None, pid: int | None = None):
+                 clock=st.now_utc, lock_path: Path | None = None, pid: int | None = None, version: str | None = None):
         if feed not in st.FEEDS:
             raise ValueError(f"feed must be one of {list(st.FEEDS)}")
         self.store, self.symbols, self.feed, self.poll_seconds = store, list(symbols), feed, poll_seconds
         self.client_factory, self.clock = client_factory, clock
         self.lock = SingleInstanceLock(lock_path or st.LOCK_PATH)
         self.pid = pid or os.getpid()
+        self.version = version
+        self.run_id: int | None = None
         self.client = None
         self.next_poll: datetime | None = None
         self.backoff_until: datetime | None = None
@@ -114,6 +129,9 @@ class Worker:
         cfg = {"symbols": self.symbols, "feed": self.feed, "poll_seconds": self.poll_seconds, "timeframe": "1Min",
                "adjustment": "raw", "feed_label": st.FEEDS[self.feed]["label"]}
         import json
+        self.version = self.version or code_version()
+        cfg["code_version"] = self.version
+        self.run_id = self.store.start_run(self.pid, self.version, cfg, now)
         self.store.update_worker(pid=self.pid, state="starting", detail="worker started", started_utc=st.iso(now),
                                  heartbeat_utc=st.iso(now), stopped_utc=None, exit_reason=None,
                                  config_json=json.dumps(cfg), consecutive_failures=0, backoff_until_utc=None,
@@ -125,6 +143,8 @@ class Worker:
         now = self.clock()
         self.store.update_worker(state="stopped", detail=reason, stopped_utc=st.iso(now), exit_reason=reason,
                                  heartbeat_utc=st.iso(now), next_poll_utc=None)
+        if self.run_id:
+            self.store.end_run(self.run_id, now, reason)
         self.store.event("info", "lifecycle", f"worker pid {self.pid} stopped: {reason}", now)
         self.lock.release()
 
@@ -154,6 +174,8 @@ class Worker:
     def step(self) -> float:
         now = self.clock()
         self.store.update_worker(heartbeat_utc=st.iso(now))
+        if self.run_id:
+            self.store.touch_run(self.run_id, now)
         desired = self.store.desired()
         if desired == "stopped":
             self.stopping = True
@@ -172,6 +194,8 @@ class Worker:
             if self.stopping:
                 return 0
         mk = st.market_state(now)
+        if mk["open"] and self.quality is not None:
+            self.quality.mark_monitored(mk["session"], now)
         if mk["open"]:
             if self.next_poll is None or now >= self.next_poll:
                 self._poll(mk["session"], now)

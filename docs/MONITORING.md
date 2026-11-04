@@ -146,3 +146,109 @@ freshness, live bars or any research data, and nothing consumes them for decisio
   anomalies, defects or corrections, and no zero-volume minutes.
 - These are one morning's observations. They are not a suitability verdict, and not evidence of
   any strategy's profitability.
+
+## Multi-session recovery and daily evidence reports
+
+### Session states
+
+| State | Meaning |
+|---|---|
+| IN PROGRESS | the session is open and being monitored |
+| PROVISIONAL | the session has closed; comparison or post-close re-observation still pending |
+| FINALIZED | compared through the close and re-observed after the close; report stored |
+| INCOMPLETE | cannot be completed; report stored with the reason and the unresolved intervals |
+
+A session can become INCOMPLETE in three ways:
+- it is beyond the 5-session lookback
+- historical access was refused 3 times
+- it is not a comparable session
+
+### Recovery
+
+When the worker starts, every unfinished monitored session in the last 5 opened trading sessions is
+resumed, oldest first, with the current session first. "Monitored" means the live worker polled it.
+- **Calendar:** weekends, holidays and early closes come from the exchange calendar.
+- **Midnight:** sessions are tracked by date, so neither midnight UTC nor midnight ET abandons one.
+- **Bounds:**
+  - 120-minute request windows, with a 5 s pause between backlog chunks
+  - at most 120 comparison requests per rolling hour
+  - nothing on or before 2026-10-30 (reserved)
+- **What can't be recovered:** live capture. A later re-fetch is a different observation and is
+  never written into the live record.
+
+### Finalization
+
+Finalization is idempotent. The report's evidence is hashed:
+- repeating finalization with unchanged evidence stores nothing
+- changed evidence becomes a new version that amends the old one, and old versions are kept
+
+### Daily report sections
+
+1. **Live capture:** minutes received; normal arrivals vs catch-up arrivals (bar end to receipt above
+   180 s); stale intervals with worker-alive share; minutes missed while SIP had a bar.
+2. **Later IEX revisions:** the provider's re-fetch compared with what was received live.
+3. **Delayed SIP comparison:**
+   - categories, labelled without implying identical prices or suitability
+   - close differences vs re-fetched IEX and vs live IEX
+   - high/low differences and volume share
+   - "eligible" (bar end + 15 min) vs "received", split into normal and catch-up
+4. **Operations:**
+   - worker runs, with process id and code version
+   - downtime intervals, labelled planned (stopped by request) or unplanned (no clean stop)
+   - unrecorded intervals (before worker-run recording existed)
+   - restarts, request failures, access refusals, comparison runs by kind
+5. **Unresolved:** minutes not compared, post-close re-observation not done, failed runs,
+   unrecoverable live gaps.
+6. **Provenance:** endpoint, feeds, adjustment, rules, thresholds, code versions.
+
+## Operating instructions
+
+The commands are the same in PowerShell; use `.venv\Scripts\python` instead of `.venv/Scripts/python`.
+
+1. Start the city server. The desktop app's launch configuration does this, or run:
+   `.venv/Scripts/python -m trading.dashboard.server` (it binds to 127.0.0.1:8765 only).
+2. Open http://127.0.0.1:8765, then **Market monitor**, then **Start**. The worker runs while the
+   server runs.
+3. Keep the computer awake and the server running through the session. Ideally keep it running until
+   about 45 minutes after the close, so the post-close re-observation and finalization happen the
+   same day. If it was off, starting the server the next day recovers the unfinished session, as
+   long as it is within the last 5 sessions.
+4. **Stop** halts the worker. Nothing restarts it until Start.
+5. Command-line equivalents: `.venv/Scripts/python -m trading.monitor status|start|pause|stop`.
+6. The supervisor launches at most 6 workers per hour. If you restart the server many times in an
+   hour, the worker resumes automatically when the oldest launch is an hour old.
+
+There is no Windows startup task. Monitoring is **not** a 24/7 service: it runs only while this
+computer is on and the city server is running.
+
+## Checklist for observing several consecutive sessions
+
+Each trading day:
+- [ ] Before 09:30 ET, the server is running and the city shows Worker health: RUNNING (or MARKET
+      CLOSED before the open).
+- [ ] During the session, all symbols show FRESH most of the time. Note any STALE or
+      DISCONNECTED periods.
+- [ ] Mid-session, Session history shows the day IN PROGRESS, with "Compared with SIP" growing about
+      20 minutes behind the clock.
+- [ ] After the close, keep the server running about 45 minutes. The day should become FINALIZED
+      with report version 1.
+- [ ] The next morning, check the previous session is FINALIZED. If it is PROVISIONAL, confirm it
+      finalizes shortly after the worker starts.
+- [ ] In each report, record: received normal vs catch-up, downtime (unplanned), request failures
+      and access refusals, live vs re-fetch differences, SIP revisions, and unresolved items.
+- [ ] Over a weekend or holiday, the next session's start should recover the last session.
+- [ ] Before drawing conclusions, collect at least 5 consecutive sessions, each FINALIZED or
+      INCOMPLETE with a stated reason.
+
+## Limitations
+
+- **Live capture cannot be recovered.** Minutes the live monitor missed stay missing in section 1.
+- **Run history:** worker-run recording began 2026-11-04 17:16 UTC; earlier intervals that day are
+  "unrecorded".
+- **Lookback:** recovery covers the last 5 opened sessions; anything older is reported INCOMPLETE.
+- **Downtime labels:** "planned" means a recorded stop request. A server stopped from the desktop
+  app, a computer shutdown or a crash all appear as unplanned.
+- **Latency:** catch-up latency (a backlog fetched after a gap) is reported separately from normal
+  latency. Normal live latency is bounded below by the 60 s poll.
+- **No suitability claims:** the reports state what was observed. They do not certify either feed
+  for trading or show that any strategy would be profitable.

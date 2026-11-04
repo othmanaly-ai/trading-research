@@ -47,7 +47,10 @@ def launch(store: st.MonitorStore, by: str, now=None) -> tuple[bool, str]:
         return False, "a worker was launched less than 20 s ago; waiting for its heartbeat"
     if len(recent) >= MAX_SPAWNS_PER_HOUR:
         msg = f"launch limit reached ({MAX_SPAWNS_PER_HOUR} per hour); not launching. See the worker log."
-        store.event("error", "supervisor", msg, now)
+        logged = store.db.execute("SELECT 1 FROM events WHERE kind='supervisor' AND message=? AND ts_utc >= ? LIMIT 1",
+                                  (msg, st.iso(now - timedelta(minutes=10)))).fetchone()
+        if not logged:                                  # record once per 10 minutes, not every check
+            store.event("error", "supervisor", msg, now)
         return False, msg
     env = {k: v for k, v in os.environ.items() if k not in STRIP_FROM_CHILD}   # inherited, never read here
     st.LOG_PATH.parent.mkdir(parents=True, exist_ok=True)

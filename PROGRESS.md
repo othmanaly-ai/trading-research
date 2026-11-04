@@ -464,6 +464,36 @@ pipeline -> watch progress -> cancel if needed -> open the report.
   4.1% (SPY), 1.5% (QQQ) and 3.7% (IWM). See `docs/MONITORING.md`.
 - **Tests:** 267 pass, 0 skipped.
 
+## Multi-session monitoring and daily evidence reports (2026-11-04)
+
+- **Inspected:** comparisons had used the re-fetched IEX bars, recording the live capture only as
+  present/absent, and only the current ET date was ever compared.
+- **Fixed:**
+  - comparisons now keep live IEX values next to re-fetched ones
+  - reports separate live capture, later IEX revisions and delayed SIP
+  - "consistent" now reads "IEX within the SIP range (prices can still differ; not identical, not a
+    suitability check)"
+- **Implemented:**
+  - session states: in progress, provisional, finalized, incomplete
+  - recovery of unfinished monitored sessions within 5 sessions, under a 120-requests-per-hour
+    budget, with 120-minute chunks
+  - incomplete reported, never success (beyond the lookback, or historical access refused 3 times)
+  - idempotent finalization with versioned, amend-only reports
+  - worker-run records with code version
+  - downtime classed as planned, unplanned or unrecorded
+  - normal vs catch-up latency, for live receipt and for SIP after eligibility
+  - city session history, daily report and worker-health summary
+  - supervisor launch-limit errors logged once per 10 minutes
+- **Tested** (labelled fixtures, 14 new tests): shutdown before the post-close check, then restart
+  the next day; both midnight boundaries; weekend; early close; repeated finalization and
+  amendment; refused historical access; bounded backlog, lookback and request budget; reserved
+  session; live, revision and SIP separation; downtime, restarts, failures; unrecorded intervals.
+- **Real operation:** after the deploy, the current session stayed compared to the 20-minute
+  boundary. Live receipts: 45 normal (median 22 s), 123 by catch-up (median about 65 min). No IEX
+  revisions. Development restarts hit the supervisor's 6-per-hour launch limit, which blocked
+  relaunch until the oldest launch aged out (it worked as designed, and the report shows it).
+- **Tests:** 281 pass, 0 skipped.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

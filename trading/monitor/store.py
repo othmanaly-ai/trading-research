@@ -107,6 +107,9 @@ class MonitorStore:
             CREATE TABLE IF NOT EXISTS events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, ts_utc TEXT, level TEXT, kind TEXT, message TEXT);
             CREATE TABLE IF NOT EXISTS spawns (ts_utc TEXT, requested_by TEXT, pid INTEGER, note TEXT);
+            CREATE TABLE IF NOT EXISTS m_workers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, pid INTEGER, started_utc TEXT, last_alive_utc TEXT,
+                stopped_utc TEXT, exit_reason TEXT, code_version TEXT, config_json TEXT);
             INSERT OR IGNORE INTO control (id, desired, requested_utc, requested_by) VALUES (1, 'stopped', NULL, 'default');
             INSERT OR IGNORE INTO worker (id, state, detail) VALUES (1, 'stopped', 'never started');
             """)
@@ -159,6 +162,27 @@ class MonitorStore:
     def spawns_since(self, since: datetime) -> list[dict]:
         return [dict(r) for r in self.db.execute("SELECT * FROM spawns WHERE ts_utc >= ? ORDER BY ts_utc",
                                                  (iso(since),))]
+
+    # ---- worker runs (one row per process lifetime; basis for downtime and restarts) ------
+    def start_run(self, pid: int, code_version: str, config: dict, now: datetime) -> int:
+        cur = self.db.execute("INSERT INTO m_workers (pid, started_utc, last_alive_utc, code_version, config_json) "
+                              "VALUES (?,?,?,?,?)", (pid, iso(now), iso(now), code_version, json.dumps(config)))
+        self.db.commit()
+        return cur.lastrowid
+
+    def touch_run(self, run_id: int, now: datetime) -> None:
+        self.db.execute("UPDATE m_workers SET last_alive_utc=? WHERE id=?", (iso(now), run_id))
+        self.db.commit()
+
+    def end_run(self, run_id: int, now: datetime, reason: str) -> None:
+        self.db.execute("UPDATE m_workers SET stopped_utc=?, last_alive_utc=?, exit_reason=? WHERE id=?",
+                        (iso(now), iso(now), reason, run_id))
+        self.db.commit()
+
+    def runs_between(self, start: datetime, end: datetime) -> list[dict]:
+        return [dict(r) for r in self.db.execute(
+            "SELECT * FROM m_workers WHERE started_utc < ? AND last_alive_utc >= ? ORDER BY started_utc",
+            (iso(end), iso(start)))]
 
     # ---- bars -------------------------------------------------------------------------
     def insert_bars(self, symbol: str, feed: str, bars: list[dict], received: datetime) -> dict:

@@ -39,6 +39,11 @@ MAX_CHUNK = timedelta(minutes=120)          # bounded request window; a backlog 
 EOD_RECHECK_AFTER = timedelta(minutes=30)   # after the close + delay: one full-day re-observation
 BACKOFF = (60, 120, 300, 600)
 ACCESS_REFUSED_WAIT = 1800
+RECOVERY_LOOKBACK_SESSIONS = 5          # unfinished monitored sessions older than this are reported incomplete
+MAX_HISTORICAL_ACCESS_FAILURES = 3      # then a past session is reported incomplete (never "successful")
+REQUEST_BUDGET_PER_HOUR = 120           # quality requests; recovery never floods the provider
+BACKLOG_GAP = timedelta(seconds=5)      # pause between backlog chunks
+SESSION_STATES = ("in_progress", "provisional", "finalized", "incomplete")
 FIELDS = ("o", "h", "l", "c", "v")
 CATEGORIES = ("consistent_subset", "expected_coverage_difference", "both_absent", "unresolved_anomaly",
               "structural_defect")
@@ -68,11 +73,44 @@ CREATE TABLE IF NOT EXISTS q_health (
     id INTEGER PRIMARY KEY CHECK (id = 1), state TEXT, detail TEXT, failures INTEGER DEFAULT 0,
     backoff_until_utc TEXT, last_success_utc TEXT, updated_utc TEXT);
 INSERT OR IGNORE INTO q_health (id, state, detail) VALUES (1, 'idle', 'no comparison has run yet');
+CREATE TABLE IF NOT EXISTS q_reports (
+    session_date TEXT, version INTEGER, status TEXT, created_utc TEXT, report_sha TEXT, report_json TEXT,
+    amends_version INTEGER, PRIMARY KEY (session_date, version));
 """
+MIGRATIONS = {
+    "q_state": [("status", "TEXT"), ("detail", "TEXT"), ("access_failures", "INTEGER DEFAULT 0"),
+                ("finalized_utc", "TEXT"), ("first_monitored_utc", "TEXT"), ("updated_utc", "TEXT")],
+    "q_compare": [("live_o", "REAL"), ("live_h", "REAL"), ("live_l", "REAL"), ("live_c", "REAL"), ("live_v", "REAL"),
+                  ("d_c_usd_live", "REAL"), ("d_c_bps_live", "REAL")],
+}
 
 
 def ensure_schema(store: st.MonitorStore) -> None:
     store.db.executescript(SCHEMA)
+    for table, cols in MIGRATIONS.items():
+        have = {r[1] for r in store.db.execute(f"PRAGMA table_info({table})")}
+        for name, decl in cols:
+            if name not in have:
+                store.db.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
+    # Derived fields only: comparisons recorded before the live columns existed get the live IEX values
+    # from the live-capture table (which is the original evidence and is not modified).
+    store.db.execute("""
+        UPDATE q_compare SET
+          live_o = (SELECT o FROM bars b WHERE b.symbol=q_compare.symbol AND b.feed='iex' AND b.t_utc=q_compare.t_utc),
+          live_h = (SELECT h FROM bars b WHERE b.symbol=q_compare.symbol AND b.feed='iex' AND b.t_utc=q_compare.t_utc),
+          live_l = (SELECT l FROM bars b WHERE b.symbol=q_compare.symbol AND b.feed='iex' AND b.t_utc=q_compare.t_utc),
+          live_c = (SELECT c FROM bars b WHERE b.symbol=q_compare.symbol AND b.feed='iex' AND b.t_utc=q_compare.t_utc),
+          live_v = (SELECT v FROM bars b WHERE b.symbol=q_compare.symbol AND b.feed='iex' AND b.t_utc=q_compare.t_utc)
+        WHERE live_iex_present = 1 AND live_c IS NULL""")
+    store.db.execute("""
+        UPDATE q_compare SET
+          d_c_usd_live = live_c - (SELECT c FROM q_obs o WHERE o.symbol=q_compare.symbol AND o.feed='sip'
+                                   AND o.t_utc=q_compare.t_utc AND o.revision=q_compare.sip_rev),
+          d_c_bps_live = (live_c - (SELECT c FROM q_obs o WHERE o.symbol=q_compare.symbol AND o.feed='sip'
+                                    AND o.t_utc=q_compare.t_utc AND o.revision=q_compare.sip_rev)) * 10000.0 /
+                         (SELECT c FROM q_obs o WHERE o.symbol=q_compare.symbol AND o.feed='sip'
+                          AND o.t_utc=q_compare.t_utc AND o.revision=q_compare.sip_rev)
+        WHERE live_c IS NOT NULL AND d_c_bps_live IS NULL AND sip_present = 1""")
     store.db.commit()
 
 
@@ -253,8 +291,8 @@ class QualityChecker:
             t_iso = st.iso(t)
             for sym in self.symbols:
                 sip, iex = self._latest(sym, "sip", t_iso), self._latest(sym, "iex", t_iso)
-                live = self.store.db.execute("SELECT received_utc FROM bars WHERE symbol=? AND feed='iex' AND t_utc=?",
-                                             (sym, t_iso)).fetchone()
+                live = self.store.db.execute("SELECT o, h, l, c, v, received_utc FROM bars WHERE symbol=? AND "
+                                             "feed='iex' AND t_utc=?", (sym, t_iso)).fetchone()
                 cat, detail = classify(sip, iex)
                 row = {"d": {}, "share": None}
                 if sip and iex and cat != "structural_defect":
@@ -263,19 +301,104 @@ class QualityChecker:
                     if sip["v"] and sip["v"] > 0:
                         row["share"] = iex["v"] / sip["v"]
                 d = row["d"]
+                live_d = (live["c"] - sip["c"], _bps(live["c"], sip["c"])) if (live and sip and _num(live["c"])
+                                                                               and _num(sip["c"])) else (None, None)
                 self.store.db.execute(
-                    "INSERT OR IGNORE INTO q_compare VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    "INSERT OR IGNORE INTO q_compare (symbol, t_utc, session_date, sip_rev, iex_rev, category, detail, "
+                    "sip_present, iex_present, live_iex_present, d_o_usd, d_h_usd, d_l_usd, d_c_usd, d_o_bps, d_h_bps, "
+                    "d_l_bps, d_c_bps, iex_volume, sip_volume, iex_volume_share, sip_provider_available_utc, "
+                    "sip_retrieved_utc, iex_retrieved_utc, live_iex_received_utc, compared_utc, run_id, live_o, live_h, "
+                    "live_l, live_c, live_v, d_c_usd_live, d_c_bps_live) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (sym, t_iso, session.date.isoformat(), sip["revision"] if sip else 0, iex["revision"] if iex else 0,
                      cat, detail, int(bool(sip)), int(bool(iex)), int(bool(live)),
                      *(d.get(f, (None, None))[0] for f in ("o", "h", "l", "c")),
                      *(d.get(f, (None, None))[1] for f in ("o", "h", "l", "c")),
                      iex["v"] if iex else None, sip["v"] if sip else None, row["share"],
                      sip["provider_available_utc"] if sip else None, sip["retrieved_utc"] if sip else None,
-                     iex["retrieved_utc"] if iex else None, live["received_utc"] if live else None, now_iso, run_id))
+                     iex["retrieved_utc"] if iex else None, live["received_utc"] if live else None, now_iso, run_id,
+                     *((live[k] for k in ("o", "h", "l", "c", "v")) if live else (None,) * 5), *live_d))
                 n += 1
             t += timedelta(minutes=1)
         self.store.db.commit()
         return n
+
+    # ---- sessions: which ones are monitored, which remain unfinished --------------------------
+    def mark_monitored(self, session, now: datetime) -> None:
+        """Called by the worker while it live-polls an open session."""
+        if session.date <= st.RESERVED_END:
+            return
+        self.store.db.execute(
+            "INSERT INTO q_state (session_date, status, detail, first_monitored_utc, updated_utc) "
+            "VALUES (?, 'in_progress', 'session open; monitored live', ?, ?) ON CONFLICT(session_date) DO NOTHING",
+            (session.date.isoformat(), st.iso(now), st.iso(now)))
+        self.store.db.commit()
+
+    def _set_state(self, date_s: str, **fields) -> None:
+        fields["updated_utc"] = st.iso(self.clock())
+        sets = ", ".join(f"{k}=?" for k in fields)
+        self.store.db.execute(f"UPDATE q_state SET {sets} WHERE session_date=?", [*fields.values(), date_s])
+        self.store.db.commit()
+
+    def _requests_last_hour(self, now: datetime) -> int:
+        return self.store.db.execute("SELECT COALESCE(SUM(requests),0) FROM q_runs WHERE started_utc >= ?",
+                                     (st.iso(now - timedelta(hours=1)),)).fetchone()[0]
+
+    def _session(self, date_s: str):
+        from datetime import date as _d
+        found = st.sessions_between(_d.fromisoformat(date_s), _d.fromisoformat(date_s))
+        return found[0] if found else None
+
+    def _expire_old(self, now: datetime) -> None:
+        """Unfinished sessions beyond the lookback are reported INCOMPLETE (never marked successful)."""
+        recent = [s for s in st.sessions_between((now - timedelta(days=14)).date(), now.date()) if s.open_utc <= now]
+        keep = {s.date.isoformat() for s in recent[-RECOVERY_LOOKBACK_SESSIONS:]}
+        for row in self.store.db.execute("SELECT session_date FROM q_state WHERE status IN ('in_progress','provisional') "
+                                         "OR status IS NULL").fetchall():
+            if row[0] not in keep:
+                self._set_state(row[0], status="incomplete",
+                                detail=f"beyond the recovery lookback of {RECOVERY_LOOKBACK_SESSIONS} sessions; "
+                                       "remaining minutes were not compared")
+                self.finalize(row[0])
+            else:                                            # keep every pending state accurate, not only the one worked on
+                sess = self._session(row[0])
+                if sess and now >= sess.close_utc:
+                    self.store.db.execute("UPDATE q_state SET status='provisional', detail=?, updated_utc=? WHERE "
+                                          "session_date=? AND status='in_progress'",
+                                          ("session closed; comparison and post-close re-observation pending",
+                                           st.iso(now), row[0]))
+        self.store.db.commit()
+
+    def pending_sessions(self) -> list:
+        return [dict(r) for r in self.store.db.execute(
+            "SELECT * FROM q_state WHERE status IN ('in_progress','provisional') OR status IS NULL ORDER BY session_date")]
+
+    def _next_action(self, now: datetime):
+        mk = st.market_state(now)
+        current = (mk["session"] or mk["last_session"])
+        rows = self.pending_sessions()
+        rows.sort(key=lambda r: (0 if current and r["session_date"] == current.date.isoformat() else 1, r["session_date"]))
+        for row in rows:
+            session = self._session(row["session_date"])
+            if session is None or session.date <= st.RESERVED_END:
+                self._set_state(row["session_date"], status="incomplete", detail="not a comparable session")
+                continue
+            closed = now >= session.close_utc
+            if row.get("status") != ("provisional" if closed else "in_progress"):
+                self._set_state(row["session_date"], status="provisional" if closed else "in_progress",
+                                detail="session closed; comparison and post-close re-observation pending" if closed
+                                else "session open; monitored live")
+            b = min(boundary(now), session.close_utc)
+            through = st.parse(row["compared_through_utc"]) if row["compared_through_utc"] else session.open_utc
+            if through < b:
+                return session, "chunk", through, min(b, through + MAX_CHUNK)
+            if through >= session.close_utc:
+                if not row["eod_recheck_utc"]:
+                    if now >= session.close_utc + SIP_DELAY + EOD_RECHECK_AFTER:
+                        return session, "recheck", session.open_utc, session.close_utc
+                    continue
+                return session, "finalize", None, None
+        return None
 
     # ---- scheduling (called from the worker loop) ----------------------------------------
     def step(self, client, now: datetime) -> dict | None:
@@ -284,46 +407,78 @@ class QualityChecker:
             return None
         if self.next_cycle and now < self.next_cycle:
             return None
-        mk = st.market_state(now)
-        session = mk["session"] or mk["last_session"]
-        if session is None or session.date <= st.RESERVED_END or session.date != st.session_date_et(now):
+        self._expire_old(now)
+        action = self._next_action(now)
+        if action is None:
             self.next_cycle = now + CYCLE_EVERY
-            self._health("idle", "no session today; nothing to compare")
+            self._health("ok" if h["last_success_utc"] else "idle",
+                         "up to date: every monitored session is compared to the 20-minute boundary "
+                         "or finalized")
             return None
-        b = min(boundary(now), session.close_utc)
-        row = self.store.db.execute("SELECT * FROM q_state WHERE session_date=?", (session.date.isoformat(),)).fetchone()
-        done_through = st.parse(row["compared_through_utc"]) if row and row["compared_through_utc"] else session.open_utc
-        if done_through < b:
-            end = min(b, done_through + MAX_CHUNK)
-            res = self.compare_window(client, session, done_through, end)
-            if not res["ok"]:
-                return self._fail(res, now)
-            self.store.db.execute("INSERT INTO q_state (session_date, compared_through_utc) VALUES (?,?) "
-                                  "ON CONFLICT(session_date) DO UPDATE SET compared_through_utc=excluded.compared_through_utc",
-                                  (session.date.isoformat(), st.iso(end)))
-            self.store.db.commit()
-            more = end < b
-            self.next_cycle = now if more else now + CYCLE_EVERY      # finish a backlog chunk by chunk
-            self._health("ok", f"compared through {st.iso(end)}" + ("; backlog remains" if more else ""),
-                         failures=0, backoff_until_utc=None, last_success_utc=st.iso(now))
-            return res
-        if (done_through >= session.close_utc and not (row and row["eod_recheck_utc"])
-                and now >= session.close_utc + SIP_DELAY + EOD_RECHECK_AFTER):
-            res = self.compare_window(client, session, session.open_utc, session.close_utc, kind="eod_recheck")
-            if not res["ok"]:
-                return self._fail(res, now)
-            self.store.db.execute("UPDATE q_state SET eod_recheck_utc=? WHERE session_date=?",
-                                  (st.iso(now), session.date.isoformat()))
-            self.store.db.commit()
-            self._health("ok", f"end-of-day re-observation done: {res['corrections']} correction(s)",
-                         failures=0, backoff_until_utc=None, last_success_utc=st.iso(now))
-            self.next_cycle = now + CYCLE_EVERY
-            return res
-        self.next_cycle = now + CYCLE_EVERY
-        state = "ok" if done_through >= b else "waiting"
-        self._health(state, f"up to date: compared through {st.iso(done_through)}; next minutes become comparable "
-                            f"20 min after they end")
-        return None
+        session, kind, start, end = action
+        date_s = session.date.isoformat()
+        if kind == "finalize":
+            self.finalize(date_s)
+            self.next_cycle = now
+            return {"ok": True, "finalized": date_s}
+        if self._requests_last_hour(now) + 2 > REQUEST_BUDGET_PER_HOUR:
+            self.next_cycle = now + timedelta(minutes=1)
+            self._health("throttled", f"hourly request budget ({REQUEST_BUDGET_PER_HOUR}) reached; backlog continues "
+                                      "next minute")
+            return None
+        run_kind = "eod_recheck" if kind == "recheck" else (
+            "recovery" if session.date != st.session_date_et(now) else "cycle")
+        res = self.compare_window(client, session, start, end, kind=run_kind)
+        if not res["ok"]:
+            if res["status"] == "access_failure" and session.date != st.session_date_et(now):
+                row = self.store.db.execute("SELECT access_failures FROM q_state WHERE session_date=?",
+                                            (date_s,)).fetchone()
+                n = (row[0] or 0) + 1
+                self._set_state(date_s, access_failures=n)
+                if n >= MAX_HISTORICAL_ACCESS_FAILURES:
+                    self._set_state(date_s, status="incomplete",
+                                    detail=f"historical access refused {n} times ({res['error'][:160]}); "
+                                           "remaining minutes were not compared")
+                    self.finalize(date_s)
+            return self._fail(res, now)
+        if kind == "recheck":
+            self._set_state(date_s, eod_recheck_utc=st.iso(now))
+            self.finalize(date_s)
+            detail = f"{date_s}: post-close re-observation done ({res['corrections']} correction(s)); finalized"
+        else:
+            self._set_state(date_s, compared_through_utc=st.iso(end))
+            detail = f"{date_s}: compared through {st.iso(end)}"
+        more = self._next_action(now)
+        self.next_cycle = now + BACKLOG_GAP if (more and more[1] != "finalize") else now + (
+            timedelta(0) if more else CYCLE_EVERY)
+        self._health("ok", detail + ("; more work queued" if more else ""), failures=0, backoff_until_utc=None,
+                     last_success_utc=st.iso(now))
+        return res
+
+    # ---- idempotent daily finalization ---------------------------------------------------
+    def finalize(self, date_s: str) -> dict:
+        """Store the daily evidence report once. Re-running with unchanged evidence stores nothing;
+        changed evidence after finalization becomes a new version that amends (never replaces) the old."""
+        from trading.monitor import reliability
+        rep_ = reliability.daily_report(self.store, date_s, self.clock())
+        body = json.dumps(rep_["evidence"], sort_keys=True, default=str)
+        sha = __import__("hashlib").sha256(body.encode()).hexdigest()
+        last = self.store.db.execute("SELECT * FROM q_reports WHERE session_date=? ORDER BY version DESC LIMIT 1",
+                                     (date_s,)).fetchone()
+        status = rep_["status"]["state"]
+        if status == "finalized":
+            self._set_state(date_s, status="finalized", finalized_utc=st.iso(self.clock()),
+                            detail="compared through the close; post-close re-observation done")
+        if last and last["report_sha"] == sha and last["status"] == status:
+            return {"stored": False, "version": last["version"]}
+        version = (last["version"] + 1) if last else 1
+        self.store.db.execute("INSERT INTO q_reports VALUES (?,?,?,?,?,?,?)",
+                              (date_s, version, status, st.iso(self.clock()), sha,
+                               json.dumps(rep_, default=str), last["version"] if last else None))
+        self.store.event("info", "quality-report", f"{date_s}: report version {version} stored ({status})"
+                         + (f"; amends version {last['version']}" if last else ""))
+        self.store.db.commit()
+        return {"stored": True, "version": version}
 
     def _fail(self, res, now):
         failures = self.health()["failures"] + 1

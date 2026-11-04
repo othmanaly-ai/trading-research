@@ -324,7 +324,7 @@ def test_start_launches_once_and_supervisor_recovers_without_duplicates(env, _is
     for i in range(10):
         control.launch(env, "supervisor", now + timedelta(minutes=2, seconds=25 * i))
     assert len(launched) == 6
-    assert any("launch limit" in e["message"] for e in env.events(50))
+    assert sum("launch limit" in e["message"] for e in env.events(50)) == 1      # logged once, not per check
 
 
 def test_supervisor_only_acts_when_desired_running(env, _isolate_monitor):

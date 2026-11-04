@@ -72,6 +72,8 @@ Exit codes for the data check: 0 = success, 1 = API refused or failed, 2 = no cr
 - `trading/monitor/` (see `docs/MONITORING.md`). The worker is a separate process; only it loads
   Alpaca credentials. The city server reads `data/monitoring/monitor.sqlite` and launches or
   supervises the worker, but never imports broker code.
+- Daily evidence reports (`trading/monitor/reliability.py`): keep live capture, later IEX revisions and delayed SIP
+  separate; never write re-fetched bars into the live record; finalization is amend-only.
 - Data quality (`trading/monitor/quality.py`): compare only minutes whose end is >= 20 min old (15 min SIP
   delay + 5 min margin); keep every observation revision; never certify a feed or derive signals.
 - Never request or store dates on or before the end of the reserved periods (2026-10-30). Never

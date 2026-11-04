@@ -1,7 +1,7 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLiveJson } from "../useLiveJson";
 import type { TowerSpec } from "./CityView";
-import QualityPanel from "./QualityPanel";
+import SessionHistory from "./SessionHistory";
 
 // Read-only market monitoring (trading/monitor). The worker is a separate process; this view only
 // displays its records from /api/monitor. Not a research dataset, not a trading signal.
@@ -122,6 +122,12 @@ export default function MonitorView({ reducedMotion }: { reducedMotion: boolean 
         ({data.symbols[0]?.feed_label}). Not a research dataset, not a trading signal, no recommendations. Order submission is DISABLED.
         Reserved research periods (through {data.reserved_end}) are never fetched.</div>
 
+      <div className="health-box" role="status" aria-label="Worker health summary">
+        <strong>Worker health:</strong> {w.alive ? `RUNNING (pid ${w.pid}, heartbeat ${age(w.heartbeat_age_s)} ago)` : `NOT RUNNING (${w.effective_state})`}
+        {" "}· desired {data.desired} · {w.consecutive_failures ? `${w.consecutive_failures} consecutive failure(s), retry ${et(w.backoff_until_utc)}` : "no current failures"}
+        {" "}· last successful poll {et(w.last_success_utc)}.
+        <br /><span className="small">Runs only while this computer and the city server are running; no startup task, not a 24/7 service.</span>
+      </div>
       <div className="row">
         <span>Market: <strong className={data.market.open ? "tone-ok" : ""}>{data.market.open ? "OPEN" : "CLOSED"}</strong>
           {data.market.open ? ` (session ${data.market.session_date}, closes ${et(data.market.session_close_utc)})`
@@ -189,8 +195,8 @@ export default function MonitorView({ reducedMotion }: { reducedMotion: boolean 
         </div>
       ) : null}
 
-      <h3>Data quality: delayed SIP vs IEX (daily report)</h3>
-      <QualityPanel tick={tick} />
+      <h3>Session history and daily evidence reports</h3>
+      <SessionHistory tick={tick} />
 
       <h3>Events (state changes and errors)</h3>
       {data.events.length === 0 ? <p className="empty">No events recorded yet.</p> : (

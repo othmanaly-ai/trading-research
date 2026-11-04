@@ -78,8 +78,27 @@ def env():
     store.close()
 
 
-def checker(store, clock):
-    return q.QualityChecker(store, SYMS, clock)
+def checker(store, clock, monitored=True):
+    """A checker whose session was monitored live (as the worker marks it while the market is open)."""
+    qc = q.QualityChecker(store, SYMS, clock)
+    if monitored:
+        day = mst.session_date_et(clock())
+        for sess in mst.sessions_between(day, day):
+            if sess.date > mst.RESERVED_END:
+                qc.mark_monitored(sess, sess.open_utc)
+    return qc
+
+
+def run_until_idle(qc, feeds, clock, limit=50):
+    """Step the checker, advancing the fake clock past the backlog gap, until it has nothing to do."""
+    results = []
+    for _ in range(limit):
+        qc.next_cycle = None
+        r = qc.step(feeds, clock())
+        if r is None:
+            break
+        results.append(r)
+    return results
 
 
 def latest_rows(store, sym):
@@ -110,6 +129,7 @@ def test_backlog_is_worked_off_in_bounded_chunks_and_restart_resumes(env):
     feeds.fill("iex", OPEN, 300)
     qc = checker(env, clock)
     qc.step(feeds, clock())
+    qc.next_cycle = None                                              # backlog gap elapsed
     qc.step(feeds, clock())
     spans = [(mst.parse(c["end"]) - mst.parse(c["start"])).total_seconds() for c in feeds.calls]
     assert all(s < q.MAX_CHUNK.total_seconds() for s in spans) and len(feeds.calls) == 4
@@ -183,15 +203,15 @@ def test_unexpected_timestamps_and_conflicting_duplicates_are_defects(env):
 # ---- corrections, duplicates, no look-ahead ----------------------------------------------
 
 def test_late_correction_keeps_revision_history_and_duplicates_add_nothing(env):
-    clock = Clock(datetime(2026, 11, 4, 21, 50, tzinfo=UTC))             # after close + delay + recheck wait
+    clock = Clock(datetime(2026, 11, 4, 21, 25, tzinfo=UTC))             # after close + 20 min, before the recheck
     feeds = FakeFeeds()
     feeds.fill("sip", OPEN, 390)
     feeds.fill("iex", OPEN, 390)
     qc = checker(env, clock)
-    while qc.step(feeds, clock()) is not None and env.db.execute(
-            "SELECT compared_through_utc FROM q_state").fetchone()[0] != "2026-11-04T21:00:00+00:00":
-        pass
+    run_until_idle(qc, feeds, clock)
+    assert env.db.execute("SELECT status FROM q_state").fetchone()[0] == "provisional"
     first_obs = env.db.execute("SELECT COUNT(*) FROM q_obs").fetchone()[0]
+    clock.t = datetime(2026, 11, 4, 21, 50, tzinfo=UTC)                    # recheck now due (close + 15 + 30)
     # The provider later corrects one SIP minute; the end-of-day re-observation must notice it.
     t_fix = OPEN + timedelta(minutes=100)
     for b in feeds.data["sip"]["QQQ"]:
@@ -211,6 +231,12 @@ def test_late_correction_keeps_revision_history_and_duplicates_add_nothing(env):
     assert next(s for s in rep["symbols"] if s["symbol"] == "QQQ")["corrections"]["sip"] == 1
     assert next(s for s in rep["symbols"] if s["symbol"] == "QQQ")["minutes_compared"] == 390
     assert rep["eod_recheck_utc"] is not None
+    # Finalized exactly once; repeating finalization stores nothing new.
+    assert env.db.execute("SELECT status FROM q_state").fetchone()[0] == "finalized"
+    assert env.db.execute("SELECT COUNT(*), MAX(status) FROM q_reports").fetchone()[:] == (1, "finalized")
+    assert qc.finalize("2026-11-04") == {"stored": False, "version": 1}
+    run_until_idle(qc, feeds, clock)
+    assert env.db.execute("SELECT COUNT(*) FROM q_reports").fetchone()[0] == 1
 
 
 def test_sip_is_labelled_delayed_and_never_changes_live_bars(env):
@@ -274,8 +300,7 @@ def test_early_close_compares_only_to_the_early_close(env):
     feeds.fill("sip", OPEN.replace(day=27), 240)
     feeds.fill("iex", OPEN.replace(day=27), 240)
     qc = checker(env, clock)
-    while qc.step(feeds, clock()):
-        pass
+    run_until_idle(qc, feeds, clock)
     assert env.db.execute("SELECT compared_through_utc FROM q_state").fetchone()[0] == "2026-11-27T18:00:00+00:00"
     assert env.db.execute("SELECT MAX(t_utc) FROM q_compare").fetchone()[0] == "2026-11-27T17:59:00+00:00"
     rep = q.report(env, "2026-11-27", clock())

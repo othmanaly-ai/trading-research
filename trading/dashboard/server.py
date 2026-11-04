@@ -129,6 +129,32 @@ def quality_minute(symbol: str, t_utc: str) -> dict:
         store.close()
 
 
+def monitor_sessions() -> dict:
+    from trading.monitor import quality, reliability, store as mst
+    store = mst.MonitorStore()
+    try:
+        quality.ensure_schema(store)
+        return {"sessions": reliability.sessions_overview(store),
+                "comparison_health": dict(store.db.execute("SELECT * FROM q_health WHERE id=1").fetchone()),
+                "operating_note": "Monitoring runs only while this computer is on and the city server is running. "
+                                  "There is no Windows startup task and no 24/7 service. Unfinished sessions within "
+                                  f"the last {quality.RECOVERY_LOOKBACK_SESSIONS} trading sessions are recovered "
+                                  "when the worker runs again; live capture gaps cannot be recovered."}
+    finally:
+        store.close()
+
+
+def monitor_report(date_s: str) -> dict:
+    from trading.monitor import reliability, store as mst
+    if not QUALITY_DATE.match(date_s or ""):
+        raise ValueError("date must be YYYY-MM-DD")
+    store = mst.MonitorStore()
+    try:
+        return reliability.stored_or_current(store, date_s)
+    finally:
+        store.close()
+
+
 def monitor_control(action: str) -> dict:
     from trading.monitor import control, store as mst
     store = mst.MonitorStore()
@@ -446,6 +472,13 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
                     return self._json({"error": str(exc)}, 400)
             if path == "/api/monitor":
                 return self._json(monitor_snapshot())
+            if path == "/api/monitor/sessions":
+                return self._json(monitor_sessions())
+            if path == "/api/monitor/report":
+                try:
+                    return self._json(monitor_report(parse_qs(urlparse(self.path).query).get("date", [""])[0]))
+                except ValueError as exc:
+                    return self._json({"error": str(exc)}, 400)
             if path in ("/api/quality", "/api/quality/minute"):
                 q = parse_qs(urlparse(self.path).query)
                 try:
