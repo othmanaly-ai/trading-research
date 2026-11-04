@@ -19,6 +19,12 @@ STRATEGIES = {
         "params_class": Params,
         "target_defined": False,      # v1.1 has a stop and a time exit, no profit target
     },
+    "opening_range_breakout": {
+        "title": "Experiment 002: Long-only opening-range breakout",
+        "spec_path": "research/002_opening_range_breakout/SPEC.md",
+        "params_class": None,
+        "target_defined": False,
+    },
 }
 
 

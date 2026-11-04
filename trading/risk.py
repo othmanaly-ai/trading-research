@@ -65,6 +65,8 @@ class RiskState:
     halted: bool = False
     blocked_day: object = None
     day_start_equity: dict = field(default_factory=dict)
+    max_drawdown_seen: float = 0.0     # over every observed mark (intraday, after costs)
+    halt_event: dict | None = None     # day and equity mark at the first drawdown breach
 
     def start_day(self, day, equity: float) -> None:
         self.day_start_equity.setdefault(day, equity)
@@ -73,8 +75,13 @@ class RiskState:
         """Update the high-water mark with a mark-to-market equity (realized + unrealized
         after modeled costs) and return a breach reason, if any."""
         self.peak_equity = max(self.peak_equity, mark_equity)
+        self.max_drawdown_seen = max(self.max_drawdown_seen,
+                                     (self.peak_equity - mark_equity) / self.peak_equity)
         start = self.day_start_equity.setdefault(day, mark_equity)
         if mark_equity <= self.peak_equity * (1 - self.limits.max_drawdown):
+            if not self.halted:
+                self.halt_event = {"day": str(day), "mark_equity": mark_equity,
+                                   "peak_equity": self.peak_equity}
             self.halted = True
             return "risk: drawdown limit breached"
         if mark_equity - start <= -self.limits.daily_loss_limit * start:

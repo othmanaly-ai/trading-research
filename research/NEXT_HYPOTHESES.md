@@ -1,4 +1,7 @@
-# Candidates for experiment 002 (PROPOSED: owner to choose; nothing implemented)
+# Candidates for experiment 002
+
+**Owner selected candidate A on 2026-11-04.** The draft spec is
+`002_opening_range_breakout/SPEC.md`. Candidate B was not selected.
 
 Constraints carried over: SPY only, long-only, no leverage, no overnight holds except
 involuntary carries, the owner risk baseline (`OWNER_BASELINE_2026_11_03`), base, stress and
