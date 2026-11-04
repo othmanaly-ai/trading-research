@@ -133,3 +133,37 @@ class ReadOnlyAlpacaClient:
                 break
             params = {**params, "page_token": token}
         return {"bars": out, "pages": pages}
+
+    def get_quotes(self, symbol: str, start: str, end: str, feed: str, max_pages: int,
+                   limit: int = 10000) -> dict:
+        """Historical bid/ask quotes (GET only), at most max_pages pages. If a page token remains
+        when the cap is reached, the result is marked complete=False; it is never padded or
+        treated as the full window."""
+        params = {"symbols": symbol, "start": start, "end": end, "feed": feed, "limit": limit, "sort": "asc"}
+        quotes, pages, token = [], 0, None
+        while pages < max_pages:
+            body = self._get(DATA_URL, "/v2/stocks/quotes", params)
+            pages += 1
+            quotes.extend((body.get("quotes") or {}).get(symbol, []))
+            token = body.get("next_page_token")
+            if not token:
+                break
+            params = {**params, "page_token": token}
+        return {"quotes": quotes, "pages": pages, "complete": not token}
+
+    def get_corporate_actions(self, symbols: list[str], types: list[str], start: str, end: str,
+                              max_pages: int, limit: int = 1000) -> dict:
+        """Corporate-action records (GET only), at most max_pages pages; complete=False if capped."""
+        params = {"symbols": ",".join(symbols), "types": ",".join(types), "start": start, "end": end,
+                  "limit": limit}
+        out, pages, token = {}, 0, None
+        while pages < max_pages:
+            body = self._get(DATA_URL, "/v1/corporate-actions", params)
+            pages += 1
+            for kind, rows in (body.get("corporate_actions") or {}).items():
+                out.setdefault(kind, []).extend(rows or [])
+            token = body.get("next_page_token")
+            if not token:
+                break
+            params = {**params, "page_token": token}
+        return {"corporate_actions": out, "pages": pages, "complete": not token}

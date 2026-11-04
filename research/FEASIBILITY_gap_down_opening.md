@@ -128,3 +128,20 @@ read-only data milestone:
 
 If quotes are not accessible, **defer this research path**. Do not test it on modeled opening
 costs alone.
+
+## Update 2026-11-04: execution-data access check
+
+Done as a bounded read-only check. Details: `../feasibility/execution_data/FINDINGS.md`. No
+returns were computed and no rule was approved.
+
+- **Quotes:** historical SIP quotes are accessible. Opening spreads on 7 pre-registered
+  development dates were mostly 1 cent, but wider at 09:30-09:31 on some days.
+- **Raw prices:** raw minute and daily bars are accessible. Adjusted prices differ from raw by
+  7-17%.
+- **Dividends:**
+  - 3 of the expected 24 records are missing
+  - there is no declaration date, so availability at the decision time cannot be shown
+  - one SPY dividend (0.48% of price) is almost the whole 0.5% draft threshold
+- **Status:** further spread modeling is supported, but dividend handling **needs additional
+  data** or an owner-approved conservative rule before any spec.
+- **Fills:** fill and queue realism stay unmeasured.

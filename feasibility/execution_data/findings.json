@@ -1,0 +1,982 @@
+{
+ "label": "FEASIBILITY EVIDENCE: execution-data access check. Not research evaluation; no returns computed.",
+ "preregistration": "feasibility/execution_data/PREREGISTRATION.md (commit 883f7bb)",
+ "host": "https://data.alpaca.markets",
+ "feed": "sip",
+ "symbol": "SPY",
+ "http_requests": 57,
+ "request_cap": 240,
+ "stopped_paths": {},
+ "local_retrieval_utc": {
+  "first": "2026-11-04T23:01:42.691116+00:00",
+  "last": "2026-11-04T23:02:15.849456+00:00"
+ },
+ "http_status_counts": {
+  "200": 57
+ },
+ "corporate_actions": {
+  "status": "ok",
+  "pages": 1,
+  "complete": true,
+  "records": 21,
+  "fields_returned": [
+   "cusip",
+   "ex_date",
+   "foreign",
+   "id",
+   "payable_date",
+   "process_date",
+   "rate",
+   "record_date",
+   "special",
+   "symbol"
+  ],
+  "records_in_range": 21,
+  "declaration_before_ex_date": {
+   "with_declaration_date": 0,
+   "declaration_before_ex": 0
+  }
+ },
+ "dates": {
+  "2016-10-19": {
+   "reason": "random draw (seed 20261105)",
+   "prior_session": "2016-10-18",
+   "fetch": {
+    "daily_raw": {
+     "status": "ok",
+     "pages": 1,
+     "bars": 2
+    },
+    "minute_raw": {
+     "status": "ok",
+     "pages": 1,
+     "bars": 33
+    },
+    "quotes": {
+     "status": "ok",
+     "pages": 2,
+     "quotes": 16305,
+     "complete": true,
+     "last_t": "2016-10-19T13:34:59.967Z"
+    }
+   },
+   "is_ex_dividend_date_per_record": false,
+   "dividend_record": null,
+   "daily_raw": {
+    "prior_close_raw": 213.67,
+    "day_open_raw": 214.02,
+    "days_returned": [
+     "2016-10-18",
+     "2016-10-19"
+    ]
+   },
+   "minute_raw": {
+    "bars": 33,
+    "expected": 32,
+    "missing_minutes_et": [],
+    "ohlc_or_volume_violations": 0,
+    "out_of_order": 0,
+    "open_0930_raw": 214.03
+   },
+   "raw_vs_adjusted": {
+    "available": true,
+    "minutes_matched": 33,
+    "ratio_raw_over_adjusted_min": 1.165767,
+    "ratio_raw_over_adjusted_max": 1.165822
+   },
+   "daily_open_minus_0930_bar_open_cents": -1.0,
+   "quotes": {
+    "quotes": 16305,
+    "first_t": "2016-10-19T13:30:00.007Z",
+    "last_t": "2016-10-19T13:34:59.967Z",
+    "outside_window": 0,
+    "out_of_order": 0,
+    "nonpositive_bid": 0,
+    "nonpositive_ask": 0,
+    "negative_size": 0,
+    "crossed": 0,
+    "locked": 867,
+    "condition_codes": {
+     "?": 16305
+    },
+    "tape_codes": {
+     "B": 16305
+    },
+    "by_minute_et": {
+     "09:30": {
+      "quotes": 5499,
+      "valid": 5499,
+      "first_quote_after_minute_start_s": 0.007,
+      "largest_gap_s": 0.975,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.4673,
+      "spread_bp_p90": 0.4675,
+      "share_1_cent_by_count": 0.9756,
+      "share_1_cent_time_weighted": 0.9951
+     },
+     "09:31": {
+      "quotes": 3175,
+      "valid": 3175,
+      "first_quote_after_minute_start_s": 0.0,
+      "largest_gap_s": 0.938,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.4673,
+      "spread_bp_p90": 0.4674,
+      "share_1_cent_by_count": 0.9865,
+      "share_1_cent_time_weighted": 0.9998
+     },
+     "09:32": {
+      "quotes": 2697,
+      "valid": 2697,
+      "first_quote_after_minute_start_s": 0.005,
+      "largest_gap_s": 1.719,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.4674,
+      "spread_bp_p90": 0.4674,
+      "share_1_cent_by_count": 0.9844,
+      "share_1_cent_time_weighted": 0.9999
+     },
+     "09:33": {
+      "quotes": 2645,
+      "valid": 2645,
+      "first_quote_after_minute_start_s": 0.0,
+      "largest_gap_s": 1.054,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.4674,
+      "spread_bp_p90": 0.4675,
+      "share_1_cent_by_count": 0.9856,
+      "share_1_cent_time_weighted": 1.0
+     },
+     "09:34": {
+      "quotes": 2289,
+      "valid": 2289,
+      "first_quote_after_minute_start_s": 0.005,
+      "largest_gap_s": 0.922,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.4675,
+      "spread_bp_p90": 0.4675,
+      "share_1_cent_by_count": 0.9908,
+      "share_1_cent_time_weighted": 1.0
+     }
+    }
+   }
+  },
+  "2017-01-19": {
+   "reason": "random draw (seed 20261105)",
+   "prior_session": "2017-01-18",
+   "fetch": {
+    "daily_raw": {
+     "status": "ok",
+     "pages": 1,
+     "bars": 2
+    },
+    "minute_raw": {
+     "status": "ok",
+     "pages": 1,
+     "bars": 33
+    },
+    "quotes": {
+     "status": "ok",
+     "pages": 2,
+     "quotes": 10259,
+     "complete": true,
+     "last_t": "2017-01-19T14:35:00Z"
+    }
+   },
+   "is_ex_dividend_date_per_record": false,
+   "dividend_record": null,
+   "daily_raw": {
+    "prior_close_raw": 226.75,
+    "day_open_raw": 226.84,
+    "days_returned": [
+     "2017-01-18",
+     "2017-01-19"
+    ]
+   },
+   "minute_raw": {
+    "bars": 33,
+    "expected": 32,
+    "missing_minutes_et": [],
+    "ohlc_or_volume_violations": 0,
+    "out_of_order": 0,
+    "open_0930_raw": 226.84
+   },
+   "raw_vs_adjusted": {
+    "available": true,
+    "minutes_matched": 33,
+    "ratio_raw_over_adjusted_min": 1.158933,
+    "ratio_raw_over_adjusted_max": 1.158989
+   },
+   "daily_open_minus_0930_bar_open_cents": 0.0,
+   "quotes": {
+    "quotes": 10259,
+    "first_t": "2017-01-19T14:30:00.006Z",
+    "last_t": "2017-01-19T14:35:00Z",
+    "outside_window": 1,
+    "out_of_order": 0,
+    "nonpositive_bid": 0,
+    "nonpositive_ask": 0,
+    "negative_size": 0,
+    "crossed": 1,
+    "locked": 172,
+    "condition_codes": {
+     "?": 10259
+    },
+    "tape_codes": {
+     "B": 10259
+    },
+    "by_minute_et": {
+     "09:30": {
+      "quotes": 3025,
+      "valid": 3024,
+      "first_quote_after_minute_start_s": 0.006,
+      "largest_gap_s": 0.768,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 5.0,
+      "spread_bp_median": 0.4407,
+      "spread_bp_p90": 0.4408,
+      "share_1_cent_by_count": 0.9157,
+      "share_1_cent_time_weighted": 0.9042
+     },
+     "09:31": {
+      "quotes": 2629,
+      "valid": 2629,
+      "first_quote_after_minute_start_s": 0.0,
+      "largest_gap_s": 0.874,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.4407,
+      "spread_bp_p90": 0.4408,
+      "share_1_cent_by_count": 0.9684,
+      "share_1_cent_time_weighted": 0.979
+     },
+     "09:32": {
+      "quotes": 2036,
+      "valid": 2036,
+      "first_quote_after_minute_start_s": 0.0,
+      "largest_gap_s": 2.211,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.4408,
+      "spread_bp_p90": 0.4408,
+      "share_1_cent_by_count": 0.9784,
+      "share_1_cent_time_weighted": 0.9763
+     },
+     "09:33": {
+      "quotes": 1227,
+      "valid": 1227,
+      "first_quote_after_minute_start_s": 0.0,
+      "largest_gap_s": 1.429,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.4407,
+      "spread_bp_p90": 0.4407,
+      "share_1_cent_by_count": 0.9731,
+      "share_1_cent_time_weighted": 0.9841
+     },
+     "09:34": {
+      "quotes": 1341,
+      "valid": 1341,
+      "first_quote_after_minute_start_s": 0.0,
+      "largest_gap_s": 2.018,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.4407,
+      "spread_bp_p90": 0.4408,
+      "share_1_cent_by_count": 0.9732,
+      "share_1_cent_time_weighted": 0.9946
+     }
+    }
+   }
+  },
+  "2017-03-27": {
+   "reason": "random draw (seed 20261105)",
+   "prior_session": "2017-03-24",
+   "fetch": {
+    "daily_raw": {
+     "status": "ok",
+     "pages": 1,
+     "bars": 2
+    },
+    "minute_raw": {
+     "status": "ok",
+     "pages": 1,
+     "bars": 33
+    },
+    "quotes": {
+     "status": "ok",
+     "pages": 3,
+     "quotes": 27304,
+     "complete": true,
+     "last_t": "2017-03-27T13:35:00Z"
+    }
+   },
+   "is_ex_dividend_date_per_record": false,
+   "dividend_record": null,
+   "daily_raw": {
+    "prior_close_raw": 233.88,
+    "day_open_raw": 231.93,
+    "days_returned": [
+     "2017-03-24",
+     "2017-03-27"
+    ]
+   },
+   "minute_raw": {
+    "bars": 33,
+    "expected": 32,
+    "missing_minutes_et": [],
+    "ohlc_or_volume_violations": 0,
+    "out_of_order": 0,
+    "open_0930_raw": 231.93
+   },
+   "raw_vs_adjusted": {
+    "available": true,
+    "minutes_matched": 33,
+    "ratio_raw_over_adjusted_min": 1.153915,
+    "ratio_raw_over_adjusted_max": 1.153965
+   },
+   "daily_open_minus_0930_bar_open_cents": 0.0,
+   "quotes": {
+    "quotes": 27304,
+    "first_t": "2017-03-27T13:30:00.008Z",
+    "last_t": "2017-03-27T13:35:00Z",
+    "outside_window": 1,
+    "out_of_order": 0,
+    "nonpositive_bid": 0,
+    "nonpositive_ask": 0,
+    "negative_size": 0,
+    "crossed": 42,
+    "locked": 1133,
+    "condition_codes": {
+     "?": 27304
+    },
+    "tape_codes": {
+     "B": 27304
+    },
+    "by_minute_et": {
+     "09:30": {
+      "quotes": 6776,
+      "valid": 6748,
+      "first_quote_after_minute_start_s": 0.008,
+      "largest_gap_s": 0.498,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 2.0,
+      "spread_cents_max": 3.0,
+      "spread_bp_median": 0.4316,
+      "spread_bp_p90": 0.8627,
+      "share_1_cent_by_count": 0.8886,
+      "share_1_cent_time_weighted": 0.9308
+     },
+     "09:31": {
+      "quotes": 5952,
+      "valid": 5950,
+      "first_quote_after_minute_start_s": 0.0,
+      "largest_gap_s": 0.569,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.4315,
+      "spread_bp_p90": 0.4316,
+      "share_1_cent_by_count": 0.9521,
+      "share_1_cent_time_weighted": 0.9655
+     },
+     "09:32": {
+      "quotes": 4849,
+      "valid": 4840,
+      "first_quote_after_minute_start_s": 0.0,
+      "largest_gap_s": 0.485,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.4311,
+      "spread_bp_p90": 0.4312,
+      "share_1_cent_by_count": 0.9556,
+      "share_1_cent_time_weighted": 0.9713
+     },
+     "09:33": {
+      "quotes": 5346,
+      "valid": 5343,
+      "first_quote_after_minute_start_s": 0.0,
+      "largest_gap_s": 1.52,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.4308,
+      "spread_bp_p90": 0.431,
+      "share_1_cent_by_count": 0.9661,
+      "share_1_cent_time_weighted": 0.9816
+     },
+     "09:34": {
+      "quotes": 4380,
+      "valid": 4380,
+      "first_quote_after_minute_start_s": 0.0,
+      "largest_gap_s": 1.042,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.4308,
+      "spread_bp_p90": 0.431,
+      "share_1_cent_by_count": 0.953,
+      "share_1_cent_time_weighted": 0.9593
+     }
+    }
+   }
+  },
+  "2019-05-07": {
+   "reason": "random draw (seed 20261105)",
+   "prior_session": "2019-05-06",
+   "fetch": {
+    "daily_raw": {
+     "status": "ok",
+     "pages": 1,
+     "bars": 2
+    },
+    "minute_raw": {
+     "status": "ok",
+     "pages": 1,
+     "bars": 33
+    },
+    "quotes": {
+     "status": "ok",
+     "pages": 6,
+     "quotes": 50073,
+     "complete": true,
+     "last_t": "2019-05-07T13:34:59.944013008Z"
+    }
+   },
+   "is_ex_dividend_date_per_record": false,
+   "dividend_record": null,
+   "daily_raw": {
+    "prior_close_raw": 292.83,
+    "day_open_raw": 290.15,
+    "days_returned": [
+     "2019-05-06",
+     "2019-05-07"
+    ]
+   },
+   "minute_raw": {
+    "bars": 33,
+    "expected": 32,
+    "missing_minutes_et": [],
+    "ohlc_or_volume_violations": 0,
+    "out_of_order": 0,
+    "open_0930_raw": 290.15
+   },
+   "raw_vs_adjusted": {
+    "available": true,
+    "minutes_matched": 33,
+    "ratio_raw_over_adjusted_min": 1.115741,
+    "ratio_raw_over_adjusted_max": 1.115784
+   },
+   "daily_open_minus_0930_bar_open_cents": 0.0,
+   "quotes": {
+    "quotes": 50073,
+    "first_t": "2019-05-07T13:30:00.000342983Z",
+    "last_t": "2019-05-07T13:34:59.944013008Z",
+    "outside_window": 0,
+    "out_of_order": 0,
+    "nonpositive_bid": 0,
+    "nonpositive_ask": 0,
+    "negative_size": 0,
+    "crossed": 50,
+    "locked": 1698,
+    "condition_codes": {
+     "?": 50073
+    },
+    "tape_codes": {
+     "B": 50073
+    },
+    "by_minute_et": {
+     "09:30": {
+      "quotes": 13384,
+      "valid": 13384,
+      "first_quote_after_minute_start_s": 0.000343,
+      "largest_gap_s": 0.4349,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 2.0,
+      "spread_cents_max": 3.0,
+      "spread_bp_median": 0.3445,
+      "spread_bp_p90": 0.6888,
+      "share_1_cent_by_count": 0.879,
+      "share_1_cent_time_weighted": 0.8923
+     },
+     "09:31": {
+      "quotes": 9933,
+      "valid": 9926,
+      "first_quote_after_minute_start_s": 0.009303,
+      "largest_gap_s": 0.362907,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 3.0,
+      "spread_bp_median": 0.3442,
+      "spread_bp_p90": 0.3443,
+      "share_1_cent_by_count": 0.9277,
+      "share_1_cent_time_weighted": 0.881
+     },
+     "09:32": {
+      "quotes": 11893,
+      "valid": 11873,
+      "first_quote_after_minute_start_s": 0.001023,
+      "largest_gap_s": 0.514887,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.3443,
+      "spread_bp_p90": 0.3444,
+      "share_1_cent_by_count": 0.9394,
+      "share_1_cent_time_weighted": 0.9103
+     },
+     "09:33": {
+      "quotes": 6946,
+      "valid": 6923,
+      "first_quote_after_minute_start_s": 0.000778,
+      "largest_gap_s": 0.737872,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.3443,
+      "spread_bp_p90": 0.3443,
+      "share_1_cent_by_count": 0.9359,
+      "share_1_cent_time_weighted": 0.8997
+     },
+     "09:34": {
+      "quotes": 7917,
+      "valid": 7917,
+      "first_quote_after_minute_start_s": 0.019084,
+      "largest_gap_s": 0.835513,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.3442,
+      "spread_bp_p90": 0.3443,
+      "share_1_cent_by_count": 0.9357,
+      "share_1_cent_time_weighted": 0.8951
+     }
+    }
+   }
+  },
+  "2020-12-02": {
+   "reason": "random draw (seed 20261105)",
+   "prior_session": "2020-12-01",
+   "fetch": {
+    "daily_raw": {
+     "status": "ok",
+     "pages": 1,
+     "bars": 2
+    },
+    "minute_raw": {
+     "status": "ok",
+     "pages": 1,
+     "bars": 33
+    },
+    "quotes": {
+     "status": "ok",
+     "pages": 8,
+     "quotes": 77912,
+     "complete": true,
+     "last_t": "2020-12-02T14:34:59.999942912Z"
+    }
+   },
+   "is_ex_dividend_date_per_record": false,
+   "dividend_record": null,
+   "daily_raw": {
+    "prior_close_raw": 365.84,
+    "day_open_raw": 364.82,
+    "days_returned": [
+     "2020-12-01",
+     "2020-12-02"
+    ]
+   },
+   "minute_raw": {
+    "bars": 33,
+    "expected": 32,
+    "missing_minutes_et": [],
+    "ohlc_or_volume_violations": 0,
+    "out_of_order": 0,
+    "open_0930_raw": 364.81
+   },
+   "raw_vs_adjusted": {
+    "available": true,
+    "minutes_matched": 33,
+    "ratio_raw_over_adjusted_min": 1.084278,
+    "ratio_raw_over_adjusted_max": 1.084309
+   },
+   "daily_open_minus_0930_bar_open_cents": 1.0,
+   "quotes": {
+    "quotes": 77912,
+    "first_t": "2020-12-02T14:30:00.000684288Z",
+    "last_t": "2020-12-02T14:34:59.999942912Z",
+    "outside_window": 0,
+    "out_of_order": 0,
+    "nonpositive_bid": 0,
+    "nonpositive_ask": 0,
+    "negative_size": 0,
+    "crossed": 5,
+    "locked": 392,
+    "condition_codes": {
+     "?": 77912
+    },
+    "tape_codes": {
+     "B": 77912
+    },
+    "by_minute_et": {
+     "09:30": {
+      "quotes": 10999,
+      "valid": 10998,
+      "first_quote_after_minute_start_s": 0.000684,
+      "largest_gap_s": 0.395345,
+      "spread_cents_median": 2.0,
+      "spread_cents_p90": 3.0,
+      "spread_cents_max": 5.0,
+      "spread_bp_median": 0.5483,
+      "spread_bp_p90": 0.8224,
+      "share_1_cent_by_count": 0.3392,
+      "share_1_cent_time_weighted": 0.3264
+     },
+     "09:31": {
+      "quotes": 10816,
+      "valid": 10816,
+      "first_quote_after_minute_start_s": 0.004783,
+      "largest_gap_s": 0.280061,
+      "spread_cents_median": 2.0,
+      "spread_cents_p90": 2.0,
+      "spread_cents_max": 3.0,
+      "spread_bp_median": 0.5484,
+      "spread_bp_p90": 0.5487,
+      "share_1_cent_by_count": 0.4039,
+      "share_1_cent_time_weighted": 0.4051
+     },
+     "09:32": {
+      "quotes": 17166,
+      "valid": 17166,
+      "first_quote_after_minute_start_s": 0.008306,
+      "largest_gap_s": 0.214916,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 2.0,
+      "spread_cents_max": 3.0,
+      "spread_bp_median": 0.2744,
+      "spread_bp_p90": 0.5488,
+      "share_1_cent_by_count": 0.5591,
+      "share_1_cent_time_weighted": 0.5057
+     },
+     "09:33": {
+      "quotes": 19984,
+      "valid": 19984,
+      "first_quote_after_minute_start_s": 0.000557,
+      "largest_gap_s": 0.29433,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 2.0,
+      "spread_cents_max": 3.0,
+      "spread_bp_median": 0.2744,
+      "spread_bp_p90": 0.5489,
+      "share_1_cent_by_count": 0.675,
+      "share_1_cent_time_weighted": 0.6118
+     },
+     "09:34": {
+      "quotes": 18947,
+      "valid": 18943,
+      "first_quote_after_minute_start_s": 5.5e-05,
+      "largest_gap_s": 0.252159,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 2.0,
+      "spread_cents_max": 3.0,
+      "spread_bp_median": 0.2744,
+      "spread_bp_p90": 0.5488,
+      "share_1_cent_by_count": 0.7377,
+      "share_1_cent_time_weighted": 0.6936
+     }
+    }
+   }
+  },
+  "2021-07-20": {
+   "reason": "random draw (seed 20261105)",
+   "prior_session": "2021-07-19",
+   "fetch": {
+    "daily_raw": {
+     "status": "ok",
+     "pages": 1,
+     "bars": 2
+    },
+    "minute_raw": {
+     "status": "ok",
+     "pages": 1,
+     "bars": 33
+    },
+    "quotes": {
+     "status": "ok",
+     "pages": 17,
+     "quotes": 160494,
+     "complete": true,
+     "last_t": "2021-07-20T13:34:59.999061248Z"
+    }
+   },
+   "is_ex_dividend_date_per_record": false,
+   "dividend_record": null,
+   "daily_raw": {
+    "prior_close_raw": 424.97,
+    "day_open_raw": 425.68,
+    "days_returned": [
+     "2021-07-19",
+     "2021-07-20"
+    ]
+   },
+   "minute_raw": {
+    "bars": 33,
+    "expected": 32,
+    "missing_minutes_et": [],
+    "ohlc_or_volume_violations": 0,
+    "out_of_order": 0,
+    "open_0930_raw": 425.68
+   },
+   "raw_vs_adjusted": {
+    "available": true,
+    "minutes_matched": 33,
+    "ratio_raw_over_adjusted_min": 1.072646,
+    "ratio_raw_over_adjusted_max": 1.07267
+   },
+   "daily_open_minus_0930_bar_open_cents": 0.0,
+   "quotes": {
+    "quotes": 160494,
+    "first_t": "2021-07-20T13:30:00.00056192Z",
+    "last_t": "2021-07-20T13:34:59.999061248Z",
+    "outside_window": 0,
+    "out_of_order": 0,
+    "nonpositive_bid": 0,
+    "nonpositive_ask": 0,
+    "negative_size": 0,
+    "crossed": 53,
+    "locked": 4705,
+    "condition_codes": {
+     "R": 160494
+    },
+    "tape_codes": {
+     "B": 160494
+    },
+    "by_minute_et": {
+     "09:30": {
+      "quotes": 23057,
+      "valid": 23049,
+      "first_quote_after_minute_start_s": 0.000562,
+      "largest_gap_s": 0.230172,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 2.0,
+      "spread_cents_max": 4.0,
+      "spread_bp_median": 0.2349,
+      "spread_bp_p90": 0.4697,
+      "share_1_cent_by_count": 0.7679,
+      "share_1_cent_time_weighted": 0.7882
+     },
+     "09:31": {
+      "quotes": 29626,
+      "valid": 29623,
+      "first_quote_after_minute_start_s": 0.000537,
+      "largest_gap_s": 0.243229,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 2.0,
+      "spread_cents_max": 3.0,
+      "spread_bp_median": 0.2352,
+      "spread_bp_p90": 0.4702,
+      "share_1_cent_by_count": 0.8634,
+      "share_1_cent_time_weighted": 0.8772
+     },
+     "09:32": {
+      "quotes": 33198,
+      "valid": 33169,
+      "first_quote_after_minute_start_s": 0.000493,
+      "largest_gap_s": 0.176385,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 4.0,
+      "spread_bp_median": 0.2353,
+      "spread_bp_p90": 0.2354,
+      "share_1_cent_by_count": 0.922,
+      "share_1_cent_time_weighted": 0.9568
+     },
+     "09:33": {
+      "quotes": 31727,
+      "valid": 31720,
+      "first_quote_after_minute_start_s": 0.000464,
+      "largest_gap_s": 0.183992,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.2352,
+      "spread_bp_p90": 0.2353,
+      "share_1_cent_by_count": 0.9245,
+      "share_1_cent_time_weighted": 0.9576
+     },
+     "09:34": {
+      "quotes": 42886,
+      "valid": 42880,
+      "first_quote_after_minute_start_s": 0.021956,
+      "largest_gap_s": 0.141932,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 2.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.2351,
+      "spread_bp_p90": 0.4699,
+      "share_1_cent_by_count": 0.8998,
+      "share_1_cent_time_weighted": 0.9222
+     }
+    }
+   }
+  },
+  "2019-06-21": {
+   "reason": "expected ex-dividend date (corporate-action check)",
+   "prior_session": "2019-06-20",
+   "fetch": {
+    "daily_raw": {
+     "status": "ok",
+     "pages": 1,
+     "bars": 2
+    },
+    "minute_raw": {
+     "status": "ok",
+     "pages": 1,
+     "bars": 33
+    },
+    "quotes": {
+     "status": "ok",
+     "pages": 4,
+     "quotes": 38940,
+     "complete": true,
+     "last_t": "2019-06-21T13:34:59.980716587Z"
+    }
+   },
+   "is_ex_dividend_date_per_record": true,
+   "dividend_record": {
+    "cusip": "",
+    "ex_date": "2019-06-21",
+    "foreign": false,
+    "id": "cfb55a30-351a-4130-a4b2-1530dc86ccbb",
+    "process_date": "2019-06-21",
+    "rate": 1.43164,
+    "special": false,
+    "symbol": "SPY"
+   },
+   "daily_raw": {
+    "prior_close_raw": 295.88,
+    "day_open_raw": 294.13,
+    "days_returned": [
+     "2019-06-20",
+     "2019-06-21"
+    ]
+   },
+   "minute_raw": {
+    "bars": 33,
+    "expected": 32,
+    "missing_minutes_et": [],
+    "ohlc_or_volume_violations": 0,
+    "out_of_order": 0,
+    "open_0930_raw": 294.14
+   },
+   "raw_vs_adjusted": {
+    "available": true,
+    "minutes_matched": 33,
+    "ratio_raw_over_adjusted_min": 1.110344,
+    "ratio_raw_over_adjusted_max": 1.110382
+   },
+   "daily_open_minus_0930_bar_open_cents": -1.0,
+   "quotes": {
+    "quotes": 38940,
+    "first_t": "2019-06-21T13:30:00.000495624Z",
+    "last_t": "2019-06-21T13:34:59.980716587Z",
+    "outside_window": 0,
+    "out_of_order": 0,
+    "nonpositive_bid": 0,
+    "nonpositive_ask": 0,
+    "negative_size": 0,
+    "crossed": 128,
+    "locked": 1925,
+    "condition_codes": {
+     "?": 38940
+    },
+    "tape_codes": {
+     "B": 38940
+    },
+    "by_minute_et": {
+     "09:30": {
+      "quotes": 10356,
+      "valid": 10319,
+      "first_quote_after_minute_start_s": 0.000496,
+      "largest_gap_s": 0.579639,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 2.0,
+      "spread_cents_max": 4.0,
+      "spread_bp_median": 0.3399,
+      "spread_bp_p90": 0.6798,
+      "share_1_cent_by_count": 0.6723,
+      "share_1_cent_time_weighted": 0.5978
+     },
+     "09:31": {
+      "quotes": 6411,
+      "valid": 6396,
+      "first_quote_after_minute_start_s": 0.000953,
+      "largest_gap_s": 0.56043,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 3.0,
+      "spread_bp_median": 0.3399,
+      "spread_bp_p90": 0.34,
+      "share_1_cent_by_count": 0.9514,
+      "share_1_cent_time_weighted": 0.9546
+     },
+     "09:32": {
+      "quotes": 5502,
+      "valid": 5501,
+      "first_quote_after_minute_start_s": 0.000807,
+      "largest_gap_s": 1.011619,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.34,
+      "spread_bp_p90": 0.34,
+      "share_1_cent_by_count": 0.9785,
+      "share_1_cent_time_weighted": 0.9742
+     },
+     "09:33": {
+      "quotes": 8363,
+      "valid": 8353,
+      "first_quote_after_minute_start_s": 0.000978,
+      "largest_gap_s": 0.575868,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.34,
+      "spread_bp_p90": 0.3401,
+      "share_1_cent_by_count": 0.9088,
+      "share_1_cent_time_weighted": 0.8592
+     },
+     "09:34": {
+      "quotes": 8308,
+      "valid": 8243,
+      "first_quote_after_minute_start_s": 0.000362,
+      "largest_gap_s": 0.459188,
+      "spread_cents_median": 1.0,
+      "spread_cents_p90": 1.0,
+      "spread_cents_max": 2.0,
+      "spread_bp_median": 0.3401,
+      "spread_bp_p90": 0.3402,
+      "share_1_cent_by_count": 0.9285,
+      "share_1_cent_time_weighted": 0.9045
+     }
+    }
+   }
+  }
+ }
+}

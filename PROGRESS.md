@@ -494,6 +494,21 @@ pipeline -> watch progress -> cancel if needed -> open the report.
   relaunch until the oldest launch aged out (it worked as designed, and the report shows it).
 - **Tests:** 281 pass, 0 skipped.
 
+## Execution-data access check (2026-11-04)
+
+- **Pre-registered** (commit 883f7bb): 7 development dates, endpoints, caps.
+- **Implemented:**
+  - GET-only `get_quotes` and `get_corporate_actions` with hard page caps
+  - `trading/execution_feasibility.py`, which counts every HTTP call, enforces a 240-request
+    cap and stops a path after an access failure
+- **Tested:** synthetic fixtures for the cap, held-out date refusal, path stopping without
+  retry, and quote validation.
+- **Verified in real use:** 57 requests, all HTTP 200, with no cap reached.
+  - historical SIP quotes and raw bars are accessible
+  - the dividend records are incomplete and not point-in-time
+- **Recorded:** findings in `feasibility/execution_data/FINDINGS.md`; downloads git-ignored.
+  This is not research evaluation.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

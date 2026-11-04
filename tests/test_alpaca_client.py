@@ -72,7 +72,7 @@ def test_only_paper_and_data_hosts_allowed():
 
 def test_client_has_no_order_methods():
     public = {n for n in dir(ReadOnlyAlpacaClient) if not n.startswith("_")}
-    assert public == {"get_account", "get_bars", "get_bars_multi"}
+    assert public == {"get_account", "get_bars", "get_bars_multi", "get_quotes", "get_corporate_actions"}
     assert all(n.startswith("get_") for n in public)          # read-only: GET methods only
 
 
@@ -141,3 +141,39 @@ def test_multi_symbol_pagination_merges_pages_and_keeps_feed():
     assert out["pages"] == 2 and [b["t"] for b in out["bars"]["QQQ"]] == ["1", "2"]
     assert len(out["bars"]["IWM"]) == 1 and http.calls[0]["params"]["symbols"] == "SPY,QQQ,IWM"
     assert all(c["params"]["feed"] == "sip" for c in http.calls)
+
+
+def test_quotes_page_cap_marks_incomplete():
+    """SYNTHETIC: a remaining page token at the cap means incomplete, never complete."""
+    http = FakeHttp([FakeResponse(200, {"quotes": {"SPY": [{"t": str(i)}]}, "next_page_token": f"P{i}"})
+                     for i in range(3)])
+    client = ReadOnlyAlpacaClient(FAKE_KEY, FAKE_SECRET, http=http)
+    out = client.get_quotes("SPY", "s", "e", feed="sip", max_pages=2)
+    assert out["pages"] == 2 and out["complete"] is False and len(out["quotes"]) == 2
+    assert len(http.calls) == 2 and http.calls[1]["params"]["page_token"] == "P0"
+    assert all(c["params"]["feed"] == "sip" and c["url"].endswith("/v2/stocks/quotes") for c in http.calls)
+
+
+def test_quotes_complete_when_no_token():
+    http = FakeHttp([FakeResponse(200, {"quotes": {"SPY": [{"t": "a"}]}, "next_page_token": None})])
+    out = ReadOnlyAlpacaClient(FAKE_KEY, FAKE_SECRET, http=http).get_quotes("SPY", "s", "e", "sip", max_pages=5)
+    assert out["complete"] is True and out["pages"] == 1
+
+
+def test_corporate_actions_merge_and_cap():
+    """SYNTHETIC records."""
+    http = FakeHttp([
+        FakeResponse(200, {"corporate_actions": {"cash_dividends": [{"ex_date": "2019-06-21"}]}, "next_page_token": "P2"}),
+        FakeResponse(200, {"corporate_actions": {"cash_dividends": [{"ex_date": "2019-09-20"}]}, "next_page_token": None}),
+    ])
+    out = ReadOnlyAlpacaClient(FAKE_KEY, FAKE_SECRET, http=http).get_corporate_actions(
+        ["SPY"], ["cash_dividend"], "2016-01-04", "2021-12-31", max_pages=3)
+    assert out["complete"] is True and len(out["corporate_actions"]["cash_dividends"]) == 2
+    assert http.calls[0]["url"].endswith("/v1/corporate-actions")
+
+
+def test_access_refusal_on_quotes_raises_without_retry():
+    http = FakeHttp([FakeResponse(403, {"message": "SYNTHETIC: subscription does not permit"})])
+    with pytest.raises(AlpacaAccessError) as err:
+        ReadOnlyAlpacaClient(FAKE_KEY, FAKE_SECRET, http=http).get_quotes("SPY", "s", "e", "sip", max_pages=5)
+    assert err.value.status_code == 403 and len(http.calls) == 1
