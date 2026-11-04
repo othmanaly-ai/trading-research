@@ -19,7 +19,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from trading.costs import COST_LEVELS
-from trading.experiment import EXPERIMENT_DIR, PERIODS, VARIANT_BUDGET
+from trading.experiment import (
+    EXPERIMENT_DIR, EXPERIMENT_LIMITS, EXPERIMENT_PRIMARY, PERIODS, VARIANT_BUDGET,
+)
 from trading.history import HISTORY_DIR, period_of, read_manifest
 from trading.risk import RiskLimits
 from trading.strategies.intraday_momentum import Params
@@ -27,9 +29,9 @@ from trading.strategies.registry import spec_info
 
 LOCK_PATH = EXPERIMENT_DIR / "EXPERIMENT_LOCK.json"
 PASS_RULES = "SPEC section 14 rules 1-5; rule 1 stress test read strictly as net >= 0 (17.4)"
-HYPOTHESIS = ("The SPY return from the previous close to 10:00 ET predicts the direction of the "
-              "return over the final 30 minutes of the session, by enough to remain positive after "
-              "modeled costs.")
+HYPOTHESIS = ("Long-only (spec v1.3): when SPY is up from the previous close to 10:00 ET, a long "
+              "position over the final 30 minutes of the session earns a positive return after "
+              "modeled costs, within the owner's risk limits.")
 METRICS = ["net return (base/stress/severe)", "max drawdown", "time in market", "trades",
            "unique sessions", "average win/loss", "profit factor", "Sharpe with bootstrap CI",
            "results by year", "result without top 10 trades", "parameter neighbors",
@@ -40,11 +42,14 @@ class LockMismatch(RuntimeError):
     pass
 
 
-def fingerprint(limits: RiskLimits, periods: dict = PERIODS) -> dict:
-    """The parts that may not change within one experiment id."""
-    spec = spec_info("intraday_momentum", Params())
+def fingerprint(limits: RiskLimits = EXPERIMENT_LIMITS, periods: dict = PERIODS,
+                primary: Params = EXPERIMENT_PRIMARY) -> dict:
+    """The parts that may not change within one experiment id (including the primary
+    strategy parameters such as long_only; other variants are budgeted separately)."""
+    spec = spec_info("intraday_momentum", primary)
     return {
         "spec_version": spec["spec_version"], "spec_sha256": spec["spec_sha256"],
+        "primary_params": primary.as_dict(),
         "costs": [asdict(c) for c in COST_LEVELS],
         "periods": {k: [str(a), str(b)] for k, (a, b) in periods.items()},
         "variant_budget": VARIANT_BUDGET, "pass_rules": PASS_RULES,
@@ -72,14 +77,15 @@ def data_inspection_status(history_root: Path = HISTORY_DIR,
     return {"sessions_stored_by_period": stored, "inspection_replays_touching_period": inspected}
 
 
-def build_lock(limits: RiskLimits = RiskLimits(), periods: dict = PERIODS,
+def build_lock(limits: RiskLimits = EXPERIMENT_LIMITS, periods: dict = PERIODS,
+               primary: Params = EXPERIMENT_PRIMARY,
                history_root: Path = HISTORY_DIR, inspection_log: Path | None = None) -> dict:
-    fp = fingerprint(limits, periods)
+    fp = fingerprint(limits, periods, primary)
     return {
         "experiment_id": experiment_id(fp),
         "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "hypothesis": HYPOTHESIS,
-        "primary_params": Params().as_dict(),
+        "primary_params": primary.as_dict(),
         "metrics": METRICS,
         "risk_limits_are_placeholders": limits.placeholder,
         "data_status_at_lock": data_inspection_status(
@@ -88,11 +94,12 @@ def build_lock(limits: RiskLimits = RiskLimits(), periods: dict = PERIODS,
     }
 
 
-def check_lock(limits: RiskLimits, periods: dict = PERIODS, lock_path: Path = LOCK_PATH) -> dict:
+def check_lock(limits: RiskLimits = EXPERIMENT_LIMITS, periods: dict = PERIODS, lock_path: Path = LOCK_PATH,
+               primary: Params = EXPERIMENT_PRIMARY) -> dict:
     if not lock_path.is_file():
         raise LockMismatch(f"no experiment lock at {lock_path}; create it before evaluating")
     lock = json.loads(lock_path.read_text(encoding="utf-8"))
-    current = fingerprint(limits, periods)
+    current = fingerprint(limits, periods, primary)
     diffs = sorted(k for k in current if current[k] != lock["fingerprint"].get(k))
     if diffs:
         raise LockMismatch(f"experiment definition changed since lock {lock['experiment_id']}: {diffs}. "
@@ -127,7 +134,7 @@ def main(argv=None) -> int:
         print(f"Wrote {lock['experiment_id']} to {LOCK_PATH}")
         return 0
     try:
-        lock = check_lock(RiskLimits())
+        lock = check_lock()
     except LockMismatch as exc:
         print(f"MISMATCH: {exc}")
         return 1

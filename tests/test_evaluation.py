@@ -177,7 +177,7 @@ def test_event_stream_only_uses_information_available_at_each_time(demo_ledger):
 
 def test_spec_version_and_hash():
     info = spec_info("intraday_momentum", Params())
-    assert info["spec_version"] == "1.2"
+    assert info["spec_version"] == "1.3"
     assert info["spec_sha256"] == spec_hash(PROJECT_ROOT / info["spec_path"])
     assert info["target_defined"] is False
 

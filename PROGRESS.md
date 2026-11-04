@@ -187,6 +187,77 @@ Known defects and limitations:
   overflow.
 - **No evaluation was run:** there is no real data. Nothing here is evidence about the strategy.
 
+## Alpaca read-only access VERIFIED (2026-11-03, 23:51 UTC)
+
+- **Credentials:** `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` are present as environment
+  variables. Values were never displayed; the Key ID has the paper-style `PK` prefix.
+  `TRADING_MODE=paper` and `ORDER_SUBMISSION_ENABLED=false`, so the order guard blocks
+  submission (checked by calling it).
+- **Held-out guard added:** the default check (last 5 sessions, Oct 28 – Nov 3 2026) overlaps
+  the final period, so `verify_data_access` now refuses held-out samples (exit 3) and takes
+  `--as-of` / `--symbol`.
+- **Command run:**
+  `python -m trading.verify_data_access --symbol SPY --as-of 2016-02-01 --feed sip`, exit 0.
+- **Paper account read (`GET /v2/account`):** passed. Status ACTIVE; equity, cash and portfolio
+  value $100,000; buying power $400,000 (the paper default of 4x intraday margin; this
+  project does not use leverage unless the owner chooses it); trading not blocked. No `id`
+  or `account_number` saved.
+- **SPY daily bars, SIP, raw, 2016-01-26 to 2016-02-01:** passed. 5 of 5 sessions, 1 page,
+  structural checks clean.
+- **SPY 1-minute bars, SIP, regular session 2016-02-01:** passed. 390 of 390 minutes, 1 page,
+  no gaps, no bars outside the session.
+- **Observation:** the official daily close (193.65) differs from the last 1-minute bar's
+  close (193.69). That is the closing auction, relevant to decision D4 (exit at 15:59 vs
+  market-on-close).
+- **Not checked:** the IEX feed, multi-page pagination against the real API, the
+  `trading.history` bulk store, and historical replay on real data.
+- Saved under `data/alpaca/20261103T235104Z/` (git-ignored).
+
+## Owner risk baseline implemented, lock pending a D6 decision (2026-11-03)
+
+- **Owner limits** are recorded as `trading/risk.py: OWNER_BASELINE_2026_11_03`:
+  $100,000 start; 0.10% risk per trade including modeled costs; 0.50% daily; 3% drawdown from
+  the high-water mark; 5% position notional; 10% gross exposure; 2 positions; no leverage.
+- **Engine changes** (`trading/backtest.py`):
+  - Sizing takes the most restrictive cap and rounds down: risk with round-trip costs,
+    notional, gross exposure including pending entries, position count, participation.
+  - Equity is marked after every bar as realized + net-if-closed after modeled costs.
+  - A daily breach exits at the next bar's open (gaps and costs included) and blocks the rest
+    of the session.
+  - A drawdown breach exits the same way and halts permanently.
+- The dashboard ledger's unrealized P&L now uses the same after-cost definition.
+- **Tests:** `pytest -q`: 130 passed (new risk, engine and lock tests).
+- **Lock** `001-eaa09c9d5a` is now MISMATCHED (new risk fields), as designed. It has not been
+  superseded yet because the requested long-only constraint conflicts with accepted decision
+  D6 (long and short). Candidate ids: `001-dea482a7be` (long and short) and `001-872d4e72b4`
+  (long-only).
+- **Not built:** a multi-strategy account simulator. Experiment 001 has one strategy, so
+  account-level and per-strategy limits coincide; the demo dashboard's four towers still use
+  separate demo allocations.
+
+## Spec v1.3 locked as experiment 001-fd13f1fdef (2026-11-04 00:11 UTC)
+
+- **Owner decisions:** long-only (D6 changed); the owner risk baseline (D1); halt-affected
+  sessions kept.
+- **Involuntary overnight carry:** only when no bar remains to exit on. Labeled
+  "unresolved: halt or missing data", because bars cannot tell a halt from missing feed data.
+  The carry exit's P&L counts against the next session's daily and drawdown limits. No
+  end-of-day fill is ever invented: the old "last earlier bar" fill rule was removed.
+- **Verified by tests:**
+  - equity = start + realized + net liquidation P&L, with each cost counted once
+  - daily losses accumulate across trades and marks
+  - a gap through the daily limit exits at the next open with a real loss above the threshold
+  - the drawdown halt never resets
+  - carry blocks the next session when its loss breaches the limit
+- **Clarification:** the earlier "10% / 60% move" figures were a simplified single-position
+  illustration, not an account-risk assessment. The $100 stop-risk figure is a planned loss
+  under modeled fills; gaps can exceed it.
+- **Baselines for long-only:** always-long trades every signal session (about twice the
+  exposure). The random baseline is long or flat at the strategy's own long rate.
+- **History download:** monthly chunks; refuses validation and final dates without explicit flags.
+- **Lock history:** `001-eaa09c9d5a` was archived in `locks/` with the reason.
+- **Tests:** `pytest -q`: 136 passed.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

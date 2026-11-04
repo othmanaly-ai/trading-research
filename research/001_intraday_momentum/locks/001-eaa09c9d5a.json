@@ -1,0 +1,102 @@
+{
+  "experiment_id": "001-eaa09c9d5a",
+  "created_utc": "2026-11-03T23:31:50+00:00",
+  "hypothesis": "The SPY return from the previous close to 10:00 ET predicts the direction of the return over the final 30 minutes of the session, by enough to remain positive after modeled costs.",
+  "primary_params": {
+    "signal_from": "prev_close",
+    "signal_minutes": 30,
+    "entry_offset_min": 30,
+    "entry_delay_min": 1,
+    "entry_fallback_min": 2,
+    "exit_mode": "last_minute",
+    "stop_mult": 2.0,
+    "sizing_mult": 2.0,
+    "sigma_lookback": 20,
+    "long_only": false
+  },
+  "metrics": [
+    "net return (base/stress/severe)",
+    "max drawdown",
+    "time in market",
+    "trades",
+    "unique sessions",
+    "average win/loss",
+    "profit factor",
+    "Sharpe with bootstrap CI",
+    "results by year",
+    "result without top 10 trades",
+    "parameter neighbors",
+    "always-long and random-direction baselines",
+    "no-trade baseline"
+  ],
+  "risk_limits_are_placeholders": true,
+  "data_status_at_lock": {
+    "sessions_stored_by_period": {
+      "development": 0,
+      "validation": 0,
+      "final": 0
+    },
+    "inspection_replays_touching_period": {
+      "development": 0,
+      "validation": 0,
+      "final": 0
+    }
+  },
+  "fingerprint": {
+    "spec_version": "1.2",
+    "spec_sha256": "13184c5d3f43",
+    "costs": [
+      {
+        "name": "base",
+        "half_spread_bp": 0.5,
+        "slippage_bp": 0.5,
+        "sell_fee_bp": 0.3,
+        "commission_per_order": 0.0
+      },
+      {
+        "name": "stress",
+        "half_spread_bp": 1.0,
+        "slippage_bp": 2.0,
+        "sell_fee_bp": 0.6,
+        "commission_per_order": 0.0
+      },
+      {
+        "name": "severe",
+        "half_spread_bp": 2.0,
+        "slippage_bp": 2.5,
+        "sell_fee_bp": 0.6,
+        "commission_per_order": 0.0
+      }
+    ],
+    "periods": {
+      "development": [
+        "2016-01-04",
+        "2021-12-31"
+      ],
+      "validation": [
+        "2022-01-03",
+        "2024-06-28"
+      ],
+      "final": [
+        "2024-07-01",
+        "2026-10-30"
+      ]
+    },
+    "variant_budget": {
+      "development": 10,
+      "validation": 2,
+      "final": 1
+    },
+    "pass_rules": "SPEC section 14 rules 1-5; rule 1 stress test read strictly as net >= 0 (17.4)",
+    "risk_limits": {
+      "risk_per_trade": 0.005,
+      "max_notional": 1.0,
+      "participation": 0.01,
+      "daily_loss_limit": 0.01,
+      "max_drawdown": 0.05,
+      "placeholder": true
+    }
+  },
+  "superseded_utc": "2026-11-04T00:11:40+00:00",
+  "superseded_reason": "Owner decisions 2026-11-03: spec v1.3 long-only (D6 changed), owner risk baseline OWNER_BASELINE_2026_11_03 (D1 answered), halt/missing-data involuntary carry rules. Before this lock, the only real data seen was a 5-session SPY development sample (2016-01-26..2016-02-01) from verify_data_access; no validation or final data has been retrieved."
+}

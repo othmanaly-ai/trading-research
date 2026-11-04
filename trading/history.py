@@ -52,49 +52,64 @@ def _iso(dt) -> str:
 
 def fetch_and_store(client: "ReadOnlyAlpacaClient", symbol: str, start: date, end: date,  # noqa: F821
                     feed: str, adjustment: str, root: Path = HISTORY_DIR,
-                    include_final: bool = False) -> dict:
+                    include_final: bool = False, include_validation: bool = False) -> dict:
+    """Fetch minute bars one calendar month at a time (bounded memory) and daily bars in
+    one request. Held-out periods are refused unless explicitly included."""
     sessions = sessions_between(start, end)
     if not sessions:
         raise HistoryError(f"no NYSE sessions between {start} and {end}")
     if not include_final and any(period_of(s.date) == "final" for s in sessions):
         raise HistoryError("range overlaps the final held-out period; pass --include-final only "
                            "when running the final test")
+    if not include_validation and any(period_of(s.date) == "validation" for s in sessions):
+        raise HistoryError("range overlaps the validation period; pass --include-validation only "
+                           "when the validation step is approved")
 
     retrieved = datetime.now(timezone.utc)
-    minute = client.get_bars(symbol, "1Min", _iso(sessions[0].open_utc), _iso(sessions[-1].close_utc),
-                             feed, adjustment)
-    daily = client.get_bars(symbol, "1Day", str(sessions[0].date), str(sessions[-1].date),
-                            feed, adjustment)
-
     out = series_dir(root, symbol, feed, adjustment)
     (out / "minute").mkdir(parents=True, exist_ok=True)
     (out / "raw").mkdir(parents=True, exist_ok=True)
-    # Keep the API's bars exactly as received (all hours) before any filtering.
-    pd.DataFrame(minute["bars"]).to_csv(out / "raw" / "minute_all_hours.csv", index=False)
+
+    daily = client.get_bars(symbol, "1Day", str(sessions[0].date), str(sessions[-1].date),
+                            feed, adjustment)
+    # Keep the API's bars exactly as received before any filtering.
     pd.DataFrame(daily["bars"]).to_csv(out / "raw" / "daily.csv", index=False)
-    mframe = bars_to_frame(minute["bars"])
     dframe = bars_to_frame(daily["bars"])
     dframe["session_date"] = dframe["timestamp_et"].dt.date.astype(str)
     dframe.to_csv(out / "daily.csv", index=False)
     daily_structure = check_bars(dframe) if len(dframe) else {"rows": 0}
+    daily_dates = set(dframe["session_date"])
 
-    per_session = {}
+    months = {}
     for s in sessions:
-        open_t, close_t = pd.Timestamp(s.open_utc), pd.Timestamp(s.close_utc)
-        day = mframe[(mframe["timestamp_utc"] >= open_t) & (mframe["timestamp_utc"] < close_t)]
-        day.to_csv(out / "minute" / f"{s.date}.csv", index=False)
-        structure = check_bars(day) if len(day) else {"rows": 0}
-        coverage = check_minute_coverage(day, s) if len(day) else {"present_minutes": 0}
-        has_daily = str(s.date) in set(dframe["session_date"])
-        usable = len(day) > 0 and not has_problems(structure) and has_daily
-        per_session[str(s.date)] = {
-            "period": period_of(s.date), "rows": len(day), "structure": structure,
-            "present_minutes": coverage.get("present_minutes", 0),
-            "expected_minutes": s.regular_minutes, "early_close": s.early_close,
-            "missing_minutes": coverage.get("missing_minutes", s.regular_minutes),
-            "missing_examples_et": coverage.get("missing_examples_et", []),
-            "daily_bar": has_daily, "usable": usable,
-        }
+        months.setdefault((s.date.year, s.date.month), []).append(s)
+    per_session, pages, rows_all, received = {}, 0, 0, []
+    for (year, month), group in months.items():
+        minute = client.get_bars(symbol, "1Min", _iso(group[0].open_utc), _iso(group[-1].close_utc),
+                                 feed, adjustment)
+        pages += minute["pages"]
+        rows_all += len(minute["bars"])
+        pd.DataFrame(minute["bars"]).to_csv(out / "raw" / f"minute_all_hours_{year}-{month:02d}.csv", index=False)
+        mframe = bars_to_frame(minute["bars"])
+        if len(mframe):
+            received += [mframe["timestamp_utc"].min(), mframe["timestamp_utc"].max()]
+        for s in group:
+            open_t, close_t = pd.Timestamp(s.open_utc), pd.Timestamp(s.close_utc)
+            day = mframe[(mframe["timestamp_utc"] >= open_t) & (mframe["timestamp_utc"] < close_t)]
+            day.to_csv(out / "minute" / f"{s.date}.csv", index=False)
+            structure = check_bars(day) if len(day) else {"rows": 0}
+            coverage = check_minute_coverage(day, s) if len(day) else {"present_minutes": 0}
+            has_daily = str(s.date) in daily_dates
+            usable = len(day) > 0 and not has_problems(structure) and has_daily
+            per_session[str(s.date)] = {
+                "period": period_of(s.date), "rows": len(day), "structure": structure,
+                "present_minutes": coverage.get("present_minutes", 0),
+                "expected_minutes": s.regular_minutes, "early_close": s.early_close,
+                "missing_minutes": coverage.get("missing_minutes", s.regular_minutes),
+                "missing_examples_et": coverage.get("missing_examples_et", []),
+                "daily_bar": has_daily, "usable": usable,
+            }
+    minute_received = [_iso(min(received)), _iso(max(received))] if received else None
 
     manifest = {
         "source": SOURCE, "symbol": symbol.upper(), "requested_feed": feed,
@@ -102,14 +117,15 @@ def fetch_and_store(client: "ReadOnlyAlpacaClient", symbol: str, start: date, en
         "adjustment": adjustment, "interval": "1Min (regular session only) + 1Day",
         "timezone_stored": "UTC plus America/New_York column", "calendar": "XNYS",
         "start": str(start), "end": str(end), "retrieved_utc": _iso(retrieved),
-        "requests": {"minute_pages": minute["pages"], "minute_rows_all_hours": len(minute["bars"]),
+        "requests": {"minute_pages": pages, "minute_rows_all_hours": rows_all,
+                     "minute_chunks": len(months),
                      "daily_pages": daily["pages"], "daily_rows": len(daily["bars"]),
                      "pagination_complete": True,   # get_bars follows next_page_token until it is null
                      "minute_requested": [_iso(sessions[0].open_utc), _iso(sessions[-1].close_utc)],
-                     "minute_received": _received(mframe), "daily_received": _received(dframe)},
+                     "minute_received": minute_received, "daily_received": _received(dframe)},
         "daily_structure": daily_structure,
         "transformations": [
-            "raw/ holds the API bars unmodified (all hours).",
+            "raw/ holds the API bars unmodified (all hours), one minute file per calendar month.",
             "minute/<date>.csv keeps bars whose start is in [session open, session close) per the XNYS "
             "calendar, so pre-market and after-hours bars are excluded; prices are not altered.",
             "No gaps are filled and no bars are interpolated. Missing minutes are reported, not repaired.",
@@ -179,14 +195,15 @@ def main(argv=None) -> int:
     parser.add_argument("--feed", choices=["sip", "iex"], default="sip")
     parser.add_argument("--adjustment", choices=["raw", "all"], default="all")
     parser.add_argument("--include-final", action="store_true")
+    parser.add_argument("--include-validation", action="store_true")
     args = parser.parse_args(argv)
-    if args.end < args.start or args.end - args.start > timedelta(days=800):
-        print("Choose an end date after the start, within about two years per run.")
+    if args.end < args.start or args.end - args.start > timedelta(days=2600):
+        print("Choose an end date after the start, within about seven years per run.")
         return 2
     try:
         client = ReadOnlyAlpacaClient(*load_credentials())
         m = fetch_and_store(client, args.symbol, args.start, args.end, args.feed, args.adjustment,
-                            include_final=args.include_final)
+                            include_final=args.include_final, include_validation=args.include_validation)
     except MissingCredentials as exc:
         print(f"BLOCKED: {exc}")
         return 2

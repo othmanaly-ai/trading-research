@@ -5,8 +5,8 @@ the same event twice (same event_id) changes nothing, so a resent or duplicated
 event cannot double-count results.
 
 Realized P&L comes only from position_closed events (net of simulated costs).
-Unrealized P&L is a mark at the latest bar close against the entry fill,
-before exit costs.
+Unrealized P&L is what the open position would net if closed at the latest bar
+close, after modeled exit costs (the same definition the engine's risk checks use).
 """
 
 from collections import defaultdict
@@ -15,6 +15,15 @@ from datetime import datetime
 from trading.evaluation import evaluate
 
 RECENT_EVENTS = 200
+
+
+def _net_if_closed(pos: dict, price: float) -> float:
+    """Net P&L if the position closed at `price`, after modeled exit costs
+    (mirrors trading.backtest._net_if_closed; entry costs are in entry_fill)."""
+    d, n = pos["direction"], pos["shares"]
+    exit_fill = price * (1 - d * pos["cost_per_side_bp"] / 1e4)
+    sell_notional = n * (exit_fill if d > 0 else pos["entry_fill"])
+    return d * n * (exit_fill - pos["entry_fill"]) - sell_notional * pos["sell_fee_bp"] / 1e4
 
 
 def _ts(iso: str) -> float:
@@ -94,7 +103,11 @@ class Ledger:
             "end_equity": None,
         }
         for s in self.strategies.values():
-            self._set_status(s, "WAITING", "session open; signal at open + 30 min")
+            if s["position"]:
+                self._set_status(s, "IN POSITION (CARRIED OVERNIGHT)",
+                                 "involuntary carry: exit at the first executable bar")
+            else:
+                self._set_status(s, "WAITING", "session open; signal at open + 30 min")
             s["version"] += 1
 
     def _on_session_close(self, ev):
@@ -105,6 +118,9 @@ class Ledger:
         for s in self.strategies.values():
             if s["position"] is None:
                 self._set_status(s, "MARKET CLOSED", "flat overnight")
+            else:
+                self._set_status(s, "CARRIED OVERNIGHT", "unresolved: halt or missing data; "
+                                 "exposure stays in equity and risk")
             s["version"] += 1
 
     def _on_feed_status(self, ev):
@@ -125,7 +141,7 @@ class Ledger:
         for s in self.strategies.values():
             pos = s["position"]
             if pos and s["instrument"] == ev["instrument"]:
-                s["unrealized_pnl"] = pos["direction"] * pos["shares"] * (p["c"] - pos["entry_fill"])
+                s["unrealized_pnl"] = _net_if_closed(pos, p["c"])
                 pos["mark_price"], pos["mark_utc"] = p["c"], ev["ts_utc"]
                 self._touch(s)
 
@@ -168,8 +184,10 @@ class Ledger:
             s["position"] = {"direction": direction, "shares": p["shares"],
                              "entry_fill": p["fill_price"], "entry_utc": ev["ts_utc"],
                              "stop_price": p.get("stop_price"), "mark_price": p["reference_price"],
+                             "cost_per_side_bp": p.get("cost_per_side_bp", 0.0),
+                             "sell_fee_bp": p.get("sell_fee_bp", 0.0),
                              "mark_utc": ev["ts_utc"]}
-            s["unrealized_pnl"] = direction * p["shares"] * (p["reference_price"] - p["fill_price"])
+            s["unrealized_pnl"] = _net_if_closed(s["position"], p["reference_price"])
             self._set_status(s, "IN POSITION " + ("LONG" if direction > 0 else "SHORT"),
                              f"{p['shares']} shares @ {p['fill_price']:.2f} (simulated)")
             self._touch(s)

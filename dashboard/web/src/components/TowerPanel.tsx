@@ -63,7 +63,7 @@ export default function TowerPanel({ strategy, instance, research, mode, lastBar
       <dl className="kv">
         <dt>Realized P&amp;L</dt><dd className={pnlClass(s.realized_pnl)}>{money(s.realized_pnl, true)}</dd>
         <dt>Unrealized P&amp;L</dt>
-        <dd className={pnlClass(s.unrealized_pnl)}>{s.position ? `${money(s.unrealized_pnl, true)} (mark ${num(s.position.mark_price)} at ${timeET(s.position.mark_utc)}, before exit costs)` : "— (no open position)"}</dd>
+        <dd className={pnlClass(s.unrealized_pnl)}>{s.position ? `${money(s.unrealized_pnl, true)} (mark ${num(s.position.mark_price)} at ${timeET(s.position.mark_utc)}, after modeled exit costs)` : "— (no open position)"}</dd>
         <dt>Position</dt>
         <dd>{s.position ? `${s.position.direction > 0 ? "LONG" : "SHORT"} ${s.position.shares} sh @ ${num(s.position.entry_fill)} since ${timeET(s.position.entry_utc)}` : "Flat"}</dd>
       </dl>

@@ -6,8 +6,19 @@
   "first_session": "2016-03-01",
   "sessions": 5,
   "warmup_sessions": 25,
-  "allowed_periods": ["development"],
+  "allowed_periods": [
+    "development"
+  ],
   "instances": [
-    {"id": "imom-spy-hist", "name": "Intraday Momentum", "instrument": "SPY", "allocation": 100000, "params": {}}
+    {
+      "id": "imom-spy-hist",
+      "name": "Intraday Momentum (long-only, v1.3)",
+      "instrument": "SPY",
+      "allocation": 100000,
+      "params": {
+        "long_only": true
+      },
+      "risk_profile": "OWNER_BASELINE_2026_11_03"
+    }
   ]
 }

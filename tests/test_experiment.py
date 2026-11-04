@@ -66,6 +66,16 @@ def test_changed_definition_refused(days, tmp_path, lock_path):
     assert "risk_limits" in attempts(tmp_path)[-1]["detail"]
 
 
+def test_experiment_id_changes_with_limits_and_primary_params():
+    from trading.experiment_lock import experiment_id, fingerprint
+    from trading.risk import OWNER_BASELINE_2026_11_03
+    from trading.strategies.intraday_momentum import Params
+    ids = {experiment_id(fingerprint(RiskLimits())),
+           experiment_id(fingerprint(OWNER_BASELINE_2026_11_03, primary=Params(long_only=False))),
+           experiment_id(fingerprint(OWNER_BASELINE_2026_11_03, primary=Params(long_only=True)))}
+    assert len(ids) == 3
+
+
 def test_attempts_ledger_records_completed_and_refused(run, tmp_path):
     report = run("development")
     with pytest.raises(ExperimentRefused):
@@ -93,7 +103,8 @@ def test_validation_requires_development_first(run):
 
 def test_full_sequence_logs_and_flags_reuse(run, tmp_path):
     dev = run("development")
-    assert dev["risk_placeholder"] is True
+    assert dev["risk_placeholder"] is False                 # owner limits (v1.3)
+    assert dev["random_direction"]["method"].startswith("random long/flat")
     assert set(dev["results_by_cost"]) == {"base", "stress", "severe"}
     assert set(dev["pass_rules"]) == {"1_positive_after_costs", "2_beats_baselines",
                                       "3_drawdown_within_limit", "4_survives_top10_removal",

@@ -43,13 +43,27 @@ def alpaca_payloads(sessions, broken_day=None):
     return days, minute, daily
 
 
+class RoutingHttp:
+    """Answers each bars request from the payloads by timeframe and time range, in two
+    pages (to exercise pagination). Only get() exists, like the real session."""
+
+    def __init__(self, minute, daily):
+        self.minute, self.daily, self.calls = minute, daily, []
+
+    def get(self, url, headers, params, timeout):
+        self.calls.append(dict(params))
+        if params["timeframe"] == "1Day":
+            bars = [b for b in self.daily if params["start"] <= b["t"][:10] <= params["end"]]
+        else:
+            bars = [b for b in self.minute if params["start"] <= b["t"] <= params["end"]]
+        half = len(bars) // 2
+        if params.get("page_token") == "p2":
+            return FakeResponse(200, {"bars": {"SPY": bars[half:]}, "next_page_token": None})
+        return FakeResponse(200, {"bars": {"SPY": bars[:half]}, "next_page_token": "p2" if half else None})
+
+
 def fake_client(minute, daily):
-    half = len(minute) // 2
-    return ReadOnlyAlpacaClient("KEY", "SECRET", http=FakeHttp([
-        FakeResponse(200, {"bars": {"SPY": minute[:half]}, "next_page_token": "p2"}),
-        FakeResponse(200, {"bars": {"SPY": minute[half:]}, "next_page_token": None}),
-        FakeResponse(200, {"bars": {"SPY": daily}, "next_page_token": None}),
-    ]))
+    return ReadOnlyAlpacaClient("KEY", "SECRET", http=RoutingHttp(minute, daily))
 
 
 @pytest.fixture
@@ -63,7 +77,7 @@ def store(tmp_path):
 def test_store_keeps_regular_session_and_records_provenance(store):
     root, _, m, broken = store
     assert m["requested_feed"] == "sip" and m["adjustment"] == "all" and m["source"] == "alpaca_rest"
-    assert m["requests"]["minute_pages"] == 2
+    assert m["requests"]["minute_chunks"] == 3 and m["requests"]["minute_pages"] == 6   # 3 months x 2 pages
     assert m["summary"]["expected_sessions"] == len(SESSIONS)
     assert m["summary"]["usable_sessions"] == len(SESSIONS) - 1
     assert m["summary"]["by_period"]["development"] == len(SESSIONS) - 1
@@ -72,7 +86,9 @@ def test_store_keeps_regular_session_and_records_provenance(store):
     assert m["sessions"][str(broken)]["usable"] is False
     assert m["sessions"][str(broken)]["structure"]["duplicate_timestamps"] == 1
     assert m["requests"]["pagination_complete"] is True
-    assert m["requests"]["minute_received"][0] < m["requests"]["minute_requested"][0]  # pre-market bar
+    assert m["requests"]["minute_received"][0] >= m["requests"]["minute_requested"][0]
+    regular = sum(v["rows"] for v in m["sessions"].values())
+    assert m["requests"]["minute_rows_all_hours"] > regular       # extended-hours bars were filtered out
     assert ok["missing_minutes"] == 0
     assert m["transformations"] and m["limitations"]
     assert not any(m["daily_structure"][k] for k in m["daily_structure"] if k != "rows")
@@ -80,7 +96,7 @@ def test_store_keeps_regular_session_and_records_provenance(store):
 
 def test_raw_responses_kept_unmodified(store):
     root, _, m, _ = store
-    raw = pd.read_csv(root / "SPY" / "sip" / "all" / "raw" / "minute_all_hours.csv")
+    raw = pd.concat(pd.read_csv(f) for f in sorted((root / "SPY" / "sip" / "all" / "raw").glob("minute_all_hours_*.csv")))
     assert len(raw) == m["requests"]["minute_rows_all_hours"]      # includes pre-market and the duplicate
     assert list(raw.columns[:6]) == ["t", "o", "h", "l", "c", "v"]
 
@@ -93,6 +109,12 @@ def test_load_days_round_trip_and_excludes_unusable(store):
     assert loaded[d].official_close == pytest.approx(days[d].official_close)
     assert loaded[d].bars["close"].to_numpy() == pytest.approx(days[d].bars["close"].to_numpy())
     assert loaded[d].bars.index[0] == pd.Timestamp(SESSIONS[5].open_utc)
+
+
+def test_validation_period_download_refused(tmp_path):
+    with pytest.raises(HistoryError, match="validation"):
+        fetch_and_store(fake_client([], []), "SPY", date(2022, 3, 1), date(2022, 3, 10), "sip", "all",
+                        root=tmp_path)
 
 
 def test_final_period_download_refused(tmp_path):

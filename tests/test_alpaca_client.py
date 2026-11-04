@@ -94,5 +94,19 @@ def test_credentials_from_dotenv(tmp_path, monkeypatch):
     assert load_credentials(env) == (FAKE_KEY, FAKE_SECRET)
 
 
+def test_verify_refuses_held_out_sample_before_network(monkeypatch, capsys):
+    from trading import verify_data_access
+    monkeypatch.setenv("APCA_API_KEY_ID", FAKE_KEY)
+    monkeypatch.setenv("APCA_API_SECRET_KEY", FAKE_SECRET)
+
+    def no_network(*a, **k):
+        raise AssertionError("network call attempted")
+    monkeypatch.setattr(alpaca_client.ReadOnlyAlpacaClient, "_get", no_network)
+    assert verify_data_access.main(["--as-of", "2025-03-03"]) == 3        # final period
+    assert verify_data_access.main(["--as-of", "2023-03-01"]) == 3        # validation period
+    out = capsys.readouterr().out
+    assert "REFUSED" in out and FAKE_SECRET not in out
+
+
 def test_paper_url_is_paper():
     assert alpaca_client.PAPER_TRADING_URL == "https://paper-api.alpaca.markets"

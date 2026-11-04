@@ -107,7 +107,7 @@ export function AccountPanel({ account, snapshot, instruments }: { account: Acco
       <dl className="kv">
         <dt>Equity</dt><dd>{money(account.equity)}</dd>
         <dt>Realized P&amp;L</dt><dd className={pnlClass(account.realized_pnl)}>{money(account.realized_pnl, true)}</dd>
-        <dt>Unrealized P&amp;L</dt><dd className={pnlClass(account.unrealized_pnl)}>{money(account.unrealized_pnl, true)} <span className="muted">(mark, before exit costs)</span></dd>
+        <dt>Unrealized P&amp;L</dt><dd className={pnlClass(account.unrealized_pnl)}>{money(account.unrealized_pnl, true)} <span className="muted">(if closed at last bar, after modeled exit costs)</span></dd>
         <dt>Exposure</dt><dd>{money(account.gross_exposure)} ({pct(account.exposure_pct)} of equity) · {account.open_positions} open</dd>
         <dt>Risk</dt><dd className={account.risk_status === "OK" ? "tone-idle" : "tone-danger"}>{account.risk_status}</dd>
       </dl>

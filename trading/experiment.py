@@ -17,8 +17,8 @@ import numpy as np
 
 from trading.backtest import DayData, StressOptions, run_backtest
 from trading.costs import BASE, COST_LEVELS
-from trading.metrics import percentile_of, random_direction_returns, summarize
-from trading.risk import RiskLimits
+from trading.metrics import percentile_of, random_direction_returns, random_long_flat_returns, summarize
+from trading.risk import OWNER_BASELINE_2026_11_03, RiskLimits
 from trading.sessions import sessions_between
 from trading.strategies.intraday_momentum import Params
 
@@ -31,6 +31,10 @@ PERIODS = {
     "validation": (date(2022, 1, 3), date(2024, 6, 28)),
     "final": (date(2024, 7, 1), date(2026, 10, 30)),
 }
+# Experiment 001, spec v1.3: the locked primary configuration.
+EXPERIMENT_PRIMARY = Params(long_only=True)
+EXPERIMENT_LIMITS = OWNER_BASELINE_2026_11_03
+
 PREREQUISITE = {"validation": "development", "final": "validation"}
 VARIANT_BUDGET = {"development": 10, "validation": 2, "final": 1}
 WARMUP_DAYS = 60
@@ -114,13 +118,25 @@ def _evaluate(days: dict[date, DayData], period: str, params: Params, limits: Ri
     by_cost = {c.name: summarize(bt(costs=c)) for c in COST_LEVELS}
     base = by_cost["base"]
 
-    always_long = summarize(bt(override=lambda d, s: 1))
-    no_kill = replace(limits, max_drawdown=1.0)
-    longs, shorts = bt(lim=no_kill, override=lambda d, s: 1), bt(lim=no_kill, override=lambda d, s: -1)
+    # Baselines trade every session with a valid signal, so they must not inherit the
+    # long-only filter: always-long has roughly twice the long-only strategy's exposure.
+    both = replace(params, long_only=False)
+    always_long = summarize(bt(p=both, override=lambda d, s: 1))
+    no_kill = replace(limits, max_drawdown=1.0, daily_loss_limit=1.0)
+    longs = bt(p=both, lim=no_kill, override=lambda d, s: 1)
     lt = {t.date: t.net_pnl / t.equity_before for t in longs.trades}
-    st = {t.date: t.net_pnl / t.equity_before for t in shorts.trades}
-    common = sorted(lt.keys() & st.keys())
-    rand = random_direction_returns([lt[d] for d in common], [st[d] for d in common], n_random, seed)
+    if params.long_only:
+        # Random entry: long on random eligible sessions at the strategy's own long rate.
+        eligible = sorted(lt)
+        p_long = base["trades"] / len(eligible) if eligible else 0.0
+        rand = random_long_flat_returns([lt[d] for d in eligible], p_long, n_random, seed)
+        random_method, common = f"random long/flat, p_long={p_long:.3f}", eligible
+    else:
+        shorts = bt(p=both, lim=no_kill, override=lambda d, s: -1)
+        st = {t.date: t.net_pnl / t.equity_before for t in shorts.trades}
+        common = sorted(lt.keys() & st.keys())
+        rand = random_direction_returns([lt[d] for d in common], [st[d] for d in common], n_random, seed)
+        random_method = "coin-flip long/short"
     pct = percentile_of(base["net_return"], rand) if len(common) else float("nan")
 
     neighbors = {}
@@ -148,7 +164,8 @@ def _evaluate(days: dict[date, DayData], period: str, params: Params, limits: Ri
         "results_by_cost": by_cost,
         "baseline_always_long": always_long,
         "baseline_no_trade_return": 0.0,
-        "random_direction": {"runs": n_random, "days": len(common), "strategy_percentile": pct,
+        "random_direction": {"method": random_method, "runs": n_random, "days": len(common),
+                             "strategy_percentile": pct,
                              "p95": float(_pct(rand, 95)), "median": float(_pct(rand, 50))},
         "neighbors_net_return": neighbors,
         "pass_rules": rules,
@@ -204,8 +221,8 @@ def _log_attempt(log_dir: Path, row: dict) -> None:
         w.writerow(row)
 
 
-def run_experiment(days: dict[date, DayData], period: str, params: Params = Params(),
-                   limits: RiskLimits = RiskLimits(), start_equity: float = 100_000.0,
+def run_experiment(days: dict[date, DayData], period: str, params: Params = EXPERIMENT_PRIMARY,
+                   limits: RiskLimits = EXPERIMENT_LIMITS, start_equity: float = 100_000.0,
                    final_test: bool = False, n_random: int = 10000, seed: int = 0,
                    log_dir: Path = EXPERIMENT_DIR, results_dir: Path = RESULTS_DIR,
                    periods: dict = PERIODS, lock_path: Path | None = None) -> dict:
@@ -221,7 +238,7 @@ def run_experiment(days: dict[date, DayData], period: str, params: Params = Para
             "git_commit": _git_commit(), "period": period, "variant_id": variant_id(params),
             "params": json.dumps(params.as_dict(), sort_keys=True)}
     try:
-        lock = check_lock(limits, periods, lock_path or LOCK_PATH)
+        lock = check_lock(limits, periods, lock_path or LOCK_PATH, primary=EXPERIMENT_PRIMARY)
         report = _evaluate(days, period, params, limits, start_equity, final_test, n_random, seed,
                            log_dir, results_dir, periods, lock)
     except (ExperimentRefused, LockMismatch) as exc:

@@ -59,6 +59,7 @@ class Trade:
     gross_pnl: float
     net_pnl: float
     flags: list = field(default_factory=list)
+    carry_mark_price: float | None = None   # last in-session close when carried overnight
 
     @property
     def notional(self) -> float:
@@ -102,25 +103,45 @@ def last30_return(day: DayData | None) -> float | None:
     return float(day.bars.at[last, "close"]) / float(day.bars.at[first, "open"]) - 1
 
 
-def _exit_without_stop(day, nxt, scanned, params, close_t):
-    """(time, reference price, reason, flags) for the scheduled close-out."""
-    last_t = close_t - MINUTE
-    if params.exit_mode == "moc" and day.official_close is not None:
-        return close_t, day.official_close, "time exit (MOC)", []
-    if last_t in scanned.index:
-        return close_t, float(scanned.at[last_t, "close"]), "time exit", []
-    if len(scanned) and scanned.index[-1] >= close_t - MISSING_EXIT_WINDOW:
-        t = scanned.index[-1]
-        return t + MINUTE, float(scanned.at[t, "close"]), "time exit", ["missing exit bar"]
+UNRESOLVED = "unresolved: halt or missing data"
+CARRY = "involuntary overnight carry"
+
+
+def _carry_exit(nxt, scanned, reason):
+    """No bar left in the session to exit on: never invent a fill. The exit happens at
+    the next session's first actual bar (gap and costs apply). Bar data cannot tell a
+    halt from missing feed data, so the case is labeled unresolved."""
+    last_close = float(scanned["close"].iloc[-1]) if len(scanned) else None
     if nxt is not None and len(nxt.bars):
         t = nxt.bars.index[0]
-        return t, float(nxt.bars.at[t, "open"]), "halt: exit next open", ["halted; held overnight"]
+        return (t, float(nxt.bars.at[t, "open"]), f"{reason} ({CARRY})", [UNRESOLVED, CARRY]), last_close
     t = scanned.index[-1]
-    return t + MINUTE, float(scanned.at[t, "close"]), "time exit", ["missing exit bar", "no next session"]
+    return (t + MINUTE, last_close, f"{reason} (no later data)",
+            [UNRESOLVED, "no later data: marked at last close, not an executed fill"]), last_close
+
+
+def _scheduled_exit(day, nxt, scanned, params, close_t):
+    """(exit tuple, carry mark) for the scheduled close-out."""
+    last_t = close_t - MINUTE
+    if params.exit_mode == "moc" and day.official_close is not None:
+        return (close_t, day.official_close, "time exit (MOC)", []), None
+    if last_t in scanned.index:
+        return (close_t, float(scanned.at[last_t, "close"]), "time exit", []), None
+    return _carry_exit(nxt, scanned, "time exit")
+
+
+def _net_if_closed(costs: CostModel, direction: int, shares: int, entry_ref: float,
+                   exit_ref: float) -> float:
+    """Net P&L after modeled costs if a position entered at entry_ref closes at exit_ref."""
+    entry_fill = costs.fill_price(entry_ref, direction)
+    exit_fill = costs.fill_price(exit_ref, -direction)
+    sell_notional = shares * (exit_fill if direction > 0 else entry_fill)
+    return (direction * shares * (exit_fill - entry_fill)
+            - costs.sell_fee(sell_notional) - 2 * costs.commission_per_order)
 
 
 def _simulate_day(i, sessions, days, sigma_hist, params, costs, limits, equity,
-                  rng_draws, stress, direction_override):
+                  rng_draws, stress, direction_override, risk):
     session = sessions[i]
     day = days.get(session.date)
     if day is None:
@@ -162,8 +183,10 @@ def _simulate_day(i, sessions, days, sigma_hist, params, costs, limits, equity,
     decision_price = float(known["close"].iloc[-1])
     stop_frac = (params.stop_mult or params.sizing_mult) * sigma30
     median_vol = float(known.loc[window, "volume"].median())
+    # Planned loss at the stop includes modeled entry/exit costs (spread, slippage, sell fee).
+    round_trip = decision_price * (2 * costs.per_side_bp + costs.sell_fee_bp) / 1e4
     shares, cap = size_position(limits, equity, decision_price, stop_frac * decision_price,
-                                median_vol)
+                                median_vol, round_trip, gross_in_use=0.0, positions_in_use=0)
     stop_dist = stop_frac * price
     shares = int(shares * stress.fill_fraction)
     if shares < 1:
@@ -171,9 +194,8 @@ def _simulate_day(i, sessions, days, sigma_hist, params, costs, limits, equity,
     stop = price - direction * stop_dist if params.stop_mult else None
 
     scanned = day.bars[(day.bars.index >= entry_bar_t) & (day.bars.index < close_t)]
-    exit_info = None
-    entry_fill_est = costs.fill_price(price, direction)
-    loss_limit = limits.daily_loss_limit * equity        # equity at the start of this day
+    nxt = days.get(sessions[i + 1].date) if i + 1 < len(sessions) else None
+    exit_info, carry_mark = None, None
     bar_times = list(scanned.index)
     for k, (t, bar) in enumerate(scanned.iterrows()):
         # Pessimistic: a stop touched anywhere in a bar (including the entry
@@ -184,37 +206,39 @@ def _simulate_day(i, sessions, days, sigma_hist, params, costs, limits, equity,
         if stop is not None and direction < 0 and bar["high"] >= stop:
             exit_info = (t + MINUTE, max(float(bar["open"]), stop), "stop", [])
             break
-        # Daily loss limit, marked to market at each completed bar's close (unrealized
-        # loss counts). A breach is only known once the bar ends, so the exit fills at
-        # the next bar's open, the same one-minute delay as entries.
-        unrealized = direction * shares * (float(bar["close"]) - entry_fill_est)
-        if unrealized <= -loss_limit:
+        # Account-level loss limits, marked to market at each completed bar's close:
+        # equity = start-of-day equity + what the position would net if closed at that
+        # close, after modeled costs. A breach is only known once the bar ends, so the
+        # risk-reducing exit fills at the next bar's open (gaps and costs included).
+        breach = risk.observe(session.date, equity + _net_if_closed(costs, direction, shares, price,
+                                                                     float(bar["close"])))
+        if breach:
             if k + 1 < len(bar_times):
                 nt = bar_times[k + 1]
-                exit_info = (nt, float(scanned.at[nt, "open"]), "risk: daily loss limit", [])
+                exit_info = (nt, float(scanned.at[nt, "open"]), breach, [])
+            elif t == close_t - MINUTE:
+                # Breach on the scheduled exit bar: the time exit already scheduled at
+                # this bar's close is the first executable opportunity; no extra fill.
+                exit_info = (close_t, float(bar["close"]), "time exit", [f"{breach} at scheduled exit bar"])
             else:
-                exit_info = (t + MINUTE, float(bar["close"]), "risk: daily loss limit",
-                             ["no later bar; exited at breach bar close"])
+                exit_info, carry_mark = _carry_exit(nxt, scanned, breach)
             break
     if exit_info is None:
-        nxt = days.get(sessions[i + 1].date) if i + 1 < len(sessions) else None
-        exit_info = _exit_without_stop(day, nxt, scanned, params, close_t)
+        exit_info, carry_mark = _scheduled_exit(day, nxt, scanned, params, close_t)
         if rng_draws[1] < stress.late_exit_rate and day.official_close is not None:
             exit_info = (close_t, day.official_close, "time exit", ["stress: late exit at close"])
     exit_t, exit_price, exit_reason, flags = exit_info
 
     entry_fill = costs.fill_price(price, direction)
     exit_fill = costs.fill_price(exit_price, -direction)
-    sell_notional = shares * (exit_fill if direction > 0 else entry_fill)
-    net = (direction * shares * (exit_fill - entry_fill)
-           - costs.sell_fee(sell_notional) - 2 * costs.commission_per_order)
+    net = _net_if_closed(costs, direction, shares, price, exit_price)
     return Trade(
         date=session.date, direction=direction, shares=shares, binding_cap=cap,
         entry_time=entry_bar_t, entry_price=price, entry_fill=entry_fill,
         exit_time=exit_t, exit_price=exit_price, exit_fill=exit_fill,
         exit_reason=exit_reason, stop_price=stop, r1=r1, sigma30=sigma30,
         equity_before=equity, gross_pnl=direction * shares * (exit_price - price),
-        net_pnl=net, flags=flags,
+        net_pnl=net, flags=flags, carry_mark_price=carry_mark,
     ), None
 
 
@@ -236,8 +260,16 @@ def run_backtest(days: dict[date, DayData], sessions: list[Session], start: date
             results.append(DayResult(session, equity, skip_reason=block))
             continue
         trade, reason = _simulate_day(i, sessions, days, sigma_hist, params, costs, limits,
-                                      equity, draws, stress, direction_override)
+                                      equity, draws, stress, direction_override, risk)
         results.append(DayResult(session, equity, trade=trade, skip_reason=reason))
-        if trade:
+        if trade and trade.carry_mark_price is not None and i + 1 < len(sessions):
+            # Carried overnight: the next session starts at the position's mark at this
+            # session's last bar, and the exit P&L counts against the next session's limits.
+            nxt_day = sessions[i + 1].date
+            risk.start_day(nxt_day, equity + _net_if_closed(costs, trade.direction, trade.shares,
+                                                            trade.entry_price, trade.carry_mark_price))
+            equity += trade.net_pnl
+            risk.observe(nxt_day, equity)
+        elif trade:
             equity += trade.net_pnl
     return BacktestResult(results, start_equity, equity)

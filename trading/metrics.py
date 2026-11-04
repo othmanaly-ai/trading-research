@@ -90,6 +90,13 @@ def summarize(result: BacktestResult, top_n: int = 10) -> dict:
         f"top{top_n}_share_of_pnl": float(top.sum() / total_pnl) if total_pnl > 0 else None,
         "exit_reasons": dict(Counter(t.exit_reason for t in trades)),
         "flagged_trades": sum(1 for t in trades if t.flags),
+        "unique_sessions": len({t.date for t in trades}),
+        "avg_holding_minutes": float(np.mean([t.minutes_held for t in trades])) if trades else None,
+        "unresolved": {
+            "trades": sum(1 for t in trades if any(f.startswith("unresolved") for f in t.flags)),
+            "net_pnl": float(sum(t.net_pnl for t in trades if any(f.startswith("unresolved") for f in t.flags))),
+            "overnight_carries": sum(1 for t in trades if "involuntary overnight carry" in t.flags),
+        },
     }
 
 
@@ -104,6 +111,15 @@ def random_direction_returns(long_rets: np.ndarray, short_rets: np.ndarray,
     pick_long = rng.random((n_runs, len(long_rets))) < 0.5
     r = np.where(pick_long, long_rets, short_rets)
     return np.prod(1 + r, axis=1) - 1
+
+
+def random_long_flat_returns(long_rets, p_long: float, n_runs: int = 10000, seed: int = 0) -> np.ndarray:
+    """Compounded return of runs that go long on each eligible session with probability
+    p_long and stay flat otherwise (comparable trade count and exposure to a long-only rule)."""
+    rng = np.random.default_rng(seed)
+    long_rets = np.asarray(long_rets, dtype=float)
+    take = rng.random((n_runs, len(long_rets))) < p_long
+    return np.prod(1 + np.where(take, long_rets, 0.0), axis=1) - 1
 
 
 def percentile_of(value: float, distribution: np.ndarray) -> float:

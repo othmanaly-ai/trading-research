@@ -1,7 +1,7 @@
 {
-  "experiment_id": "001-eaa09c9d5a",
-  "created_utc": "2026-11-03T23:31:50+00:00",
-  "hypothesis": "The SPY return from the previous close to 10:00 ET predicts the direction of the return over the final 30 minutes of the session, by enough to remain positive after modeled costs.",
+  "experiment_id": "001-fd13f1fdef",
+  "created_utc": "2026-11-04T00:11:40+00:00",
+  "hypothesis": "Long-only (spec v1.3): when SPY is up from the previous close to 10:00 ET, a long position over the final 30 minutes of the session earns a positive return after modeled costs, within the owner's risk limits.",
   "primary_params": {
     "signal_from": "prev_close",
     "signal_minutes": 30,
@@ -12,7 +12,7 @@
     "stop_mult": 2.0,
     "sizing_mult": 2.0,
     "sigma_lookback": 20,
-    "long_only": false
+    "long_only": true
   },
   "metrics": [
     "net return (base/stress/severe)",
@@ -29,7 +29,7 @@
     "always-long and random-direction baselines",
     "no-trade baseline"
   ],
-  "risk_limits_are_placeholders": true,
+  "risk_limits_are_placeholders": false,
   "data_status_at_lock": {
     "sessions_stored_by_period": {
       "development": 0,
@@ -43,8 +43,20 @@
     }
   },
   "fingerprint": {
-    "spec_version": "1.2",
-    "spec_sha256": "13184c5d3f43",
+    "spec_version": "1.3",
+    "spec_sha256": "0b32b30b3b33",
+    "primary_params": {
+      "signal_from": "prev_close",
+      "signal_minutes": 30,
+      "entry_offset_min": 30,
+      "entry_delay_min": 1,
+      "entry_fallback_min": 2,
+      "exit_mode": "last_minute",
+      "stop_mult": 2.0,
+      "sizing_mult": 2.0,
+      "sigma_lookback": 20,
+      "long_only": true
+    },
     "costs": [
       {
         "name": "base",
@@ -89,12 +101,15 @@
     },
     "pass_rules": "SPEC section 14 rules 1-5; rule 1 stress test read strictly as net >= 0 (17.4)",
     "risk_limits": {
-      "risk_per_trade": 0.005,
-      "max_notional": 1.0,
+      "risk_per_trade": 0.001,
+      "max_notional": 0.05,
       "participation": 0.01,
-      "daily_loss_limit": 0.01,
-      "max_drawdown": 0.05,
-      "placeholder": true
+      "daily_loss_limit": 0.005,
+      "max_drawdown": 0.03,
+      "max_gross_exposure": 0.1,
+      "max_positions": 2,
+      "risk_includes_costs": true,
+      "placeholder": false
     }
   }
 }

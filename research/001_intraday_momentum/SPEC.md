@@ -1,9 +1,12 @@
 # Experiment 001: Intraday momentum in SPY (specification)
 
-Spec version: 1.2. Version history:
+Spec version: 1.3. Version history:
 - 1.0: approved 2026-11-03.
 - 1.1: adds the section 17 implementation clarifications.
 - 1.2: section 17 item 7, how the daily loss limit handles unrealized losses.
+- 1.3 (2026-11-03): owner decisions. Long-only (D6), owner risk limits (D1), and the
+  halt / missing-data / involuntary overnight rules (section 8, section 17 items 8-10).
+  Written before any development, validation or final data was downloaded.
 
 The strategy registry records this version and the file's hash. No real data
 had been seen when any of these versions was written.
@@ -118,7 +121,8 @@ For session *d* with close time *C* (16:00, or 13:00 on early-close days):
 - `P_prev` = previous session's official close (daily bar close, adjusted).
 - `P_10` = close of the 09:59 ET bar (last trade before 10:00), adjusted.
 - `r1 = P_10 / P_prev - 1`. Known at 10:00:00 ET at the earliest.
-- Direction: `+1` (long) if `r1 > 0`, `-1` (short) if `r1 < 0`, no trade if
+- Direction (v1.3, long-only): `+1` (long) if `r1 > 0`; **no trade** if `r1 < 0` (the
+  short side is not traded); no trade if
   `r1 == 0` or if any input is missing.
 - Primary version has **no threshold** and no other filter (no tuning).
 
@@ -157,8 +161,34 @@ primary is run first; the other is a logged variant.
 
 ## 7. Sizing, exposure, loss limits
 
-Risk numbers are **placeholders** until the owner answers the setup questions
-(D1). The software enforces whichever values are agreed.
+v1.3: owner-agreed limits (`trading/risk.py: OWNER_BASELINE_2026_11_03`), applied to the whole
+simulated account and including pending entries.
+
+| Limit | Value | On $100,000 |
+|---|---|---|
+| Starting simulated equity | | $100,000 |
+| Planned loss per trade at the stop, including modeled entry/exit costs | 0.10% of current equity | $100 |
+| Daily loss (all trades and marks in the session) | 0.50% of session-start equity | $500 |
+| Drawdown from the equity high-water mark | 3% | $3,000 from the peak |
+| One position's notional value | 5% of current equity | $5,000 |
+| Combined gross exposure (open plus pending) | 10% of current equity | $10,000 |
+| Concurrent positions (open plus pending) | 2 | |
+| Leverage, short selling, voluntary overnight holds | none | |
+
+- **Equity** = starting capital + cumulative realized P&L + net liquidation P&L of open positions.
+  Liquidation P&L is what the position would net if closed at the latest bar close, after
+  modeled exit costs. Entry costs are already in the entry fill, so each cost is counted once.
+- **$100 per trade** is a planned loss under the modeled fill assumptions. A gap through the
+  stop, or an exit delayed by a halt or missing data, can lose more.
+- **Daily loss** accumulates everything in the session: realized P&L from all trades
+  (including a carried position's exit at the open) plus marks on open positions.
+- **A daily breach** cancels pending entries, blocks new entries for the rest of that session,
+  and requests a risk-reducing exit at the next modeled executable opportunity.
+- **A drawdown breach** does the same, then halts the experiment permanently with no
+  automatic reset. Risk-reducing exits stay allowed.
+- **No broker orders:** these are simulator actions only.
+
+Original placeholder text, kept for history: The software enforces whichever values are agreed.
 
 - `E` = account equity at the decision time.
 - Shares = floor of the smallest of:
@@ -185,10 +215,10 @@ and no other component can override it.
 | Overnight gap | Part of the signal by design (r1 includes it). |
 | Missing `P_prev` or `P_10` bar | No trade. Logged. |
 | Data check failure for the day (duplicates, invalid OHLC, gaps in 15:00-16:00) | No trade. Logged. |
-| Market-wide halt | Level 1 and 2 circuit breakers do not halt trading after 15:25 ET. A Level 3 halt closes the market for the day: the simulated exit moves to the next session's open and the trade is flagged. |
+| Market-wide halt, or missing bars before the scheduled exit (v1.3) | No end-of-day fill is invented. The position stays open, and its exposure stays in equity and risk calculations. The exit fills at the first actual bar at or after the scheduled exit time; if none remains in the session, at the next session's first bar, with gap and costs. That is an **involuntary overnight carry**. Its exit P&L counts toward the next session's daily loss, and daily-block or drawdown-halt states persist. Bar data cannot tell a real halt from missing feed data, so these cases are labeled **unresolved: halt or missing data**, kept in the evaluation, flagged in the journal and report, and their effect on the results is reported. |
 | Partial fill | Size is capped by participation, so the base case assumes a full fill. Stress test: fill only 50% of the order. |
 | Failed order | Stress test: 2% of entries randomly fail (day skipped); 2% of exits fill one minute late at the next bar's close. |
-| Missing exit bar | Use the last bar at or before the close; flag the trade. |
+| Missing exit bar | Covered by the row above (v1.3). Earlier versions used the last earlier bar's close, which invented a fill. |
 | Dividends | Handled by adjusted prices (section 3). |
 | Splits | SPY had none in the period; the adjusted series handles any. |
 
@@ -230,7 +260,10 @@ and no other component can override it.
 1. **Always long:** long SPY every day from entry to close, same sizing and
    stop. This tests whether the signal adds anything beyond the average
    last-half-hour drift.
-2. **Random direction:** 10,000 runs with coin-flip direction on the same days.
+2. **Random entry (v1.3, long-only):** 10,000 runs that go long on randomly chosen eligible
+   days, with the same probability as the strategy's long rate, and stay flat otherwise.
+   This gives the same expected trade count and exposure. (Earlier versions used coin-flip
+   long/short direction.)
    The strategy's net result is compared to this distribution (a permutation
    test).
 3. **No trade:** zero return. The strategy must beat doing nothing after costs.
@@ -314,12 +347,12 @@ later counts as a new variant and must be logged (section 13).
 
 | # | Decision | Proposed default |
 |---|---|---|
-| D1 | Country, experience, paper balance, intended real capital, data budget; risk per trade R, daily limit, drawdown limit D | **OPEN.** Placeholders R=0.5%, daily 1%, D=5% until answered |
+| D1 | Risk limits and simulated balance | **Decided 2026-11-03 (v1.3):** section 7 table. Country, experience and intended real capital not provided; not needed for this historical experiment. |
 | D2 | SPY only, or add QQQ/IWM/DIA | SPY only first |
 | D3 | Signal from previous close (published) or from today's open | Previous close |
 | D4 | Exit at 15:59 market or market-on-close | 15:59 market (base), MOC as sensitivity |
 | D5 | Include the protective stop | Yes, 2 x sigma30 |
-| D6 | Long and short, or long only | Long and short (needs margin account) |
+| D6 | Long and short, or long only | **Changed 2026-11-03 (v1.3): long-only.** Originally long and short. |
 | D7 | Fetch both raw and adjusted bars | Yes |
 | D8 | Numeric pass thresholds (e.g. minimum Sharpe lower bound) | Pass rules in section 14 as written |
 | D9 | Variant budget | 10 / 2 / 1 |
@@ -365,6 +398,19 @@ Choices made while coding. No results existed when they were made.
    - **Effect:** with the stop at 2 x sigma30 and 0.5% risk sizing, the limit
      normally acts only on gaps or halts. It exists so the control is enforced in
      code, not just written down.
+
+8. **Long-only (v1.3).** Negative-r1 sessions are logged as "signal: negative, long-only" and
+   not traded. The always-long baseline trades every eligible session, so it has about twice
+   the exposure; the report states this. The random baseline is redefined in section 11.
+9. **Involuntary overnight carry and unresolved data (v1.3, section 8).** These follow the
+   halt/missing row. An exit decided at a bar's close (stop, or loss-limit breach) fills at
+   the next actual bar. If the breach happens on the scheduled exit bar itself, the
+   already-scheduled time exit at that bar's close is used, and no extra fill is created.
+10. **Equity and daily accounting (v1.3).** These are as defined in section 7.
+    - If a position is carried overnight, the next session's start equity is the
+      carried-position mark at the prior session's last bar.
+    - Its exit P&L is checked against that session's daily limit and against the
+      drawdown limit.
 
 **Prerequisite for any implementation:** paper keys in `.env`, then a
 successful `python -m trading.verify_data_access`, then a separate SPY

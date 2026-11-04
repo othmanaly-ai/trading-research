@@ -18,6 +18,7 @@ from trading.costs import BASE
 from trading.events import MODE_DEMO_REPLAY, Event
 from trading.fixtures.synthetic import make_days
 from trading.outcomes import classify_trade
+from trading import risk as risk_module
 from trading.risk import RiskLimits
 from trading.sessions import Session, sessions_between
 from trading.strategies.intraday_momentum import MINUTE, Params, signal
@@ -146,7 +147,8 @@ def _strategy_events(inst: dict, params: Params, days: dict, engine_sessions: li
         ev.append(mk(t.entry_time, "fill", {
             "leg": "entry", "side": "buy" if t.direction > 0 else "sell short",
             "shares": t.shares, "reference_price": t.entry_price, "fill_price": t.entry_fill,
-            "stop_price": t.stop_price, "simulated": True}))
+            "stop_price": t.stop_price, "cost_per_side_bp": BASE.per_side_bp,
+            "sell_fee_bp": BASE.sell_fee_bp, "simulated": True}))
         ev.append(mk(t.exit_time, "fill", {
             "leg": "exit", "side": "sell" if t.direction > 0 else "buy to cover",
             "shares": t.shares, "reference_price": t.exit_price, "fill_price": t.exit_fill,
@@ -195,7 +197,8 @@ def build_replay(ctx: Context, instruments: list[dict], instrument_days: dict, i
     backtests, instances_meta = {}, []
     for inst in instances:
         params = replace(Params(), **inst.get("params", {}))
-        limits = replace(RiskLimits(), **inst.get("risk", {}))
+        base_limits = getattr(risk_module, inst["risk_profile"]) if inst.get("risk_profile") else RiskLimits()
+        limits = replace(base_limits, **inst.get("risk", {}))
         days = instrument_days[inst["instrument"]]
         result = run_backtest(days, engine_sessions, replay[0].date, replay[-1].date, params,
                               BASE, limits, float(inst["allocation"]))

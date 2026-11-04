@@ -83,15 +83,21 @@ def test_wrong_mode_event_rejected(demo):
 
 
 def test_unrealized_is_marked_while_open_and_zero_after(demo):
+    """Ledger unrealized = engine's net-if-closed at the bar close, after modeled exit costs."""
+    from trading.backtest import _net_if_closed
+    from trading.costs import BASE
+    entries = {}
     ledger = Ledger(demo.meta)
     marked = False
     for e in demo.events:
         ledger.apply(e.to_dict())
+        if e.type == "fill" and e.payload["leg"] == "entry":
+            entries[e.strategy_id] = e.payload["reference_price"]
         for s in ledger.strategies.values():
             if s["position"] and e.type == "bar" and e.instrument == s["instrument"]:
                 pos = s["position"]
-                assert s["unrealized_pnl"] == pytest.approx(
-                    pos["direction"] * pos["shares"] * (e.payload["c"] - pos["entry_fill"]))
+                assert s["unrealized_pnl"] == pytest.approx(_net_if_closed(
+                    BASE, pos["direction"], pos["shares"], entries[s["id"]], e.payload["c"]))
                 marked = True
     assert marked
     assert all(s["unrealized_pnl"] == 0 for s in ledger.strategies.values())
