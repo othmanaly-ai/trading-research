@@ -603,6 +603,22 @@ pipeline -> watch progress -> cancel if needed -> open the report.
 - **Measured:** 254 draw calls on High vs 232 before; frame time unchanged (8.3 ms median).
 - **Deployment:** frontend-only; no server restart and no monitoring interruption.
 
+## Dependency-and-health map (2026-11-05)
+
+- **Read-only map:** `trading/dashboard/depmap.py` via `/api/depmap`, shown in the city's new
+  Dependencies view.
+- **Separate layers:** declared (code/config with file and symbol), recorded (runtime tables with
+  timestamps) and proposed (UNIMPLEMENTED_ROLES) connections; Graphify static relations shown apart.
+  Statuses come only from records (UNKNOWN when missing).
+- **Panel:** "Why blocked?", upstream issues, dependency impact (not proof of failure) and next action.
+- **Tests:** 13 fixture tests plus an endpoint test; the synthetic failure view was checked in the
+  browser.
+- **Deployment:** two server restarts after the close, each about 30 s of worker downtime with the
+  market closed:
+  - 2026-11-05 01:14:50-01:15:25 UTC
+  - 01:20:00-01:20:31 UTC
+- **Notes:** `docs/DEPENDENCY_MAP.md`.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

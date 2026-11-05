@@ -15,6 +15,7 @@ Endpoints:
   GET  /api/strategies/<id>/evaluation   evaluation report up to the current replay time
   GET  /api/strategies/<id>/journal      journal rows (JSON); /journal.csv downloads them
   GET  /api/research             mode availability, periods, responsibilities
+  GET  /api/depmap               read-only dependency-and-health map (declared / recorded / proposed)
   GET  /api/jobs                 real research-job records (trading/jobs.py), read-only
   GET  /api/experiments          allowed saved experiments with artifact inventories
   GET  /api/pipelines/preview?experiment=<allowed id>
@@ -510,6 +511,9 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
                     return self._json(with_store(lambda st: jobs_mod.preview(exp, st, JOBS_RESEARCH_DIR, env=_server_env())))
                 except ValueError as exc:
                     return self._json({"error": str(exc)}, 400)
+            if path == "/api/depmap":
+                from trading.dashboard import depmap
+                return self._json(depmap.collect(jobs_db=JOBS_DB))
             if path == "/api/monitor":
                 return self._json(monitor_snapshot())
             if path == "/api/monitor/sessions":

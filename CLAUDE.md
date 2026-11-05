@@ -107,6 +107,12 @@ Exit codes for the data check: 0 = success, 1 = API refused or failed, 2 = no cr
     lock. Record it with `--supersede "reason"`, never by editing the lock.
   - Every evaluation attempt is logged in `experiment_attempts.csv`.
 
+## Dependency map (read-only)
+
+- `trading/dashboard/depmap.py` (`/api/depmap`, city "Dependencies" view). Declared, recorded and proposed connections stay
+  separate; statuses come only from runtime records (UNKNOWN when missing); Graphify relations are code evidence only.
+  Never add a trading or execution node; never let it start or change anything.
+
 ## Research candidates (not experiments)
 
 - `research/candidates/<id>/STATUS.json`, shown read-only in the city's research jobs view; no pipeline runs on them.

@@ -249,3 +249,15 @@ def test_candidates_overview_tolerates_corrupt_status(tmp_path):
     (tmp_path / "research" / "candidates" / "x" / "STATUS.json").write_text("{not json", encoding="utf-8")
     out = srv.candidates_overview(tmp_path / "research" / "candidates")
     assert out[0]["status"] is None and "unreadable" in out[0]["problems"][0]
+
+
+def test_depmap_endpoint_is_read_only_and_has_no_execution_path(server, tmp_path, monkeypatch):
+    from trading.dashboard import server as srv
+    monkeypatch.setattr(srv, "JOBS_DB", tmp_path / "no-jobs.sqlite")      # isolated: never the real job store
+    status, body = _get(server + "/api/depmap")
+    assert status == 200
+    ids = {n["id"] for n in body["nodes"]}
+    assert {"alpaca_iex", "monitor_worker", "quality", "report", "model_review"} <= ids
+    assert not any(k in i for i in ids for k in ("order", "execution"))
+    assert all(set(e["kinds"]) <= {"declared", "recorded", "proposed"} for e in body["edges"])
+    assert not (tmp_path / "no-jobs.sqlite").exists()                      # reading created nothing

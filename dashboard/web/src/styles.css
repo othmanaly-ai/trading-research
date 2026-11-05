@@ -357,3 +357,11 @@ pre.json { max-height: 260px; overflow: auto; background: #0f0c26; padding: 8px;
 .station .st-status { font-weight: 700; font-size: 11px; margin: 2px 0; }
 .station.st-ok { border-left-color: #14b8a6; } .station.st-active { border-left-color: #22d3ee; }
 .station.st-danger { border-left-color: #ef4444; } .station.st-muted { border-left-color: #64748b; }
+
+/* Dependency map */
+.depmap .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 6px 0; }
+.dep-detail { flex-basis: 340px; max-height: 620px; overflow: auto; }
+.dep-detail .why > li { margin: 4px 0; }
+.dep-detail .conn > li { margin: 4px 0; }
+.city-label.related { border-color: var(--accent); }
+.city-label-holder.lm-hidden { display: none; }

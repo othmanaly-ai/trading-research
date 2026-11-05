@@ -7,6 +7,7 @@ import {
   isDemoView,
 } from "./components/Panels";
 import Overview from "./components/Overview";
+import DependencyMap from "./components/DependencyMap";
 import type { Research, StrategyView } from "./types";
 import type { TowerSpec } from "./components/CityView";
 import { money } from "./format";
@@ -125,6 +126,7 @@ export default function App() {
             {view === "Research" && <ResearchView research={research} />}
             {view === "Research jobs" && <JobsView reducedMotion={reducedMotion} />}
             {view === "Market monitor" && <MonitorView reducedMotion={reducedMotion} />}
+            {view === "Dependencies" && <DependencyMap reducedMotion={reducedMotion} />}
           </div>
         </div>
         <footer className="muted small">Real read-only records served by the local city server (127.0.0.1). The synthetic demo replay is under

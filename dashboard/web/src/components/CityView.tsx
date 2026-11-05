@@ -37,7 +37,13 @@ export interface TowerSpec {
   event?: { id: string; kind: "arrival" | "start" | "complete" | "fail" };
   active?: boolean;                      // work in progress per the records (steady accent; gentle breathing if motion allowed)
   warn?: boolean;                        // failure or stale data per the records: persistent warning ring and ⚠
+  related?: boolean;                     // upstream/downstream of the selected building (highlighted)
+  labelMode?: "full" | "compact" | "hidden";   // compact = title + status; hidden = listed only (Buildings list, tables)
 }
+
+/** Explicit connections with a style per kind (used by the dependency map). When given, they replace
+ *  the TowerSpec `links`. recorded = solid tube, declared = dashed line, proposed = dotted line. */
+export interface EdgeSpec { from: string; to: string; style: "recorded" | "declared" | "proposed"; color?: number }
 
 // Event ids already shown, per scene type, kept across remounts so a reconnect, a view change or
 // a polling repeat never animates the same recorded event twice (bounded).
@@ -58,7 +64,8 @@ interface Props {
   onSelect: (id: string) => void;
   reducedMotion: boolean;
   onFailure: (reason: string) => void;
-  variant?: "strategy" | "jobs" | "monitor" | "district";
+  variant?: "strategy" | "jobs" | "monitor" | "district" | "depmap";
+  edges?: EdgeSpec[] | null;
   mode?: CityMode;
   coreLabel?: string;                    // what the plaza ring colour means (if shown)
   legend?: { color: number; label: string }[];
@@ -69,6 +76,7 @@ const DEFAULT_MODE: Record<string, CityMode> = {
   jobs: { label: "REAL RESEARCH JOBS", detail: "deterministic software over saved artifacts", tone: "real" },
   monitor: { label: "REAL MARKET MONITOR", detail: "read-only market data", tone: "real" },
   district: { label: "REAL RECORDS", detail: "read-only status of this project's components", tone: "real" },
+  depmap: { label: "DEPENDENCY MAP", detail: "read-only · declared, recorded and proposed connections", tone: "real" },
 };
 const DEFAULT_LEGEND = [
   { color: PALETTE.amber, label: "Market-data monitoring" },
@@ -131,6 +139,7 @@ export default function CityView(props: Props) {
   const [stats, setStats] = useState<{ calls: number; tris: number; fps: number } | null>(null);
   const api = useRef<{
     sync: (t: TowerSpec[], sel: string | null, core: number | null) => void;
+    setEdges: (e: EdgeSpec[] | null) => void;
     focus: (id: string | null) => void;
     hover: (id: string | null) => void;
   } | null>(null);
@@ -282,7 +291,7 @@ export default function CityView(props: Props) {
         n.label.style.transform = "";
         n.holder.style.visibility = "";
         return { n, r: n.label.getBoundingClientRect() };
-      }).filter((x) => x.r.width > 0)
+      }).filter((x) => x.r.width > 0 && !x.n.holder.classList.contains("lm-hidden"))
         // the selected label is placed first, so it is never the one that gives way
         .sort((a, b) => (a.n.spec.id === selected ? -1 : b.n.spec.id === selected ? 1 : a.r.left - b.r.left));
       const placed: { l: number; r: number; t: number; b: number }[] = [];
@@ -362,7 +371,7 @@ export default function CityView(props: Props) {
       (n.warnRing.material as THREE.MeshBasicMaterial).color.setHex(n.spec.color);
       const hm = n.halo.material as THREE.MeshBasicMaterial;
       hm.color.setHex(n.spec.color);
-      hm.opacity = isSel ? 0.9 : isHover ? 0.5 : n.spec.dim ? 0.12 : 0.22;
+      hm.opacity = isSel ? 0.9 : isHover ? 0.5 : n.spec.related ? 0.55 : n.spec.dim ? 0.12 : 0.22;
       n.halo.visible = true;
       n.label.classList.toggle("selected", isSel);
       n.label.classList.toggle("hover", isHover);
@@ -375,13 +384,16 @@ export default function CityView(props: Props) {
       const tag = document.createElement("span"); tag.className = "cl-tag"; tag.textContent = d.category;
       const title = document.createElement("span"); title.className = "cl-title"; title.textContent = d.title;
       const status = document.createElement("span"); status.className = "cl-status"; status.textContent = (n.spec.warn ? "⚠ " : "") + d.status;
-      if (d.category) n.label.appendChild(tag);
+      const lm = n.spec.labelMode ?? "full";
+      n.holder.classList.toggle("lm-hidden", lm === "hidden");     // a class: the 2D renderer rewrites inline display
+      if (d.category && lm === "full") n.label.appendChild(tag);
       n.label.appendChild(title);
       if (d.status) n.label.appendChild(status);
       n.label.setAttribute("aria-label", n.spec.ariaLabel);
       n.label.classList.toggle("dim", !!n.spec.dim);
       n.label.classList.toggle("warn", !!n.spec.warn);
       n.label.classList.toggle("active", !!n.spec.active);
+      n.label.classList.toggle("related", !!n.spec.related);
     };
 
     let seedCounter = 1;
@@ -436,12 +448,37 @@ export default function CityView(props: Props) {
       (n.warnRing.material as THREE.Material).dispose();
     };
 
+    let extEdges: EdgeSpec[] | null = null;
     const rebuildLinks = () => {
-      const key = [...nodes.values()].map((n) => `${n.spec.id}>${(n.spec.links ?? []).join("|")}@${n.built.group.position.x.toFixed(1)}`).join(";");
+      const key = extEdges ? "E:" + extEdges.map((e) => `${e.from}>${e.to}:${e.style}:${e.color ?? ""}`).join(";") + [...nodes.values()].map((n) => n.built.group.position.x.toFixed(1)).join(",")
+        : [...nodes.values()].map((n) => `${n.spec.id}>${(n.spec.links ?? []).join("|")}@${n.built.group.position.x.toFixed(1)}`).join(";");
       if (key === linkKey) return;
       linkKey = key;
       linkGroup.children.forEach((c) => { (c as THREE.Line).geometry.dispose(); ((c as THREE.Line).material as THREE.Material).dispose(); });
       linkGroup.clear();
+      if (extEdges) {
+        for (const e of extEdges) {
+          const m = nodes.get(e.from), n = nodes.get(e.to);
+          if (!m || !n) continue;
+          const a = m.built.group.position.clone().setY(1.4), b = n.built.group.position.clone().setY(1.4);
+          const mid = a.clone().add(b).multiplyScalar(0.5).setY(4 + a.distanceTo(b) * 0.14);
+          const curve = new THREE.QuadraticBezierCurve3(a, mid, b);
+          let obj: THREE.Object3D;
+          if (e.style === "recorded") {
+            obj = new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.16, 6, false),
+              new THREE.MeshBasicMaterial({ color: e.color ?? 0x22d3ee, transparent: true, opacity: 0.85 }));
+          } else {
+            const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(60)),
+              new THREE.LineDashedMaterial({ color: e.color ?? (e.style === "declared" ? 0xa5b4cf : 0x64748b), transparent: true,
+                opacity: e.style === "declared" ? 0.85 : 0.55, dashSize: e.style === "declared" ? 1.1 : 0.25, gapSize: e.style === "declared" ? 0.7 : 0.7 }));
+            line.computeLineDistances();
+            obj = line;
+          }
+          obj.userData = { from: e.from, to: e.to, curve };
+          linkGroup.add(obj);
+        }
+        return;
+      }
       for (const n of nodes.values()) {
         for (const dep of n.spec.links ?? []) {
           const m = nodes.get(dep);
@@ -630,7 +667,8 @@ export default function CityView(props: Props) {
     };
     document.addEventListener("visibilitychange", onVisibility);
 
-    api.current = { sync, focus, hover: setHover };
+    const setEdges = (e: EdgeSpec[] | null) => { extEdges = e; rebuildLinks(); needs = true; };
+    api.current = { sync, focus, hover: setHover, setEdges };
     // Inspection hook for local verification (camera pose and frame stats); read-only use.
     (el as HTMLDivElement & { __city?: unknown }).__city = { camera, controls, nodes, renderer, sync, rings, pulses, seen };
     // reset view is exposed through a DOM event from the overlay button
@@ -667,6 +705,7 @@ export default function CityView(props: Props) {
 
   // ------------------------------------------------------------------ 2: push records into the scene
   useEffect(() => { api.current?.sync(towers, selectedId, coreColor); }, [towers, selectedId, coreColor, quality]);
+  useEffect(() => { api.current?.setEdges(props.edges ?? null); }, [props.edges, quality, towers]);
   const prevSel = useRef<string | null>(null);
   useEffect(() => {
     if (selectedId && selectedId !== prevSel.current) api.current?.focus(selectedId);
