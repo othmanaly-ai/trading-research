@@ -592,6 +592,17 @@ pipeline -> watch progress -> cancel if needed -> open the report.
 - **Deployment:** frontend-only (static build), so no server restart and no monitoring interruption.
 - **Notes:** `docs/CITY.md`.
 
+## City ambient life and real-event effects (2026-11-05)
+
+- **Decorative layer:** traffic, path and entrance lights, fountain, signage, district clock, window
+  variation and distant light sweeps; the legend labels it decorative.
+- **Real events:** arrival, start/handoff, completion, failure; steady warnings; event ids prevent
+  duplicates (verified with synthetic specs in the browser).
+- **Worker-floor panels:** real workers only.
+- **Effects levels:** Low, Medium (default) and High; reduced motion and the hidden-tab pause respected.
+- **Measured:** 254 draw calls on High vs 232 before; frame time unchanged (8.3 ms median).
+- **Deployment:** frontend-only; no server restart and no monitoring interruption.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

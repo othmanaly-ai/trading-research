@@ -50,6 +50,9 @@ const JOB_COLORS: Record<string, number> = {
   completed: 0x14b8a6, running: 0x22d3ee, queued: 0x64748b, failed: 0xef4444, blocked: 0xef4444, cancelled: 0x64748b,
   skipped: 0x8b5cf6,
 };
+const EVENT_KIND: Record<string, "start" | "complete" | "fail"> = {
+  running: "start", completed: "complete", failed: "fail", blocked: "fail",
+};
 const JOB_LEGEND = [
   { color: 0x14b8a6, label: "Completed (deterministic job)" }, { color: 0x22d3ee, label: "Running" },
   { color: 0x64748b, label: "Queued, cancelled or not started" }, { color: 0xef4444, label: "Failed or blocked" },
@@ -137,7 +140,11 @@ export default function JobsView({ reducedMotion }: { reducedMotion: boolean }) 
       ...(current && j.pipeline_id !== current.id ? [{ cls: "tl-sim", text: "reused earlier result" }] : []),
     ],
     ariaLabel: `Job ${j.worker}: ${j.status}. Show details.`,
-    pulseKey: j.status,
+    pulseKey: "",
+    // one event per recorded job status (id = job id + status): replays and polling never repeat it
+    event: EVENT_KIND[j.status] ? { id: `${j.id}:${j.status}`, kind: EVENT_KIND[j.status] } : undefined,
+    active: j.status === "running",
+    warn: j.status === "failed" || j.status === "blocked",
   // eslint-disable-next-line react-hooks/exhaustive-deps
   })), [current?.id, currentJobs.map((j) => j.id + j.status).join()]);
   const onCityFailure = useCallback((m: string) => { setCityError(m); setView("Table"); }, []);

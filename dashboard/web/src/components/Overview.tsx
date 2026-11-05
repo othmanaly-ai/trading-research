@@ -15,6 +15,7 @@ class Boundary extends Component<{ onError: (m: string) => void; children: React
 // Colours of the district: every one comes from a record (see the tables below for the same facts).
 const C = { amber: 0xf59e0b, slate: 0x64748b, red: 0xef4444, teal: 0x14b8a6, cyan: 0x22d3ee, violet: 0x8b5cf6, deferred: 0x94a3b8, orange: 0xfb923c };
 const FRESH: Record<string, number> = { FRESH: C.amber, STALE: C.orange, DISCONNECTED: C.red, "NO DATA YET": 0xfbbf24 };
+const PIPE_EVENT: Record<string, "start" | "complete" | "fail"> = { running: "start", completed: "complete", failed: "fail" };
 const PIPE: Record<string, number> = { completed: C.teal, running: C.cyan, queued: C.slate, failed: C.red, cancelled: C.slate };
 
 // Operational overview built only from existing read-only endpoints. It adds no polling of any
@@ -24,16 +25,54 @@ interface Mon {
   now_utc: string; desired: string;
   market: { open: boolean; reason: string; next_open_utc: string | null; session_date: string | null; session_close_utc: string | null };
   worker: { pid: number | null; alive: boolean; effective_state: string; heartbeat_age_s: number | null; last_success_utc: string | null;
-            consecutive_failures: number };
+            consecutive_failures: number; bars_inserted: number; last_poll_utc: string | null };
   symbols: { symbol: string; freshness: string; last_bar_end_utc: string | null; source_age_s: number | null }[];
 }
-interface Sess { sessions: { session_date: string; state: string; report_versions: number }[] }
-interface Jobs { pipelines: { id: string; experiment: string; status: string; created_utc: string }[] }
+interface Sess {
+  sessions: { session_date: string; state: string; report_versions: number }[];
+  comparison_health?: { state: string; detail: string; last_success_utc: string | null };
+}
+interface Jobs {
+  pipelines: { id: string; experiment: string; status: string; created_utc: string; job_ids?: string[] }[];
+  jobs: { id: string; pipeline_id: string; worker: string; kind: string; status: string; created_utc: string;
+          started_utc: string | null; finished_utc: string | null }[];
+  workers: { worker: string; kind: string; version: string; depends_on: string[] }[];
+}
 interface Exps {
   experiments: { experiment: string; status: { state: string; closed: boolean; failed_rules: string[] | null } | null }[];
   candidates?: { candidate: string; status: { state: string; performance_evaluated: boolean; blockers: string[]; downloads: string } | null }[];
 }
 interface Rev { available: boolean; state: string; revoked: boolean; month_spent_usd: number }
+
+type Station = { role: string; impl: string; status: string; last: string; tone: string };
+const IMPL: Record<string, string> = {
+  deterministic: "deterministic code", model: "optional model review (disabled unless authorized)", unimplemented: "not implemented",
+};
+const TONE: Record<string, string> = { completed: "ok", running: "active", failed: "danger", blocked: "danger", skipped: "muted" };
+/** Stations for the selected building, built only from records of implemented components. */
+function floorStations(sel: string | null, m: Mon | null, jobs: Jobs | null, sess: Sess | null): Station[] {
+  if (sel === "jobs" && jobs) {
+    const latest = jobs.pipelines[jobs.pipelines.length - 1];
+    return jobs.workers.filter((w) => w.kind !== "unimplemented").map((w) => {
+      // the pipeline's job ids include results reused from earlier pipelines (shown as reused)
+      const j = latest ? jobs.jobs.find((x) => (latest.job_ids ?? []).includes(x.id) && x.worker === w.worker) : undefined;
+      const reused = !!j && j.pipeline_id !== latest?.id;
+      return { role: w.worker, impl: `${IMPL[w.kind] ?? w.kind} · v${w.version}`,
+        status: j ? (w.kind === "model" && j.status === "skipped" ? "DISABLED · skipped" : j.status.toUpperCase()) + (reused ? " (reused)" : "") : "not in latest pipeline",
+        last: etTime(j?.finished_utc ?? j?.started_utc ?? j?.created_utc ?? null), tone: j ? TONE[j.status] ?? "muted" : "muted" };
+    });
+  }
+  if (sel === "worker" && m) {
+    const ch = sess?.comparison_health;
+    return [
+      { role: "Live IEX poller", impl: "deterministic code (worker process)", status: m.worker.alive ? m.worker.effective_state.toUpperCase().replace("_", " ") : "NOT RUNNING",
+        last: etTime(m.worker.last_success_utc), tone: !m.worker.alive ? "danger" : m.worker.effective_state === "running" ? "active" : "muted" },
+      ...(ch ? [{ role: "Delayed-SIP comparison", impl: "deterministic code (worker process)", status: ch.state.toUpperCase(),
+        last: etTime(ch.last_success_utc), tone: ch.state === "ok" ? "ok" : ch.state === "access_failure" || ch.state === "error" ? "danger" : "muted" }] : []),
+    ];
+  }
+  return [];
+}
 
 /** District ring around the command plaza: angle in degrees from straight behind the plaza (−z),
  *  negative to the left. Spans the back and both sides, so nothing stands between camera and centre. */
@@ -47,7 +86,7 @@ function ring(deg: number): [number, number] {
 function districtTowers(m: Mon | null, monError: string | null, jobs: Jobs | null, exps: Exps | null, rev: Rev | null): TowerSpec[] {
   const out: TowerSpec[] = [];
   const line = (cls: string, text: string) => ({ cls, text });
-  out.push({ id: "server", archetype: "command", slot: [0, 0], color: monError ? C.red : C.cyan, category: "CITY SERVER",
+  out.push({ id: "server", archetype: "command", slot: [0, 0], color: monError ? C.red : C.cyan, category: "CITY SERVER", warn: !!monError,
     title: "Command: city server", status: monError ? "NOT RESPONDING" : "RESPONDING", pulseKey: "server",
     lines: [line("tl-name", "City server (dashboard + supervisor + job runner)"), line("tl-status", monError ? `not responding: ${monError}` : "responding"),
       line("tl-inst", "Serves records on 127.0.0.1; supervises the monitoring worker; runs research jobs")],
@@ -57,14 +96,19 @@ function districtTowers(m: Mon | null, monError: string | null, jobs: Jobs | nul
     const wc = !w.alive ? C.red : w.effective_state === "running" ? C.amber : C.slate;
     out.push({ id: "worker", archetype: "operations", slot: ring(-80), color: wc, category: "MARKET-DATA WORKER",
       title: "Monitoring worker", status: w.alive ? w.effective_state.toUpperCase().replace("_", " ") : "NOT RUNNING",
-      dim: w.effective_state !== "running", links: ["server"], pulseKey: `${w.pid}:${w.effective_state}`,
+      dim: w.effective_state !== "running", links: ["server"], pulseKey: "",
+      event: w.bars_inserted > 0 ? { id: `bars:${w.pid}:${w.bars_inserted}`, kind: "arrival" } : undefined,
+      active: w.alive && w.effective_state === "running",
+      warn: (m.desired === "running" && !w.alive) || ["disconnected", "error", "refused"].includes(w.effective_state),
       lines: [line("tl-name", w.alive ? `Worker pid ${w.pid}` : "Worker not running"), line("tl-status", w.effective_state),
         line("tl-inst", `desired ${m.desired} · heartbeat ${ageText(w.heartbeat_age_s)} ago · last success ${etTime(w.last_success_utc)}`)],
       ariaLabel: `Monitoring worker: ${w.effective_state}. Show details.` });
     const feedSlots: [number, number][] = [ring(-52), ring(-27), ring(-2)];
     m.symbols.forEach((sy, i) => out.push({ id: `feed-${sy.symbol}`, archetype: "finned", slot: feedSlots[i] ?? ring(-2 + (i - 2) * 25),
       color: FRESH[sy.freshness] ?? C.slate, category: "IEX LIVE FEED", title: sy.symbol, status: sy.freshness,
-      dim: !(sy.freshness in FRESH), links: ["worker"], pulseKey: sy.last_bar_end_utc ?? "",
+      dim: !(sy.freshness in FRESH), links: ["worker"], pulseKey: "",
+      event: sy.last_bar_end_utc ? { id: `bar:${sy.symbol}:${sy.last_bar_end_utc}`, kind: "arrival" } : undefined,
+      warn: sy.freshness === "STALE" || sy.freshness === "DISCONNECTED",
       lines: [line("tl-name", `${sy.symbol} (IEX, live)`), line("tl-status", sy.freshness),
         line("tl-inst", `latest bar end ${etTime(sy.last_bar_end_utc)} · data age ${ageText(sy.source_age_s)}`)],
       ariaLabel: `${sy.symbol} feed: ${sy.freshness}. Show details.` }));
@@ -73,7 +117,9 @@ function districtTowers(m: Mon | null, monError: string | null, jobs: Jobs | nul
     const latest = jobs.pipelines[jobs.pipelines.length - 1];
     out.push({ id: "jobs", archetype: "terraced", slot: ring(22), color: latest ? PIPE[latest.status] ?? C.slate : C.slate,
       category: "RESEARCH JOBS", title: "Research-job runner", status: latest ? `LATEST ${latest.status.toUpperCase()}` : "NO PIPELINES",
-      dim: !latest || latest.status !== "running", links: ["server", "experiments"], pulseKey: latest ? `${latest.id}:${latest.status}` : "",
+      dim: !latest || latest.status !== "running", links: ["server", "experiments"], pulseKey: "",
+      event: latest && PIPE_EVENT[latest.status] ? { id: `${latest.id}:${latest.status}`, kind: PIPE_EVENT[latest.status] } : undefined,
+      active: latest?.status === "running", warn: latest?.status === "failed",
       lines: [line("tl-name", "Deterministic research jobs"), line("tl-status", latest ? `latest pipeline ${latest.status}` : "none"),
         line("tl-inst", `${jobs.pipelines.length} pipeline(s) on record; latest ${latest ? `${latest.experiment} at ${etTime(latest.created_utc)}` : "—"}`)],
       ariaLabel: `Research-job runner: ${latest?.status ?? "no pipelines"}. Show details.` });
@@ -136,6 +182,7 @@ export default function Overview({ research, openView, reducedMotion = false }: 
     new URLSearchParams(window.location.search).get("3d") === "off" ? "3D district turned off (?3d=off)." : null);
   const onCityFailure = useCallback((msg: string) => setCityError(msg), []);
   const selTower = towers.find((t) => t.id === sel) ?? null;
+  const stations = useMemo(() => floorStations(sel, m ?? null, jobs.data, sess.data), [sel, m, jobs.data, sess.data]);
   const OPEN: Record<string, string> = { worker: "Market monitor", jobs: "Research jobs", experiments: "Research jobs", review: "Research jobs", server: "Market monitor" };
   const openFor = sel ? OPEN[sel] ?? (sel.startsWith("feed-") ? "Market monitor" : sel.startsWith("cand-") ? "Research jobs" : null) : null;
 
@@ -164,6 +211,19 @@ export default function Overview({ research, openView, reducedMotion = false }: 
             <h3>{selTower.category} · {selTower.title} <button type="button" className="small" onClick={() => setSel(null)}>Close</button></h3>
             <p><strong style={{ color: `#${selTower.color.toString(16).padStart(6, "0")}` }}>{selTower.status}</strong></p>
             <ul className="notes">{selTower.lines.map((l, i) => <li key={i}>{l.text}</li>)}</ul>
+            {stations.length > 0 && (<>
+              <h4 className="floor-h">Worker floor · implemented roles only</h4>
+              <div className="floor" role="list">
+                {stations.map((st) => (
+                  <div key={st.role} className={`station st-${st.tone}`} role="listitem">
+                    <div className="st-role">{st.role}</div>
+                    <div className="st-impl">{st.impl}</div>
+                    <div className="st-status">{st.status}</div>
+                    <div className="st-last">last activity {st.last}</div>
+                  </div>))}
+              </div>
+              <p className="small muted">Each station is a software component in this project, not an agent. Statuses come from the records above.</p>
+            </>)}
             {openFor && <button type="button" onClick={() => openView(openFor)}>Open {openFor} for full records</button>}
           </aside>
         )}

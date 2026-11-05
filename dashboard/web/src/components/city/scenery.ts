@@ -34,7 +34,7 @@ function skyDome(): THREE.Mesh {
   return dome;
 }
 
-export interface Scenery { group: THREE.Group; dispose: () => void; }
+export interface Scenery { group: THREE.Group; landmarks: { x: number; z: number; w: number; h: number }[]; dispose: () => void; }
 
 export function buildScenery(kit: Kit, quality: "high" | "low", keepClear: (x: number, z: number) => boolean): Scenery {
   const group = new THREE.Group();
@@ -149,6 +149,10 @@ export function buildScenery(kit: Kit, quality: "high" | "low", keepClear: (x: n
     const pool = Math.hypot(s.x, s.z) < 80 ? NEAR : ALL;
     buckets[pool[(i * 7 + Math.floor(Math.abs(s.x))) % pool.length]].push(s);
   });
+  // the tallest distant towers (decorative light sweeps run on these, never on selectable buildings)
+  const DIMS: [number, number][] = [[4, 11], [6, 18], [4.5, 25], [5, 8], [5, 32], [4.5, 14], [7, 28], [6, 20]];
+  const landmarks = buckets.flatMap((list, i) => list.map((s) => ({ x: s.x, z: s.z, w: DIMS[i][0], h: DIMS[i][1] })))
+    .filter((l) => l.h >= 25 && Math.hypot(l.x, l.z) < 115 && l.z < 0).sort((a, b) => b.h - a.h).slice(0, 3);
   buckets.forEach((list, i) => {
     if (!list.length) return;
     const im = add(new THREE.InstancedMesh(presets[i], kit.facadeDim, list.length));
@@ -171,5 +175,5 @@ export function buildScenery(kit: Kit, quality: "high" | "low", keepClear: (x: n
     p.position.set(x, 4, z);
   }
 
-  return { group, dispose: () => { geos.forEach((g) => g.dispose()); mats.forEach((m) => m.dispose()); texs.forEach((t) => t.dispose()); } };
+  return { group, landmarks, dispose: () => { geos.forEach((g) => g.dispose()); mats.forEach((m) => m.dispose()); texs.forEach((t) => t.dispose()); } };
 }

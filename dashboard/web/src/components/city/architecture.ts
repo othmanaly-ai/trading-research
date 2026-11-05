@@ -14,6 +14,7 @@ export interface Kit {
   roof: THREE.MeshStandardMaterial;
   entrance: THREE.MeshStandardMaterial;    // warm lobby glow (decorative)
   aviation: THREE.MeshBasicMaterial;       // white obstruction lights (decorative, never status)
+  pool: THREE.MeshBasicMaterial;           // entrance light pools (decorative)
   column: THREE.CylinderGeometry;
   textures: THREE.Texture[];
   dispose: () => void;
@@ -32,10 +33,22 @@ export function makeKit(maxAniso: number): Kit {
   const roof = new THREE.MeshStandardMaterial({ color: 0x0f141f, roughness: 0.85, metalness: 0.2 });
   const entrance = new THREE.MeshStandardMaterial({ color: 0x1a1408, emissive: 0xffb866, emissiveIntensity: 0.7 });
   const aviation = new THREE.MeshBasicMaterial({ color: PALETTE.aviation, transparent: true, opacity: 0.9 });
+  const poolCanvas = document.createElement("canvas");
+  poolCanvas.width = poolCanvas.height = 64;
+  const pg = poolCanvas.getContext("2d")!;
+  const grad = pg.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, "rgba(255,190,110,0.9)");
+  grad.addColorStop(0.45, "rgba(255,170,90,0.35)");
+  grad.addColorStop(1, "rgba(255,160,80,0)");
+  pg.fillStyle = grad;
+  pg.fillRect(0, 0, 64, 64);
+  const poolTex = new THREE.CanvasTexture(poolCanvas);
+  poolTex.colorSpace = THREE.SRGBColorSpace;
+  const pool = new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false });
   const column = new THREE.CylinderGeometry(0.16, 0.16, 1, 8);
-  const mats = [facade, facadeDim, glass, structure, podium, roof, entrance, aviation];
-  return { facade, facadeDim, glass, structure, podium, roof, entrance, aviation, column, textures: [t1, t2, t3],
-    dispose: () => { mats.forEach((m) => m.dispose()); [t1, t2, t3].forEach((t) => t.dispose()); column.dispose(); } };
+  const mats = [facade, facadeDim, glass, structure, podium, roof, entrance, aviation, pool];
+  return { facade, facadeDim, glass, structure, podium, roof, entrance, aviation, pool, column, textures: [t1, t2, t3],
+    dispose: () => { mats.forEach((m) => m.dispose()); [t1, t2, t3, poolTex].forEach((t) => t.dispose()); column.dispose(); } };
 }
 
 /** World-space UVs for any box-like geometry, computed from positions and normals (call before
@@ -90,6 +103,9 @@ class Builder {
   }
   podium(w: number, d: number, h: number, columns: number) {
     this.block(w, h, d, this.kit.podium, 0, 0, 0);
+    // warm light pool on the pavement in front of the entrance (decorative)
+    const pool = this.mesh(new THREE.CircleGeometry(Math.min(3, w * 0.3), 24), this.kit.pool, 0, 0.09, d / 2 + 1.6, false);
+    pool.rotation.x = -Math.PI / 2;
     // recessed lobby with a warm entrance and a canopy
     this.mesh(new THREE.BoxGeometry(Math.min(4, w * 0.4), h * 0.7, 0.3), this.kit.entrance, 0, h * 0.35, d / 2 + 0.05, false);
     this.mesh(new THREE.BoxGeometry(Math.min(5, w * 0.5), 0.15, 1.2), this.kit.structure, 0, h * 0.78, d / 2 + 0.6, false);

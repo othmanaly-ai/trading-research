@@ -9,6 +9,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { ARCHETYPES, ARCHETYPE_LABEL, PALETTE, type Archetype } from "./city/palette";
 import { buildArchetype, makeKit, type Built, type Kit } from "./city/architecture";
 import { buildScenery, PLAZA_R, type Scenery } from "./city/scenery";
+import { buildAmbient, type Ambient, type Effects } from "./city/ambient";
 
 // The city district. Four layers, kept separate:
 //   1. static architecture (scenery + building geometry) — built once, never rebuilt on status;
@@ -31,6 +32,21 @@ export interface TowerSpec {
   dim?: boolean;                         // disabled / deferred / idle: low accent intensity
   links?: string[];                      // ids this building really depends on (drawn, pulsed on events)
   slot?: [number, number];               // explicit x,z (district layout); otherwise arranged on the arc
+  /** Latest recorded event for this building. Its id must be stable for the same record, so polling
+   *  and reconnects never replay it; a new id plays its effect once. */
+  event?: { id: string; kind: "arrival" | "start" | "complete" | "fail" };
+  active?: boolean;                      // work in progress per the records (steady accent; gentle breathing if motion allowed)
+  warn?: boolean;                        // failure or stale data per the records: persistent warning ring and ⚠
+}
+
+// Event ids already shown, per scene type, kept across remounts so a reconnect, a view change or
+// a polling repeat never animates the same recorded event twice (bounded).
+const SEEN = new Map<string, Set<string>>();
+function seenSet(key: string): Set<string> {
+  let set = SEEN.get(key);
+  if (!set) { set = new Set(); SEEN.set(key, set); }
+  if (set.size > 2000) { const keep = [...set].slice(-1000); set.clear(); keep.forEach((k) => set!.add(k)); }
+  return set;
 }
 
 export interface CityMode { label: string; detail?: string; tone: "demo" | "real" }
@@ -62,9 +78,12 @@ const DEFAULT_LEGEND = [
   { color: PALETTE.deferred, label: "Deferred / paused" },
 ];
 
-type Quality = "high" | "low";
+type Quality = Effects;
 function savedQuality(): Quality {
-  try { return localStorage.getItem("city-quality") === "low" ? "low" : "high"; } catch { return "high"; }
+  try {
+    const v = localStorage.getItem("city-quality");
+    return v === "low" || v === "medium" || v === "high" ? v : "medium";
+  } catch { return "medium"; }
 }
 
 interface Node {
@@ -78,6 +97,7 @@ interface Node {
   leader: HTMLDivElement;
   pulse: number;
   lastKey: string;
+  warnRing: THREE.Mesh;
 }
 
 const HERO = 1.3;                       // scale of selectable buildings relative to the scenery
@@ -126,13 +146,13 @@ export default function CityView(props: Props) {
     const el = host.current!;
     let renderer: THREE.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: quality === "high", powerPreference: "high-performance" });
+      renderer = new THREE.WebGLRenderer({ antialias: quality !== "low", powerPreference: "high-performance" });
       if (!renderer.getContext()) throw new Error("no WebGL context");
     } catch (e) {
       onFailure(`3D view unavailable (${(e as Error).message}). Use the Table view.`);
       return;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality === "high" ? 1.75 : 1));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality === "high" ? 1.75 : quality === "medium" ? 1.25 : 1));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.3;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -143,7 +163,7 @@ export default function CityView(props: Props) {
     el.appendChild(labels.domElement);
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(PALETTE.fog, quality === "high" ? 0.0095 : 0.011);
+    scene.fog = new THREE.FogExp2(PALETTE.fog, quality === "low" ? 0.011 : 0.0092);
     const camera = new THREE.PerspectiveCamera(42, 1, 0.5, 600);
     const HOME_TARGET = new THREE.Vector3(0, 5, -14);
     const HOME_DIR = new THREE.Vector3(0, 0.62, 1).normalize();     // ~32° above the street: skyline with a readable plan
@@ -158,8 +178,11 @@ export default function CityView(props: Props) {
       if (r < 48 && z < 10) return false;                                  // the selectable arc and its gaps
       return true;
     };
-    const scenery: Scenery = buildScenery(kit, quality, keepClear);
+    const scenery: Scenery = buildScenery(kit, quality === "low" ? "low" : "high", keepClear);
     scene.add(scenery.group);
+    // Decorative ambient layer (independent of application state; see the legend).
+    const ambient: Ambient = buildAmbient(quality, { landmarks: scenery.landmarks, facade: kit.textures, fountain: variant !== "district" });
+    scene.add(ambient.group);
 
     // Plaza status ring (meaning given by coreLabel in the legend; hidden when the core is a building).
     const coreMat = new THREE.MeshBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -194,6 +217,10 @@ export default function CityView(props: Props) {
     scene.add(linkGroup);
     let linkKey = "";
     const pulses: { mesh: THREE.Mesh; curve: THREE.QuadraticBezierCurve3; t: number }[] = [];
+    // expanding event rings (one shared geometry, a material per ring while it plays)
+    const ringGeo = new THREE.RingGeometry(1, 1.12, 64);
+    const rings: { mesh: THREE.Mesh; t: number; dur: number; r0: number }[] = [];
+    const seen = seenSet(variant);
     const pulseGeo = new THREE.SphereGeometry(0.35, 12, 8);
     let selected: string | null = null, hovered: string | null = null;
     let needs = true;
@@ -329,7 +356,10 @@ export default function CityView(props: Props) {
     const restyle = (n: Node) => {
       const isSel = n.spec.id === selected, isHover = n.spec.id === hovered;
       n.accent.emissive.setHex(n.spec.color);
-      n.accent.emissiveIntensity = accentFor(n.spec, isSel, isHover) + n.pulse * 1.6;
+      const breath = n.spec.active ? (motion.current ? 0.35 : 0.2 + 0.25 * (0.5 + 0.5 * Math.sin(performance.now() / 650))) : 0;
+      n.accent.emissiveIntensity = accentFor(n.spec, isSel, isHover) + breath + n.pulse * 1.6;
+      n.warnRing.visible = !!n.spec.warn;
+      (n.warnRing.material as THREE.MeshBasicMaterial).color.setHex(n.spec.color);
       const hm = n.halo.material as THREE.MeshBasicMaterial;
       hm.color.setHex(n.spec.color);
       hm.opacity = isSel ? 0.9 : isHover ? 0.5 : n.spec.dim ? 0.12 : 0.22;
@@ -344,12 +374,14 @@ export default function CityView(props: Props) {
       n.holder.style.setProperty("--accent", hex(n.spec.color));
       const tag = document.createElement("span"); tag.className = "cl-tag"; tag.textContent = d.category;
       const title = document.createElement("span"); title.className = "cl-title"; title.textContent = d.title;
-      const status = document.createElement("span"); status.className = "cl-status"; status.textContent = d.status;
+      const status = document.createElement("span"); status.className = "cl-status"; status.textContent = (n.spec.warn ? "⚠ " : "") + d.status;
       if (d.category) n.label.appendChild(tag);
       n.label.appendChild(title);
       if (d.status) n.label.appendChild(status);
       n.label.setAttribute("aria-label", n.spec.ariaLabel);
       n.label.classList.toggle("dim", !!n.spec.dim);
+      n.label.classList.toggle("warn", !!n.spec.warn);
+      n.label.classList.toggle("active", !!n.spec.active);
     };
 
     let seedCounter = 1;
@@ -366,6 +398,12 @@ export default function CityView(props: Props) {
       halo.position.y = 0.1;
       halo.visible = false;
       built.group.add(halo);
+      const warnRing = new THREE.Mesh(new THREE.RingGeometry(built.footprint + 1.0, built.footprint + 1.9, 64),
+        new THREE.MeshBasicMaterial({ color: spec.color, transparent: true, opacity: 0.85, depthWrite: false }));
+      warnRing.rotation.x = -Math.PI / 2;
+      warnRing.position.y = 0.11;
+      warnRing.visible = false;
+      built.group.add(warnRing);
       const holder = document.createElement("div");
       holder.className = "city-label-holder";
       const label = document.createElement("button");
@@ -383,7 +421,9 @@ export default function CityView(props: Props) {
       obj.position.set(0, built.height + 0.6, 0);
       built.group.add(obj);
       scene.add(built.group);
-      return { spec, arch, built, accent, halo, holder, label, leader, pulse: 0, lastKey: spec.pulseKey };
+      const key = spec.event?.id ?? spec.pulseKey;
+      seen.add(`${spec.id}|${key}`);            // what is current at creation is history: never replayed
+      return { spec, arch, built, accent, halo, holder, label, leader, pulse: 0, lastKey: key, warnRing };
     };
     const destroy = (n: Node) => {
       n.holder.remove();
@@ -392,6 +432,8 @@ export default function CityView(props: Props) {
       n.accent.dispose();
       n.halo.geometry.dispose();
       (n.halo.material as THREE.Material).dispose();
+      n.warnRing.geometry.dispose();
+      (n.warnRing.material as THREE.Material).dispose();
     };
 
     const rebuildLinks = () => {
@@ -415,16 +457,36 @@ export default function CityView(props: Props) {
       }
     };
 
-    const firePulse = (id: string) => {
+    const firePulse = (id: string, dir: "out" | "in" | "both" = "both") => {
       if (motion.current) return;
       for (const c of linkGroup.children) {
         const u = c.userData as { from: string; to: string; curve: THREE.QuadraticBezierCurve3 };
-        if (u.from !== id && u.to !== id) continue;
+        if (!((dir !== "in" && u.from === id) || (dir !== "out" && u.to === id))) continue;
         const color = nodes.get(u.to)?.spec.color ?? 0xffffff;
         const mesh = new THREE.Mesh(pulseGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 }));
         scene.add(mesh);
         pulses.push({ mesh, curve: u.curve, t: 0 });
       }
+    };
+
+    const ring = (n: Node, color: number, dur: number) => {
+      if (motion.current) return;
+      const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9,
+        blending: THREE.AdditiveBlending, depthWrite: false }));
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.copy(n.built.group.position).setY(0.16);
+      scene.add(mesh);
+      rings.push({ mesh, t: 0, dur, r0: n.built.footprint * HERO });
+    };
+    // Effects for recorded events only. Each plays once per event id; motion-free users get the
+    // same information from the label and the steady state.
+    const playEvent = (n: Node, kind: string) => {
+      if (motion.current) return;
+      if (kind === "arrival") { n.pulse = 0.8; ring(n, n.spec.color, 1.1); firePulse(n.spec.id, "out"); }
+      else if (kind === "start") { n.pulse = 0.6; firePulse(n.spec.id, "in"); }          // handoff from real dependencies
+      else if (kind === "complete") { n.pulse = 1; ring(n, n.spec.color, 1.4); }
+      else if (kind === "fail") { n.pulse = 0.5; ring(n, n.spec.color, 1.8); }
+      else { n.pulse = 1; firePulse(n.spec.id); }                                          // legacy pulseKey change
     };
 
     const sync = (list: TowerSpec[], sel: string | null, core: number | null) => {
@@ -439,11 +501,13 @@ export default function CityView(props: Props) {
         const p = slotFor(i, list.length, spec);
         n.built.group.position.copy(p);
         n.built.group.rotation.y = spec.slot ? 0 : Math.atan2(-p.x, 24 - p.z) * 0.5;   // turn gently toward the camera
-        if (spec.pulseKey !== n.lastKey) {
-          n.lastKey = spec.pulseKey;
-          if (!motion.current) { n.pulse = 1; firePulse(spec.id); }
-        }
+        const key = spec.event?.id ?? spec.pulseKey;
         n.spec = spec;
+        if (key !== n.lastKey) {
+          n.lastKey = key;
+          const tag = `${spec.id}|${key}`;
+          if (!seen.has(tag)) { seen.add(tag); playEvent(n, spec.event?.kind ?? "pulse"); }
+        }
         fillLabel(n);
       });
       selected = sel;
@@ -525,6 +589,15 @@ export default function CityView(props: Props) {
       for (const n of nodes.values()) {
         if (n.pulse > 0) { n.pulse = Math.max(0, n.pulse - dt / 1.2); restyle(n); animating = true; }
       }
+      for (let i = rings.length - 1; i >= 0; i--) {
+        const rg = rings[i];
+        rg.t += dt / rg.dur;
+        if (rg.t >= 1) { scene.remove(rg.mesh); (rg.mesh.material as THREE.Material).dispose(); rings.splice(i, 1); continue; }
+        rg.mesh.scale.setScalar(rg.r0 * (1 + rg.t * 1.4));
+        (rg.mesh.material as THREE.MeshBasicMaterial).opacity = 0.9 * (1 - rg.t);
+        animating = true;
+      }
+      if (!motion.current) for (const n of nodes.values()) if (n.spec.active) { restyle(n); animating = true; }
       for (let i = pulses.length - 1; i >= 0; i--) {
         const p = pulses[i];
         p.t += dt / 1.4;
@@ -532,11 +605,13 @@ export default function CityView(props: Props) {
         p.mesh.position.copy(p.curve.getPoint(p.t));
         animating = true;
       }
-      // Decorative aviation lights only need ~30 frames/s; real animation renders every frame.
+      // Decorative layer at most ~30 frames/s (Medium/High); real event effects render every frame.
       let ambientDue = false;
-      if (quality === "high" && !motion.current && now - lastAmbient > 33) {
-        kit.aviation.opacity = 0.35 + 0.6 * (0.5 + 0.5 * Math.sin(now / 900));   // slow, decorative, white
-        ambientDue = true;
+      if (now - lastAmbient > 33) {
+        const adt = Math.min(0.1, (now - lastAmbient) / 1000);
+        const moving = !motion.current && quality !== "low";
+        if (moving) kit.aviation.opacity = 0.35 + 0.6 * (0.5 + 0.5 * Math.sin(now / 900));   // slow, decorative, white
+        ambientDue = ambient.update(adt, now, moving) || moving;
         lastAmbient = now;
       }
       if (animating || needs || ambientDue) { render(); needs = false; frames++; }
@@ -547,16 +622,24 @@ export default function CityView(props: Props) {
       }
     };
     frame = requestAnimationFrame(loop);
+    // Pause all rendering while the tab is hidden (backend monitoring is unaffected: it runs in
+    // the worker process, and the page's own polling is separate from this loop).
+    const onVisibility = () => {
+      if (document.hidden) { cancelAnimationFrame(frame); frame = 0; }
+      else if (!frame) { last = performance.now(); needs = true; frame = requestAnimationFrame(loop); }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
 
     api.current = { sync, focus, hover: setHover };
     // Inspection hook for local verification (camera pose and frame stats); read-only use.
-    (el as HTMLDivElement & { __city?: unknown }).__city = { camera, controls, nodes, renderer };
+    (el as HTMLDivElement & { __city?: unknown }).__city = { camera, controls, nodes, renderer, sync, rings, pulses, seen };
     // reset view is exposed through a DOM event from the overlay button
     const onReset = () => goHome();
     el.addEventListener("city-reset", onReset);
 
     return () => {
       cancelAnimationFrame(frame);
+      document.removeEventListener("visibilitychange", onVisibility);
       ro.disconnect();
       el.removeEventListener("city-reset", onReset);
       ld.removeEventListener("pointerdown", onDown);
@@ -567,6 +650,9 @@ export default function CityView(props: Props) {
       linkGroup.children.forEach((c) => { (c as THREE.Line).geometry.dispose(); ((c as THREE.Line).material as THREE.Material).dispose(); });
       pulses.forEach((p) => (p.mesh.material as THREE.Material).dispose());
       pulseGeo.dispose();
+      rings.forEach((rg) => (rg.mesh.material as THREE.Material).dispose());
+      ringGeo.dispose();
+      ambient.dispose();
       coreRing.geometry.dispose();
       coreMat.dispose();
       scenery.dispose();
@@ -577,7 +663,7 @@ export default function CityView(props: Props) {
       el.replaceChildren();
       api.current = null;
     };
-  }, [onFailure, quality]);
+  }, [onFailure, quality, variant]);
 
   // ------------------------------------------------------------------ 2: push records into the scene
   useEffect(() => { api.current?.sync(towers, selectedId, coreColor); }, [towers, selectedId, coreColor, quality]);
@@ -604,7 +690,7 @@ export default function CityView(props: Props) {
             try { localStorage.setItem("city-quality", q); } catch { /* storage unavailable: keep in memory */ }
             setQuality(q);
           }}>
-            <option value="high">High</option><option value="low">Low</option>
+            <option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
           </select>
         </label>
         <button type="button" aria-expanded={showList} onClick={() => setShowList((s) => !s)}>Buildings</button>
@@ -627,8 +713,11 @@ export default function CityView(props: Props) {
           {props.coreLabel && <div><span className="dot ring" />Plaza ring: {props.coreLabel}</div>}
           <div className="lg-h">Architecture (decorative)</div>
           <div className="small">{archetypes.map((a) => ARCHETYPE_LABEL[a]).join(" · ")}. Shape groups components; it carries no status.</div>
-          <div className="small">Unlabelled towers, window lights, street lamps and white rooftop lights are scenery. They do not indicate market activity or work.</div>
-          {!reducedMotion && <div className="small">Moving dots run along a real dependency only when a recorded event occurs.</div>}
+          <div className="lg-h">Real events (from records)</div>
+          <div className="small">Expanding ring at a building: a recorded event (new market data, a job completing or failing). Dot travelling along a line: a handoff along a real dependency. Gently brightening accent: work in progress. Steady outer ring and ⚠: failure or stale data (stays until the record changes). Each event plays once.</div>
+          <div className="lg-h">Decorative (no data)</div>
+          <div className="small">Traffic, street and path lights, entrance light pools, fountain, signage, district clock, window-light changes, light sweeps on distant towers, white rooftop lights and unlabelled towers. They are not agents and do not indicate market activity or work.</div>
+          {reducedMotion && <div className="small">Reduced motion: traffic, sweeps, pulses and camera moves are off; status is unchanged.</div>}
         </div>
       )}
       {stats && <div className="city-stats" aria-hidden="true">{stats.calls} draw calls · {Math.round(stats.tris / 1000)}k triangles · {stats.fps} rendered frames/s · effects {quality}</div>}

@@ -95,7 +95,11 @@ export default function MonitorView({ reducedMotion }: { reducedMotion: boolean 
         { cls: "tl-status", text: w.alive ? `RUNNING · pid ${w.pid}` : "NOT RUNNING" },
         { cls: "tl-inst", text: `${w.effective_state.replace("_", " ")} · beat ${age(w.heartbeat_age_s)}` },
       ],
-      ariaLabel: `Monitoring worker: ${w.effective_state}. Show details.`, pulseKey: `${w.polls}:${w.effective_state}`,
+      ariaLabel: `Monitoring worker: ${w.effective_state}. Show details.`, pulseKey: "",
+      // new bars stored by this worker run = a market-data arrival (none while the market is closed)
+      event: w.bars_inserted > 0 ? { id: `bars:${w.pid}:${w.bars_inserted}`, kind: "arrival" } : undefined,
+      active: w.alive && w.effective_state === "running",
+      warn: (data.desired === "running" && !w.alive) || ["disconnected", "error", "refused"].includes(w.effective_state),
     };
     return [workerTower, ...data.symbols.map((r) => ({
       id: r.symbol, color: FRESH_COLORS[r.freshness] ?? 0x64748b,
@@ -108,7 +112,9 @@ export default function MonitorView({ reducedMotion }: { reducedMotion: boolean 
         { cls: "tl-inst", text: r.last_bar_end_utc ? `bar end ${etTime(r.last_bar_end_utc, false)}` : "no bar yet" },
         { cls: "tl-inst", text: `data age ${ageText(r.source_age_s)}` },
       ],
-      ariaLabel: `${r.symbol} ${r.feed}: ${r.freshness}. Show details.`, pulseKey: r.last_bar_start_utc ?? "",
+      ariaLabel: `${r.symbol} ${r.feed}: ${r.freshness}. Show details.`, pulseKey: "",
+      event: r.last_bar_start_utc ? { id: `bar:${r.symbol}:${r.last_bar_start_utc}`, kind: "arrival" as const } : undefined,
+      warn: r.freshness === "STALE" || r.freshness === "DISCONNECTED",
     }))];
   }, [data]);
 
