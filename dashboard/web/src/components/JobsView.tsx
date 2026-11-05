@@ -44,9 +44,19 @@ interface Preview {
 }
 
 const KIND_LABEL: Record<string, string> = { deterministic: "deterministic code", model: "OPTIONAL model review (disabled unless authorized)", unimplemented: "not implemented" };
+// Status accents: teal/cyan = deterministic research software; red = failed or interrupted;
+// violet = optional model review (disabled); slate = idle, cancelled or not started.
 const JOB_COLORS: Record<string, number> = {
-  completed: 0x22c55e, running: 0x22d3ee, queued: 0x818cf8, failed: 0xef4444, blocked: 0xf59e0b, cancelled: 0x64748b,
-  skipped: 0x475569,
+  completed: 0x14b8a6, running: 0x22d3ee, queued: 0x64748b, failed: 0xef4444, blocked: 0xef4444, cancelled: 0x64748b,
+  skipped: 0x8b5cf6,
+};
+const JOB_LEGEND = [
+  { color: 0x14b8a6, label: "Completed (deterministic job)" }, { color: 0x22d3ee, label: "Running" },
+  { color: 0x64748b, label: "Queued, cancelled or not started" }, { color: 0xef4444, label: "Failed or blocked" },
+  { color: 0x8b5cf6, label: "Optional model review: DISABLED (skipped)" },
+];
+const JOB_ARCH: Record<string, "terraced" | "finned" | "paired" | "twisted" | "operations"> = {
+  model: "twisted", deterministic: "terraced", unimplemented: "finned",
 };
 const ACTIVE = new Set(["queued", "running"]);
 
@@ -107,8 +117,18 @@ export default function JobsView({ reducedMotion }: { reducedMotion: boolean }) 
   const job = jobId ? byId[jobId] ?? null : null;
   const reportJob = currentJobs.find((j) => j.worker === "report");
 
-  const towers = useMemo<TowerSpec[]>(() => currentJobs.map((j) => ({
+  const towers = useMemo<TowerSpec[]>(() => currentJobs.map((j, i) => ({
     id: j.id, color: JOB_COLORS[j.status] ?? 0x64748b,
+    // ingest/report get the broader operations building; model review the (disabled) twisted tower
+    archetype: j.kind === "model" ? "twisted" : j.worker === "ingest" ? "operations" : j.worker === "report" ? "paired"
+      : (["terraced", "finned"] as const)[i % 2] ?? JOB_ARCH[j.kind],
+    category: j.kind === "model" ? "OPTIONAL REVIEW" : "RESEARCH JOB",
+    title: j.worker,
+    status: j.kind === "model" && j.status === "skipped" ? "DISABLED · SKIPPED" : j.status.toUpperCase(),
+    dim: j.kind === "model" || j.status === "cancelled" || j.status === "queued",
+    // draw a link only where the job really depends on another job in this pipeline
+    links: (data?.workers.find((w) => w.worker === j.worker)?.depends_on ?? [])
+      .map((dep) => currentJobs.find((x) => x.worker === dep)?.id).filter((x): x is string => !!x),
     lines: [
       { cls: "tl-tag", text: "REAL JOB" },
       { cls: "tl-name", text: j.worker },
@@ -268,6 +288,7 @@ export default function JobsView({ reducedMotion }: { reducedMotion: boolean }) 
           <Boundary onError={onCityFailure}>
             <Suspense fallback={<p className="empty">Loading 3D view…</p>}>
               <CityView variant="jobs" towers={towers} coreColor={JOB_COLORS[current.status] ?? 0x334155}
+                        legend={JOB_LEGEND} coreLabel={`this pipeline's status (${current.status})`}
                         selectedId={jobId} onSelect={setJobId} reducedMotion={reducedMotion} onFailure={onCityFailure} />
             </Suspense>
           </Boundary>

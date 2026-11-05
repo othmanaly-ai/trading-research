@@ -574,6 +574,24 @@ pipeline -> watch progress -> cancel if needed -> open the report.
   was down 2026-11-05 00:07:30 to 00:07:59 UTC, with the market closed and no live minutes
   affected. The supervisor relaunched it (pid 27136).
 
+## City redesign: architectural district (2026-11-05)
+
+- **Done:**
+  - CityView rewritten as a procedural night district: seven building types, instanced scenery,
+    plaza, ring road, groves, lamps, fog, sky glow, and bloom on High
+  - the Overview gains a district of the project's real components
+  - the job, monitor and demo cities use the same renderer
+  - status accents, labels, halos and pulses come only from records; architecture is decorative
+- **Verified in the browser:**
+  - labels: no overlaps at the default camera, after Reset, or at 375 px (measured)
+  - selection: the side panel, halo and camera move work; hover works on labels and meshes
+  - Low and reduced motion render on demand; the `?3d=off` table fallback works
+  - no console errors
+  - geometry count stays stable across status polls
+- **Performance:** 232 draw calls and 22k triangles; interaction frames 8.4 ms median.
+- **Deployment:** frontend-only (static build), so no server restart and no monitoring interruption.
+- **Notes:** `docs/CITY.md`.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

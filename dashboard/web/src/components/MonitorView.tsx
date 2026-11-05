@@ -30,13 +30,19 @@ interface MonitorData {
   recent_bars: Record<string, Bar[]>; controls: Record<string, string>;
 }
 
+// Amber = market-data monitoring with fresh data; slate = closed, stopped or paused (never lit as
+// if the market were open); orange = stale; red = disconnected, refused or not running.
 const FRESH_COLORS: Record<string, number> = {
-  FRESH: 0x22c55e, STALE: 0xf59e0b, STOPPED: 0x334155, "MARKET CLOSED": 0x64748b, DISCONNECTED: 0xef4444, PAUSED: 0x818cf8, "NO DATA YET": 0x0ea5e9,
+  FRESH: 0xf59e0b, STALE: 0xfb923c, STOPPED: 0x475569, "MARKET CLOSED": 0x64748b, DISCONNECTED: 0xef4444, PAUSED: 0x64748b, "NO DATA YET": 0xfbbf24,
 };
 const WORKER_COLORS: Record<string, number> = {
-  running: 0x22c55e, market_closed: 0x64748b, paused: 0x818cf8, disconnected: 0xef4444, error: 0xef4444,
-  refused: 0xef4444, starting: 0x0ea5e9, stopped: 0x334155, "not running": 0x7f1d1d,
+  running: 0xf59e0b, market_closed: 0x64748b, paused: 0x64748b, disconnected: 0xef4444, error: 0xef4444,
+  refused: 0xef4444, starting: 0xfbbf24, stopped: 0x475569, "not running": 0xef4444,
 };
+const MON_LEGEND = [
+  { color: 0xf59e0b, label: "Market data: running / fresh" }, { color: 0xfb923c, label: "Stale data" },
+  { color: 0x64748b, label: "Market closed, paused or stopped" }, { color: 0xef4444, label: "Disconnected, refused or not running" },
+];
 
 function et(ts: string | null): string {
   if (!ts) return "—";
@@ -81,6 +87,9 @@ export default function MonitorView({ reducedMotion }: { reducedMotion: boolean 
     const w = data.worker;
     const workerTower: TowerSpec = {
       id: "worker", color: WORKER_COLORS[w.effective_state] ?? 0x334155,
+      archetype: "operations", category: "MARKET-DATA WORKER", title: w.alive ? `Worker pid ${w.pid}` : "Worker",
+      status: w.alive ? w.effective_state.toUpperCase().replace("_", " ") : "NOT RUNNING",
+      dim: w.effective_state !== "running",
       lines: [
         { cls: "tl-tag mon-tag", text: "WORKER" },
         { cls: "tl-status", text: w.alive ? `RUNNING · pid ${w.pid}` : "NOT RUNNING" },
@@ -90,6 +99,9 @@ export default function MonitorView({ reducedMotion }: { reducedMotion: boolean 
     };
     return [workerTower, ...data.symbols.map((r) => ({
       id: r.symbol, color: FRESH_COLORS[r.freshness] ?? 0x64748b,
+      archetype: "finned" as const, category: `${r.feed.toUpperCase()} LIVE FEED`, title: r.symbol, status: r.freshness,
+      dim: r.freshness !== "FRESH" && r.freshness !== "STALE",
+      links: ["worker"],                                 // the worker fetches every symbol
       lines: [
         { cls: "tl-tag mon-tag", text: `${r.symbol} · ${r.feed.toUpperCase()} live` },
         { cls: "tl-status", text: r.freshness },
@@ -170,6 +182,8 @@ export default function MonitorView({ reducedMotion }: { reducedMotion: boolean 
         <Boundary onError={onCityFailure}>
           <Suspense fallback={<p className="empty">Loading 3D view…</p>}>
             <CityView variant="monitor" towers={towers} coreColor={WORKER_COLORS[w.effective_state] ?? 0x334155}
+                      legend={MON_LEGEND} coreLabel="worker state"
+                      mode={{ label: "REAL MARKET MONITOR", detail: `read-only · market ${data.market.open ? "OPEN" : "CLOSED"}`, tone: "real" }}
                       selectedId={selected} onSelect={setSelected} reducedMotion={reducedMotion} onFailure={onCityFailure} />
           </Suspense>
         </Boundary>

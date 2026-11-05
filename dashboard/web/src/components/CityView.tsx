@@ -1,38 +1,39 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { CSS2DObject, CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { ARCHETYPES, ARCHETYPE_LABEL, PALETTE, type Archetype } from "./city/palette";
+import { buildArchetype, makeKit, type Built, type Kit } from "./city/architecture";
+import { buildScenery, PLAZA_R, type Scenery } from "./city/scenery";
 
-// One 3D scene, two uses: DEMO strategy towers (boxes, purple) and REAL research-job towers
-// (cylinders, teal). Every tower is driven by a TowerSpec built from records; the label always
-// spells the status out, so color is never the only signal.
+// The city district. Four layers, kept separate:
+//   1. static architecture (scenery + building geometry) — built once, never rebuilt on status;
+//   2. application-state mapping (accent colour, beacon, halo, label text) — from TowerSpec records;
+//   3. interaction and labels (picking, hover, selection, camera, compact labels with leaders);
+//   4. optional effects (bloom, decorative aviation lights, event pulses) — off in Low / reduced motion.
+// Every operational colour, badge and pulse comes from a TowerSpec built from real records by the
+// calling view. Architecture and window lights are decorative and carry no status.
 
 export interface TowerSpec {
   id: string;
-  color: number;
-  lines: { cls: string; text: string }[];
+  color: number;                         // status accent from records
+  lines: { cls: string; text: string }[]; // full text (kept for the accessible table/list)
   ariaLabel: string;
-  pulseKey: string;            // pulses when this changes (a real event: a fill, a job state change)
+  pulseKey: string;                      // changes only on a real recorded event
+  archetype?: Archetype;
+  category?: string;                     // short tag, e.g. "MARKET DATA"
+  title?: string;
+  status?: string;
+  dim?: boolean;                         // disabled / deferred / idle: low accent intensity
+  links?: string[];                      // ids this building really depends on (drawn, pulsed on events)
+  slot?: [number, number];               // explicit x,z (district layout); otherwise arranged on the arc
 }
 
-const VARIANTS = {
-  strategy: { clear: 0x0b0820, grid: [0x7c3aed, 0x312e81], shape: "box" as const, labelClass: "tower-label" },
-  jobs: { clear: 0x041a1f, grid: [0x0e7490, 0x134e4a], shape: "cylinder" as const, labelClass: "tower-label job-label" },
-  monitor: { clear: 0x160f04, grid: [0xb45309, 0x451a03], shape: "octagon" as const, labelClass: "tower-label mon-label" },
-};
-
-const PER_ROW = 6;
-const SPACING = 9.5;
-
-interface Tower {
-  mesh: THREE.Mesh;
-  material: THREE.MeshStandardMaterial;
-  edges: THREE.LineBasicMaterial;
-  label: HTMLButtonElement;
-  holder: HTMLDivElement;      // positioned by CSS2DRenderer; the label inside it can be offset freely
-  pulse: number;
-  lastKey: string;
-}
+export interface CityMode { label: string; detail?: string; tone: "demo" | "real" }
 
 interface Props {
   towers: TowerSpec[];
@@ -41,236 +42,596 @@ interface Props {
   onSelect: (id: string) => void;
   reducedMotion: boolean;
   onFailure: (reason: string) => void;
-  variant?: keyof typeof VARIANTS;
+  variant?: "strategy" | "jobs" | "monitor" | "district";
+  mode?: CityMode;
+  coreLabel?: string;                    // what the plaza ring colour means (if shown)
+  legend?: { color: number; label: string }[];
 }
 
-function fillLabel(el: HTMLButtonElement, spec: TowerSpec, selected: boolean, labelClass: string) {
-  el.replaceChildren();
-  for (const l of spec.lines) {
-    const d = document.createElement("div");
-    d.className = l.cls;
-    d.textContent = l.text;
-    el.appendChild(d);
-  }
-  el.className = `${labelClass}${selected ? " selected" : ""}`;
-  el.setAttribute("aria-pressed", String(selected));
-  el.setAttribute("aria-label", spec.ariaLabel);
+const DEFAULT_MODE: Record<string, CityMode> = {
+  strategy: { label: "DEMO REPLAY", detail: "synthetic data · simulated outcomes · not trading", tone: "demo" },
+  jobs: { label: "REAL RESEARCH JOBS", detail: "deterministic software over saved artifacts", tone: "real" },
+  monitor: { label: "REAL MARKET MONITOR", detail: "read-only market data", tone: "real" },
+  district: { label: "REAL RECORDS", detail: "read-only status of this project's components", tone: "real" },
+};
+const DEFAULT_LEGEND = [
+  { color: PALETTE.amber, label: "Market-data monitoring" },
+  { color: PALETTE.teal, label: "Deterministic research jobs" },
+  { color: PALETTE.violet, label: "Optional model review (disabled)" },
+  { color: PALETTE.red, label: "Failed or interrupted" },
+  { color: PALETTE.deferred, label: "Deferred / paused" },
+];
+
+type Quality = "high" | "low";
+function savedQuality(): Quality {
+  try { return localStorage.getItem("city-quality") === "low" ? "low" : "high"; } catch { return "high"; }
 }
 
-export default function CityView({ towers, coreColor, selectedId, onSelect, reducedMotion, onFailure,
-  variant = "strategy" }: Props) {
+interface Node {
+  spec: TowerSpec;
+  arch: Archetype;
+  built: Built;
+  accent: THREE.MeshStandardMaterial;
+  halo: THREE.Mesh;
+  holder: HTMLDivElement;
+  label: HTMLButtonElement;
+  leader: HTMLDivElement;
+  pulse: number;
+  lastKey: string;
+}
+
+const HERO = 1.3;                       // scale of selectable buildings relative to the scenery
+function hex(c: number) { return `#${c.toString(16).padStart(6, "0")}`; }
+function derived(spec: TowerSpec) {
+  const pick = (k: string) => spec.lines.find((l) => l.cls.includes(k))?.text;
+  return {
+    title: spec.title ?? pick("tl-name") ?? spec.lines[0]?.text ?? spec.id,
+    status: spec.status ?? pick("tl-status") ?? "",
+    category: spec.category ?? pick("tl-tag") ?? "",
+  };
+}
+
+/** Arc layout in front of the plaza, facing the default camera; two rows when crowded. */
+function slotFor(i: number, n: number, spec: TowerSpec): THREE.Vector3 {
+  if (spec.slot) return new THREE.Vector3(spec.slot[0], 0, spec.slot[1]);
+  const perRow = 6;
+  const row = Math.floor(i / perRow), inRow = Math.min(perRow, n - row * perRow), k = i % perRow;
+  const radius = (inRow <= 3 ? 24 : 29) + row * 17;
+  const spread = inRow <= 1 ? 0 : Math.min(150, 34 * (inRow - 1)) * (Math.PI / 180);
+  const a = inRow <= 1 ? 0 : -spread / 2 + (k * spread) / (inRow - 1);
+  return new THREE.Vector3(Math.sin(a) * radius, 0, -Math.cos(a) * radius + 4);
+}
+
+export default function CityView(props: Props) {
+  const { towers, coreColor, selectedId, onSelect, reducedMotion, onFailure, variant = "strategy" } = props;
   const host = useRef<HTMLDivElement>(null);
-  const world = useRef<{
-    scene: THREE.Scene; renderer: THREE.WebGLRenderer; core: THREE.MeshStandardMaterial;
-    towers: Map<string, Tower>; render: () => void; fit: () => void;
+  const [quality, setQuality] = useState<Quality>(savedQuality);
+  const [showLegend, setShowLegend] = useState(false);
+  const [showList, setShowList] = useState(() => window.innerWidth > 1300);
+  const [stats, setStats] = useState<{ calls: number; tris: number; fps: number } | null>(null);
+  const api = useRef<{
+    sync: (t: TowerSpec[], sel: string | null, core: number | null) => void;
+    focus: (id: string | null) => void;
+    hover: (id: string | null) => void;
   } | null>(null);
-  const fitted = useRef(-1);
-  const motion = useRef(reducedMotion);
   const selectRef = useRef(onSelect);
   selectRef.current = onSelect;
+  const motion = useRef(reducedMotion);
   motion.current = reducedMotion;
-  const v = VARIANTS[variant];
+  const mode = props.mode ?? DEFAULT_MODE[variant];
+  const legend = props.legend ?? DEFAULT_LEGEND;
 
+  // ------------------------------------------------------------------ 1 + 3 + 4: scene setup
   useEffect(() => {
     const el = host.current!;
     let renderer: THREE.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer = new THREE.WebGLRenderer({ antialias: quality === "high", powerPreference: "high-performance" });
       if (!renderer.getContext()) throw new Error("no WebGL context");
     } catch (e) {
       onFailure(`3D view unavailable (${(e as Error).message}). Use the Table view.`);
       return;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(v.clear);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality === "high" ? 1.75 : 1));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.3;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.domElement.setAttribute("aria-hidden", "true");
     el.appendChild(renderer.domElement);
-
     const labels = new CSS2DRenderer();
     labels.domElement.className = "label-layer";
     el.appendChild(labels.domElement);
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(v.clear, 30, 90);
-    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
-    camera.position.set(0, 14, 30);
-    scene.add(new THREE.AmbientLight(0x6d5bd0, 0.6));
-    const key = new THREE.PointLight(0x8b5cf6, 400, 80);
-    key.position.set(0, 20, 10);
-    scene.add(key);
-    scene.add(new THREE.GridHelper(90, 45, v.grid[0], v.grid[1]));
+    scene.fog = new THREE.FogExp2(PALETTE.fog, quality === "high" ? 0.0095 : 0.011);
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.5, 600);
+    const HOME_TARGET = new THREE.Vector3(0, 5, -14);
+    const HOME_DIR = new THREE.Vector3(0, 0.62, 1).normalize();     // ~32° above the street: skyline with a readable plan
+    camera.position.copy(HOME_TARGET).addScaledVector(HOME_DIR, 70);
 
-    const core = new THREE.MeshStandardMaterial({ color: 0x1e1b4b, emissive: 0x4f46e5, emissiveIntensity: 0.6 });
-    const coreMesh = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.6, 0.8, 32), core);
-    coreMesh.position.set(0, 0.4, 4);
-    scene.add(coreMesh);
+    const kit: Kit = makeKit(renderer.capabilities.getMaxAnisotropy());
+    // Scenery stays clear of the plaza, the selectable arc and the camera's line of sight to it.
+    const keepClear = (x: number, z: number) => {
+      const r = Math.hypot(x, z);
+      if (r < 22) return false;
+      if (z > -2 && Math.abs(x) < 55 && r < 70) return false;             // in front: open sightlines
+      if (r < 48 && z < 10) return false;                                  // the selectable arc and its gaps
+      return true;
+    };
+    const scenery: Scenery = buildScenery(kit, quality, keepClear);
+    scene.add(scenery.group);
+
+    // Plaza status ring (meaning given by coreLabel in the legend; hidden when the core is a building).
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
+    const coreRing = new THREE.Mesh(new THREE.RingGeometry(PLAZA_R - 2.2, PLAZA_R - 1.6, 96), coreMat);
+    coreRing.rotation.x = -Math.PI / 2;
+    coreRing.position.y = 0.08;
+    scene.add(coreRing);
 
     const controls = new OrbitControls(camera, labels.domElement);
-    controls.target.set(0, 3, -6);
+    controls.target.copy(HOME_TARGET);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.minDistance = 16;
+    controls.maxDistance = 150;
+    controls.minPolarAngle = 0.25;
+    controls.maxPolarAngle = 1.42;               // never below the street
     controls.update();
-    controls.maxPolarAngle = Math.PI / 2.2;
-    controls.minDistance = 10;
-    controls.maxDistance = 110;
 
+    // Optional effects: restrained bloom (labels are DOM, so text is never blurred).
+    let composer: EffectComposer | null = null;
+    let bloom: UnrealBloomPass | null = null;
+    if (quality === "high") {
+      composer = new EffectComposer(renderer);
+      composer.addPass(new RenderPass(scene, camera));
+      bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.55, 0.45, 0.82);
+      composer.addPass(bloom);
+      composer.addPass(new OutputPass());
+    }
+
+    const nodes = new Map<string, Node>();
+    const linkGroup = new THREE.Group();
+    scene.add(linkGroup);
+    let linkKey = "";
+    const pulses: { mesh: THREE.Mesh; curve: THREE.QuadraticBezierCurve3; t: number }[] = [];
+    const pulseGeo = new THREE.SphereGeometry(0.35, 12, 8);
+    let selected: string | null = null, hovered: string | null = null;
+    let needs = true;
+
+    // Camera transition (skipped under reduced motion).
+    let tween: { t: number; fromP: THREE.Vector3; toP: THREE.Vector3; fromT: THREE.Vector3; toT: THREE.Vector3 } | null = null;
+    const moveTo = (toT: THREE.Vector3, toP: THREE.Vector3) => {
+      if (motion.current) { controls.target.copy(toT); camera.position.copy(toP); controls.update(); needs = true; return; }
+      tween = { t: 0, fromP: camera.position.clone(), toP, fromT: controls.target.clone(), toT };
+    };
+    // Frame every selectable building: horizontal extent decides the distance for the window's aspect.
+    const homeTarget = () => {
+      const ps = [...nodes.values()].map((n) => n.built.group.position);
+      if (!ps.length) return HOME_TARGET.clone();
+      const cx = (Math.min(...ps.map((p) => p.x)) + Math.max(...ps.map((p) => p.x))) / 2;
+      const cz = (Math.min(...ps.map((p) => p.z)) + Math.max(...ps.map((p) => p.z))) / 2;
+      return new THREE.Vector3(cx, 9, cz - 2);
+    };
+    const homeDistance = () => {
+      const ps = [...nodes.values()].map((n) => n.built.group.position);
+      const half = ps.length ? Math.max(14, ...ps.map((p) => Math.abs(p.x - homeTarget().x) + 13)) : 30;
+      const depth = ps.length ? Math.max(...ps.map((p) => p.z)) - Math.min(...ps.map((p) => p.z)) : 20;
+      const hf = Math.atan(Math.tan((camera.fov * Math.PI) / 360) * camera.aspect);
+      // vertical fit: the tallest selectable building plus room for its label
+      const tallest = Math.max(10, ...[...nodes.values()].map((n) => n.built.height * HERO));
+      const vfit = ((tallest + 16) / Math.tan((camera.fov * Math.PI) / 360)) * 0.72;
+      return Math.min(170, Math.max(56, half / Math.tan(hf) + depth * 0.45 + 10, vfit + depth * 0.3));
+    };
+    let userMoved = false;                     // until the user orbits, keep the home framing fitted to the window
+    const goHome = (instant = false) => {
+      const t = homeTarget(), p = t.clone().addScaledVector(HOME_DIR, homeDistance());
+      if (instant) { tween = null; controls.target.copy(t); camera.position.copy(p); controls.update(); needs = true; }
+      else moveTo(t, p);
+      userMoved = false;
+    };
+    const focus = (id: string | null) => {
+      const n = id ? nodes.get(id) : null;
+      if (!n) return;
+      const p = n.built.group.position;
+      const toT = new THREE.Vector3(p.x, n.built.height * HERO * 0.45, p.z);
+      const dir = camera.position.clone().sub(controls.target).setY(0).normalize();
+      if (dir.z < 0.2) dir.set(Math.sign(p.x) * 0.3, 0, 1).normalize();
+      const dist = Math.min(110, Math.max(55, n.built.height * HERO * 2.3 + 22));
+      userMoved = true;
+      moveTo(toT, toT.clone().add(dir.multiplyScalar(dist)).setY(toT.y + dist * 0.55));
+    };
+
+    // Labels: compact, with a leader line to the roof; overlapping labels are lifted (leader grows).
     const declutter = () => {
-      const items = [...map.values()].map((t) => {
-        t.label.style.transform = "";
-        return { t, r: t.label.getBoundingClientRect() };
-      }).filter((x) => x.r.width > 0).sort((a, b) => a.r.left - b.r.left);
       const box = el.getBoundingClientRect();
-      const placed: { left: number; right: number; top: number; bottom: number }[] = [];
-      for (const { t, r } of items) {
-        // Keep the label inside the view horizontally (narrow windows), then avoid overlaps vertically.
+      // Overlay panels (mode badge, tools, list, legend) are obstacles; labels never hide under them.
+      const wrap = el.parentElement!;
+      const obstacles = [...wrap.querySelectorAll(".city-mode, .city-tools, .city-list:not(.collapsed), .city-legend")]
+        .map((o) => o.getBoundingClientRect()).filter((r) => r.width > 0);
+      const topLimit = box.top + 4 + Math.max(0, ...obstacles.filter((o) => o.top < box.top + 60 && o.height < 70).map((o) => o.bottom - box.top));
+      const rightLimit = Math.min(box.right - 4, ...obstacles.filter((o) => o.top < box.top + 70 && o.height > 80).map((o) => o.left - 4));
+      const items = [...nodes.values()].map((n) => {
+        n.leader.style.height = "16px";
+        n.label.style.transform = "";
+        n.holder.style.visibility = "";
+        return { n, r: n.label.getBoundingClientRect() };
+      }).filter((x) => x.r.width > 0)
+        // the selected label is placed first, so it is never the one that gives way
+        .sort((a, b) => (a.n.spec.id === selected ? -1 : b.n.spec.id === selected ? 1 : a.r.left - b.r.left));
+      const placed: { l: number; r: number; t: number; b: number }[] = [];
+      const clash = (l: number, r: number, t: number, b: number) =>
+        placed.find((p) => l < p.r + 4 && r > p.l - 4 && t < p.b + 4 && b > p.t - 4)
+        ?? obstacles.find((o) => l < o.right + 2 && r > o.left - 2 && t < o.bottom + 2 && b > o.top - 2);
+      for (const { n, r } of items) {
         let dx = 0;
-        if (r.width < box.width - 8) {
+        if (r.width < rightLimit - box.left - 8) {
           if (r.left < box.left + 4) dx = box.left + 4 - r.left;
-          else if (r.right > box.right - 4) dx = box.right - 4 - r.right;
+          else if (r.right > rightLimit) dx = rightLimit - r.right;
         }
-        const left = r.left + dx, right = r.right + dx;
-        let shift = 0;
-        for (;;) {
-          const top = r.top - shift, bottom = r.bottom - shift;
-          const hit = placed.find((p) => left < p.right + 4 && right > p.left - 4 && top < p.bottom + 4 && bottom > p.top - 4);
-          if (!hit) { placed.push({ left, right, top, bottom }); break; }
-          shift += bottom - hit.top + 6;          // move this label just above the one it overlaps
+        const l = r.left + dx, rr = r.right + dx;
+        let lift = 0, down = 0;
+        for (let guard = 0; guard < 12; guard++) {
+          const t = r.top - lift, b = r.bottom - lift;
+          const hit = clash(l, rr, t, b);
+          if (!hit) break;
+          const hb = "bottom" in hit ? hit.bottom : hit.b, ht = "top" in hit ? hit.top : hit.t;
+          if (t - (b - ht + 6) < topLimit) { down = Math.max(0, hb + 6 - r.top); lift = 0; break; }   // no room above: slide down
+          lift += b - ht + 6;
         }
-        t.label.style.transform = dx || shift ? `translate(${Math.round(dx)}px, ${-Math.round(shift)}px)` : "";
-        t.label.classList.toggle("lifted", shift > 0 || dx !== 0);
+        if (r.top - lift < topLimit && !down) { down = topLimit - r.top; lift = 0; }
+        if (down) {                                   // a slid-down label must also land on a free spot
+          for (let guard = 0; guard < 12; guard++) {
+            const hit = clash(l, rr, r.top + down, r.bottom + down);
+            if (!hit) break;
+            down = ("bottom" in hit ? hit.bottom : hit.b) + 6 - r.top;
+          }
+        }
+        const t = r.top - lift + down;
+        if (n.spec.id !== selected && clash(l, rr, t, t + r.height)) {
+          n.holder.style.visibility = "hidden";       // no free spot (close-up views): still listed in Buildings
+          continue;
+        }
+        placed.push({ l, r: rr, t, b: t + r.height });
+        n.leader.style.height = down ? "0px" : `${16 + Math.round(lift)}px`;
+        if (dx || down) n.label.style.transform = `translate(${Math.round(dx)}px, ${Math.round(down)}px)`;
       }
     };
-    const map = new Map<string, Tower>();
+
+    let drawInfo = { calls: 0, tris: 0 };
+    renderer.info.autoReset = false;
     const render = () => {
-      renderer.render(scene, camera);
+      renderer.info.reset();
+      if (composer) composer.render(); else renderer.render(scene, camera);
+      drawInfo = { calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
       labels.render(scene, camera);
       declutter();
     };
-    controls.addEventListener("change", render);
+
     const resize = () => {
       const w = el.clientWidth, h = el.clientHeight;
       if (!w || !h) return;
       renderer.setSize(w, h);
       labels.setSize(w, h);
+      composer?.setSize(w, h);
+      bloom?.setSize(w, h);
       camera.aspect = w / h;
-      // Fit the widest row (plus margin) horizontally: narrower windows move the camera back.
-      const cols = Math.min(PER_ROW, Math.max(1, map.size));
-      const halfWidth = ((cols - 1) * SPACING) / 2 + 4;
-      const halfFov = Math.atan(Math.tan((camera.fov * Math.PI) / 360) * camera.aspect);
-      const dist = Math.min(105, Math.max(30, halfWidth / Math.tan(halfFov) + 6));
-      const dir = camera.position.clone().sub(controls.target).normalize();
-      camera.position.copy(controls.target.clone().add(dir.multiplyScalar(dist)));
       camera.updateProjectionMatrix();
-      controls.update();
-      render();
+      if (!userMoved && nodes.size) goHome(true);
+      needs = true;
     };
     const ro = new ResizeObserver(resize);
     ro.observe(el);
-    world.current = { scene, renderer, core, towers: map, render, fit: resize };
-    fitted.current = -1;
     resize();
 
-    const raycaster = new THREE.Raycaster();
-    const onClick = (e: MouseEvent) => {
-      const r = renderer.domElement.getBoundingClientRect();
-      const p = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-      raycaster.setFromCamera(p, camera);
-      const hit = raycaster.intersectObjects([...map.values()].map((t) => t.mesh))[0];
-      const id = hit && (hit.object.userData.id as string);
-      if (id) selectRef.current(id);
+    // ---------------------------------------------------------------- 2: state mapping (no rebuilds)
+    const accentFor = (spec: TowerSpec, isSel: boolean, isHover: boolean) =>
+      (spec.dim ? 0.42 : 1.15) + (isSel ? 0.5 : isHover ? 0.25 : 0);
+    const restyle = (n: Node) => {
+      const isSel = n.spec.id === selected, isHover = n.spec.id === hovered;
+      n.accent.emissive.setHex(n.spec.color);
+      n.accent.emissiveIntensity = accentFor(n.spec, isSel, isHover) + n.pulse * 1.6;
+      const hm = n.halo.material as THREE.MeshBasicMaterial;
+      hm.color.setHex(n.spec.color);
+      hm.opacity = isSel ? 0.9 : isHover ? 0.5 : n.spec.dim ? 0.12 : 0.22;
+      n.halo.visible = true;
+      n.label.classList.toggle("selected", isSel);
+      n.label.classList.toggle("hover", isHover);
+      n.label.setAttribute("aria-pressed", String(isSel));
     };
-    labels.domElement.addEventListener("click", onClick);
+    const fillLabel = (n: Node) => {
+      const d = derived(n.spec);
+      n.label.replaceChildren();
+      n.holder.style.setProperty("--accent", hex(n.spec.color));
+      const tag = document.createElement("span"); tag.className = "cl-tag"; tag.textContent = d.category;
+      const title = document.createElement("span"); title.className = "cl-title"; title.textContent = d.title;
+      const status = document.createElement("span"); status.className = "cl-status"; status.textContent = d.status;
+      if (d.category) n.label.appendChild(tag);
+      n.label.appendChild(title);
+      if (d.status) n.label.appendChild(status);
+      n.label.setAttribute("aria-label", n.spec.ariaLabel);
+      n.label.classList.toggle("dim", !!n.spec.dim);
+    };
 
-    let frame = 0;
-    const loop = () => {
-      frame = requestAnimationFrame(loop);
-      if (motion.current) return;
-      let active = false;
-      for (const t of map.values()) {
-        if (t.pulse > 0) {
-          t.pulse = Math.max(0, t.pulse - 0.02);
-          t.mesh.scale.set(1 + t.pulse * 0.25, 1, 1 + t.pulse * 0.25);
-          t.material.emissiveIntensity = 0.25 + t.pulse * 1.2;
-          active = true;
+    let seedCounter = 1;
+    const create = (spec: TowerSpec, index: number): Node => {
+      const arch = spec.archetype ?? ARCHETYPES[index % ARCHETYPES.length];
+      const accent = new THREE.MeshStandardMaterial({ color: 0x0a0e18, emissive: spec.color, emissiveIntensity: 1, roughness: 0.4 });
+      const built = buildArchetype(arch, kit, accent, seedCounter++ * 1.7);
+      built.group.userData.id = spec.id;
+      built.group.scale.setScalar(HERO);       // selectable buildings stand above the scenery
+      for (const h of built.hit) h.userData.id = spec.id;
+      const halo = new THREE.Mesh(new THREE.RingGeometry(built.footprint, built.footprint + 0.7, 64),
+        new THREE.MeshBasicMaterial({ color: spec.color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+      halo.rotation.x = -Math.PI / 2;
+      halo.position.y = 0.1;
+      halo.visible = false;
+      built.group.add(halo);
+      const holder = document.createElement("div");
+      holder.className = "city-label-holder";
+      const label = document.createElement("button");
+      label.type = "button";
+      label.className = "city-label";
+      label.addEventListener("pointerdown", (e) => e.stopPropagation());
+      label.addEventListener("click", (e) => { e.stopPropagation(); selectRef.current(spec.id); });
+      label.addEventListener("pointerenter", () => setHover(spec.id));
+      label.addEventListener("pointerleave", () => setHover(null));
+      const leader = document.createElement("div");
+      leader.className = "city-leader";
+      holder.append(label, leader);
+      const obj = new CSS2DObject(holder);
+      obj.center.set(0.5, 1);
+      obj.position.set(0, built.height + 0.6, 0);
+      built.group.add(obj);
+      scene.add(built.group);
+      return { spec, arch, built, accent, halo, holder, label, leader, pulse: 0, lastKey: spec.pulseKey };
+    };
+    const destroy = (n: Node) => {
+      n.holder.remove();
+      scene.remove(n.built.group);
+      n.built.dispose();
+      n.accent.dispose();
+      n.halo.geometry.dispose();
+      (n.halo.material as THREE.Material).dispose();
+    };
+
+    const rebuildLinks = () => {
+      const key = [...nodes.values()].map((n) => `${n.spec.id}>${(n.spec.links ?? []).join("|")}@${n.built.group.position.x.toFixed(1)}`).join(";");
+      if (key === linkKey) return;
+      linkKey = key;
+      linkGroup.children.forEach((c) => { (c as THREE.Line).geometry.dispose(); ((c as THREE.Line).material as THREE.Material).dispose(); });
+      linkGroup.clear();
+      for (const n of nodes.values()) {
+        for (const dep of n.spec.links ?? []) {
+          const m = nodes.get(dep);
+          if (!m) continue;
+          const a = m.built.group.position.clone().setY(1.2), b = n.built.group.position.clone().setY(1.2);
+          const mid = a.clone().add(b).multiplyScalar(0.5).setY(4 + a.distanceTo(b) * 0.12);
+          const curve = new THREE.QuadraticBezierCurve3(a, mid, b);
+          const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(40)),
+            new THREE.LineBasicMaterial({ color: n.spec.color, transparent: true, opacity: 0.32 }));
+          line.userData = { from: dep, to: n.spec.id, curve };
+          linkGroup.add(line);
         }
       }
-      if (active) render();
     };
-    loop();
+
+    const firePulse = (id: string) => {
+      if (motion.current) return;
+      for (const c of linkGroup.children) {
+        const u = c.userData as { from: string; to: string; curve: THREE.QuadraticBezierCurve3 };
+        if (u.from !== id && u.to !== id) continue;
+        const color = nodes.get(u.to)?.spec.color ?? 0xffffff;
+        const mesh = new THREE.Mesh(pulseGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 }));
+        scene.add(mesh);
+        pulses.push({ mesh, curve: u.curve, t: 0 });
+      }
+    };
+
+    const sync = (list: TowerSpec[], sel: string | null, core: number | null) => {
+      const ids = new Set(list.map((t) => t.id));
+      for (const [id, n] of nodes) if (!ids.has(id)) { destroy(n); nodes.delete(id); }
+      const before = nodes.size;
+      list.forEach((spec, i) => {
+        let n = nodes.get(spec.id);
+        const arch = spec.archetype ?? ARCHETYPES[i % ARCHETYPES.length];
+        if (n && n.arch !== arch) { destroy(n); nodes.delete(spec.id); n = undefined; }
+        if (!n) { n = create(spec, i); nodes.set(spec.id, n); }
+        const p = slotFor(i, list.length, spec);
+        n.built.group.position.copy(p);
+        n.built.group.rotation.y = spec.slot ? 0 : Math.atan2(-p.x, 24 - p.z) * 0.5;   // turn gently toward the camera
+        if (spec.pulseKey !== n.lastKey) {
+          n.lastKey = spec.pulseKey;
+          if (!motion.current) { n.pulse = 1; firePulse(spec.id); }
+        }
+        n.spec = spec;
+        fillLabel(n);
+      });
+      selected = sel;
+      for (const n of nodes.values()) restyle(n);
+      const coreIsBuilding = list.some((t) => t.slot && Math.hypot(t.slot[0], t.slot[1]) < PLAZA_R);
+      coreRing.visible = core !== null && !coreIsBuilding;
+      if (core !== null) coreMat.color.setHex(core);
+      rebuildLinks();
+      if (nodes.size !== before) goHome(before === 0);
+      needs = true;
+    };
+    const setHover = (id: string | null) => {
+      if (hovered === id) return;
+      hovered = id;
+      for (const n of nodes.values()) restyle(n);
+      el.style.cursor = id ? "pointer" : "";
+      needs = true;
+    };
+
+    // Picking (hover + click) on the label layer, which also receives the orbit gestures.
+    const raycaster = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    const pickAt = (e: PointerEvent | MouseEvent): string | null => {
+      const r = renderer.domElement.getBoundingClientRect();
+      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      raycaster.setFromCamera(ndc, camera);
+      const targets = [...nodes.values()].flatMap((n) => n.built.hit);
+      const hit = raycaster.intersectObjects(targets, false)[0];
+      return (hit?.object.userData.id as string) ?? null;
+    };
+    let downAt: { x: number; y: number } | null = null;
+    let moveQueued = false, lastMove: PointerEvent | null = null;
+    const onDown = (e: PointerEvent) => { downAt = { x: e.clientX, y: e.clientY }; };
+    const onUp = (e: PointerEvent) => {
+      if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 5) {
+        const id = pickAt(e);
+        if (id) selectRef.current(id);
+      }
+      downAt = null;
+    };
+    const onMove = (e: PointerEvent) => {
+      lastMove = e;
+      if (moveQueued || e.buttons) return;
+      moveQueued = true;
+      requestAnimationFrame(() => { moveQueued = false; if (lastMove) setHover(pickAt(lastMove)); });
+    };
+    const ld = labels.domElement;
+    ld.addEventListener("pointerdown", onDown);
+    ld.addEventListener("pointerup", onUp);
+    ld.addEventListener("pointermove", onMove);
+    ld.addEventListener("pointerleave", () => setHover(null));
+    controls.addEventListener("start", () => { userMoved = true; tween = null; });
+    controls.addEventListener("change", () => {
+      // pan bounds: keep the target inside the district
+      const t = controls.target;
+      const r = Math.hypot(t.x, t.z);
+      if (r > 45) { t.x *= 45 / r; t.z *= 45 / r; }
+      t.y = Math.min(24, Math.max(1, t.y));
+      needs = true;
+    });
+
+    // Frame loop: renders on demand; continuous only while something real animates, or for the
+    // decorative aviation lights when quality is High and reduced motion is off.
+    let frame = 0, last = performance.now(), frames = 0, statT = performance.now(), lastAmbient = 0;
+    const loop = (now: number) => {
+      frame = requestAnimationFrame(loop);
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      let animating = false;
+      if (tween) {
+        tween.t = Math.min(1, tween.t + dt / 0.75);
+        const k = tween.t < 0.5 ? 4 * tween.t ** 3 : 1 - (-2 * tween.t + 2) ** 3 / 2;
+        camera.position.lerpVectors(tween.fromP, tween.toP, k);
+        controls.target.lerpVectors(tween.fromT, tween.toT, k);
+        if (tween.t >= 1) tween = null;
+        animating = true;
+      }
+      if (controls.update()) animating = true;
+      for (const n of nodes.values()) {
+        if (n.pulse > 0) { n.pulse = Math.max(0, n.pulse - dt / 1.2); restyle(n); animating = true; }
+      }
+      for (let i = pulses.length - 1; i >= 0; i--) {
+        const p = pulses[i];
+        p.t += dt / 1.4;
+        if (p.t >= 1) { scene.remove(p.mesh); (p.mesh.material as THREE.Material).dispose(); pulses.splice(i, 1); continue; }
+        p.mesh.position.copy(p.curve.getPoint(p.t));
+        animating = true;
+      }
+      // Decorative aviation lights only need ~30 frames/s; real animation renders every frame.
+      let ambientDue = false;
+      if (quality === "high" && !motion.current && now - lastAmbient > 33) {
+        kit.aviation.opacity = 0.35 + 0.6 * (0.5 + 0.5 * Math.sin(now / 900));   // slow, decorative, white
+        ambientDue = true;
+        lastAmbient = now;
+      }
+      if (animating || needs || ambientDue) { render(); needs = false; frames++; }
+      if (now - statT > 2000) {
+        setStats({ calls: drawInfo.calls, tris: drawInfo.tris, fps: Math.round(frames / ((now - statT) / 1000)) });
+        statT = now;
+        frames = 0;
+      }
+    };
+    frame = requestAnimationFrame(loop);
+
+    api.current = { sync, focus, hover: setHover };
+    // Inspection hook for local verification (camera pose and frame stats); read-only use.
+    (el as HTMLDivElement & { __city?: unknown }).__city = { camera, controls, nodes, renderer };
+    // reset view is exposed through a DOM event from the overlay button
+    const onReset = () => goHome();
+    el.addEventListener("city-reset", onReset);
+
     return () => {
       cancelAnimationFrame(frame);
       ro.disconnect();
-      labels.domElement.removeEventListener("click", onClick);
+      el.removeEventListener("city-reset", onReset);
+      ld.removeEventListener("pointerdown", onDown);
+      ld.removeEventListener("pointerup", onUp);
+      ld.removeEventListener("pointermove", onMove);
+      for (const n of nodes.values()) destroy(n);
+      nodes.clear();
+      linkGroup.children.forEach((c) => { (c as THREE.Line).geometry.dispose(); ((c as THREE.Line).material as THREE.Material).dispose(); });
+      pulses.forEach((p) => (p.mesh.material as THREE.Material).dispose());
+      pulseGeo.dispose();
+      coreRing.geometry.dispose();
+      coreMat.dispose();
+      scenery.dispose();
+      kit.dispose();
+      composer?.dispose();
       controls.dispose();
       renderer.dispose();
       el.replaceChildren();
-      world.current = null;
+      api.current = null;
     };
-  }, [onFailure, v]);
+  }, [onFailure, quality]);
 
+  // ------------------------------------------------------------------ 2: push records into the scene
+  useEffect(() => { api.current?.sync(towers, selectedId, coreColor); }, [towers, selectedId, coreColor, quality]);
+  const prevSel = useRef<string | null>(null);
   useEffect(() => {
-    const w = world.current;
-    if (!w) return;
-    const n = towers.length;
-    const ids = new Set(towers.map((t) => t.id));
-    for (const [id, t] of w.towers) {
-      if (!ids.has(id)) {
-        // Removing the mesh does not remove its CSS2D label element; do it explicitly, or stale
-        // labels from a previous record set would stay on screen.
-        t.holder.remove();
-        w.scene.remove(t.mesh);
-        t.mesh.geometry.dispose();
-        t.material.dispose();
-        w.towers.delete(id);
-      }
-    }
-    towers.forEach((spec, i) => {
-      let t = w.towers.get(spec.id);
-      const row = Math.floor(i / PER_ROW), col = i % PER_ROW;
-      const inRow = Math.min(PER_ROW, n - row * PER_ROW);
-      if (!t) {
-        const material = new THREE.MeshStandardMaterial({ color: 0x0f0b2e, emissive: spec.color, emissiveIntensity: 0.25 });
-        const geometry = v.shape === "box" ? new THREE.BoxGeometry(2, 6, 2)
-          : v.shape === "octagon" ? new THREE.CylinderGeometry(1.4, 1.4, 6, 8) : new THREE.CylinderGeometry(1.2, 1.2, 6, 20);
-        const mesh = new THREE.Mesh(geometry, material);
-        const edges = new THREE.LineBasicMaterial({ color: spec.color });
-        mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 30), edges));
-        mesh.userData.id = spec.id;
-        const label = document.createElement("button");
-        label.type = "button";
-        // OrbitControls captures the pointer on pointerdown, which would swallow the click.
-        label.addEventListener("pointerdown", (e) => e.stopPropagation());
-        label.addEventListener("click", (e) => { e.stopPropagation(); selectRef.current(spec.id); });
-        const holder = document.createElement("div");
-        holder.className = "label-holder";
-        holder.appendChild(label);
-        const obj = new CSS2DObject(holder);
-        obj.position.set(0, 3.4, 0);
-        obj.center.set(0.5, 1);
-        mesh.add(obj);
-        w.scene.add(mesh);
-        t = { mesh, material, edges, label, holder, pulse: 0, lastKey: spec.pulseKey };
-        w.towers.set(spec.id, t);
-      }
-      t.mesh.position.set((col - (inRow - 1) / 2) * SPACING, 3, -6 - row * SPACING);
-      if (spec.pulseKey !== t.lastKey) {
-        if (!motion.current) t.pulse = 1;          // driven by a real recorded change
-        t.lastKey = spec.pulseKey;
-      }
-      t.material.emissive.setHex(spec.color);
-      t.edges.color.setHex(spec.color);
-      if (motion.current || t.pulse === 0) {
-        t.mesh.scale.set(1, 1, 1);
-        t.material.emissiveIntensity = spec.id === selectedId ? 0.6 : 0.25;
-      }
-      fillLabel(t.label, spec, spec.id === selectedId, v.labelClass);
-    });
-    if (coreColor !== null) w.core.emissive.setHex(coreColor);
-    if (w.towers.size !== fitted.current) {      // refit only when the tower count changes (keeps the user's zoom)
-      fitted.current = w.towers.size;
-      w.fit();
-    } else {
-      w.render();
-    }
-  }, [towers, selectedId, coreColor, v]);
+    if (selectedId && selectedId !== prevSel.current) api.current?.focus(selectedId);
+    prevSel.current = selectedId;
+  }, [selectedId]);
 
-  return <div className={`city city-${variant}`} ref={host} />;
+  const list = useMemo(() => towers.map((t) => ({ t, d: derived(t) })), [towers]);
+  const archetypes = useMemo(() => [...new Set(towers.map((t, i) => t.archetype ?? ARCHETYPES[i % ARCHETYPES.length]))], [towers]);
+
+  return (
+    <div className={`city-wrap city-${variant}`}>
+      <div className="city" ref={host} />
+      <div className={`city-mode tone-${mode.tone}`} role="status">
+        <strong>{mode.label}</strong>{mode.detail ? <span> · {mode.detail}</span> : null}
+      </div>
+      <div className="city-tools" role="group" aria-label="3D view controls">
+        <button type="button" onClick={() => host.current?.dispatchEvent(new Event("city-reset"))}>Reset view</button>
+        <label>Effects{" "}
+          <select value={quality} onChange={(e) => {
+            const q = e.target.value as Quality;
+            try { localStorage.setItem("city-quality", q); } catch { /* storage unavailable: keep in memory */ }
+            setQuality(q);
+          }}>
+            <option value="high">High</option><option value="low">Low</option>
+          </select>
+        </label>
+        <button type="button" aria-expanded={showList} onClick={() => setShowList((s) => !s)}>Buildings</button>
+        <button type="button" aria-expanded={showLegend} onClick={() => setShowLegend((s) => !s)}>Legend</button>
+      </div>
+      <nav className={`city-list${showList ? "" : " collapsed"}`} aria-label="Buildings in this view">
+        {list.map(({ t, d }) => (
+          <button key={t.id} type="button" aria-pressed={t.id === selectedId} className={t.id === selectedId ? "on" : ""}
+                  onClick={() => onSelect(t.id)} onMouseEnter={() => api.current?.hover(t.id)} onMouseLeave={() => api.current?.hover(null)}
+                  onFocus={() => api.current?.hover(t.id)} onBlur={() => api.current?.hover(null)}>
+            <span className="dot" style={{ background: hex(t.color) }} aria-hidden="true" />
+            <span className="nm">{d.title}</span><span className="st">{d.status}</span>
+          </button>
+        ))}
+      </nav>
+      {showLegend && (
+        <div className="city-legend" aria-label="Legend">
+          <div className="lg-h">Status colours (from records)</div>
+          {legend.map((l) => <div key={l.label}><span className="dot" style={{ background: hex(l.color) }} />{l.label}</div>)}
+          {props.coreLabel && <div><span className="dot ring" />Plaza ring: {props.coreLabel}</div>}
+          <div className="lg-h">Architecture (decorative)</div>
+          <div className="small">{archetypes.map((a) => ARCHETYPE_LABEL[a]).join(" · ")}. Shape groups components; it carries no status.</div>
+          <div className="small">Unlabelled towers, window lights, street lamps and white rooftop lights are scenery. They do not indicate market activity or work.</div>
+          {!reducedMotion && <div className="small">Moving dots run along a real dependency only when a recorded event occurs.</div>}
+        </div>
+      )}
+      {stats && <div className="city-stats" aria-hidden="true">{stats.calls} draw calls · {Math.round(stats.tris / 1000)}k triangles · {stats.fps} rendered frames/s · effects {quality}</div>}
+    </div>
+  );
 }

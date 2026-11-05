@@ -40,6 +40,7 @@ function strategyTower(s: StrategyView): TowerSpec {
   const c = category(s);
   return {
     id: s.id, color: STRATEGY_COLORS[c],
+    category: "DEMO · SIMULATED", title: s.name, status: s.status, dim: c === "idle" || c === "skipped",
     lines: [
       { cls: "tl-name", text: s.name }, { cls: "tl-inst", text: s.instrument_label },
       { cls: `tl-status tone-${c}`, text: s.status },
@@ -120,7 +121,7 @@ export default function App() {
         {controls}
         <div className="layout layout-real">
           <div className="main-area">
-            {view === "Overview" && <Overview research={research} openView={setView} />}
+            {view === "Overview" && <Overview research={research} openView={setView} reducedMotion={reducedMotion} />}
             {view === "Research" && <ResearchView research={research} />}
             {view === "Research jobs" && <JobsView reducedMotion={reducedMotion} />}
             {view === "Market monitor" && <MonitorView reducedMotion={reducedMotion} />}
@@ -154,7 +155,9 @@ export default function App() {
               snap.strategies.length ? (
                 <Boundary onError={onCityFailure}>
                   <Suspense fallback={<p className="empty panel">Loading 3D view…</p>}>
-                    <CityView towers={towers} coreColor={CORE(snap.account.risk_status)}
+                    <CityView towers={towers} coreColor={CORE(snap.account.risk_status)} coreLabel="simulated account risk status"
+                              legend={[{ color: 0x22d3ee, label: "Simulated long" }, { color: 0xe879f9, label: "Simulated short" },
+                                { color: 0xfbbf24, label: "Simulated signal" }, { color: 0x6366f1, label: "Idle" }, { color: 0xef4444, label: "Halted (simulated risk rule)" }]}
                               selectedId={selectedId} onSelect={setSelectedId}
                               reducedMotion={reducedMotion} onFailure={onCityFailure} />
                   </Suspense>
