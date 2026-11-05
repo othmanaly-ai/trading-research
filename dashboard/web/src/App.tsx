@@ -3,8 +3,10 @@ import TowerPanel from "./components/TowerPanel";
 import JobsView from "./components/JobsView";
 import MonitorView from "./components/MonitorView";
 import {
-  AccountPanel, ActivityFeed, Banner, Controls, Leaderboard, ModeStrip, ResearchView, SessionHistory, StrategyTable,
+  AccountPanel, ActivityFeed, Banner, Controls, Leaderboard, ModeStrip, RealBanner, ResearchView, SessionHistory, StrategyTable,
+  isDemoView,
 } from "./components/Panels";
+import Overview from "./components/Overview";
 import type { Research, StrategyView } from "./types";
 import type { TowerSpec } from "./components/CityView";
 import { money } from "./format";
@@ -58,7 +60,8 @@ function prefersReducedMotion(): boolean {
 
 export default function App() {
   const r = useReplay();
-  const [view, setView] = useState("City");
+  // Start on the real operational overview; the synthetic demo is one click away and labelled.
+  const [view, setView] = useState(() => new URLSearchParams(window.location.search).get("view") ?? "Overview");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reducedMotion, setReducedMotion] = useState(prefersReducedMotion);
   // ?3d=off skips WebGL entirely (slow machines, or to check the fallback path).
@@ -78,6 +81,12 @@ export default function App() {
     return () => mq.removeEventListener("change", on);
   }, []);
 
+  // The tab title follows the kind of view, so a real-records page is never titled "DEMO".
+  useEffect(() => {
+    document.title = isDemoView(view) ? `${r.meta?.mode === "HISTORICAL_REPLAY" ? "HISTORICAL REPLAY" : "DEMO REPLAY"} · Strategy City`
+      : `${view} · Real records · TradingProject`;
+  }, [view, r.meta?.mode]);
+
   const onCityFailure = useCallback((m: string) => { setCityError(m); setView("Table"); }, []);
   const snap = r.snapshot;
   const selected = snap?.strategies.find((s) => s.id === selectedId) ?? null;
@@ -95,20 +104,44 @@ export default function App() {
       </main>
     );
   }
+  const lastBar = selected ? snap?.instruments.find((i) => i.id === selected.instrument)?.last_bar_end_utc ?? null : null;
+  const demo = isDemoView(view);
+  const controls = (
+    <Controls status={r.status} connection={r.connection} lastMessageAt={r.lastMessageAt} control={r.control}
+              controlError={r.controlError} view={view} setView={setView}
+              reducedMotion={reducedMotion} setReducedMotion={setReducedMotion} />
+  );
+
+  if (!demo) {
+    // REAL views: no replay clock, demo controls, simulated account, demo activity or demo risk alerts.
+    return (
+      <div className="app app-real">
+        <RealBanner />
+        {controls}
+        <div className="layout layout-real">
+          <div className="main-area">
+            {view === "Overview" && <Overview research={research} openView={setView} />}
+            {view === "Research" && <ResearchView research={research} />}
+            {view === "Research jobs" && <JobsView reducedMotion={reducedMotion} />}
+            {view === "Market monitor" && <MonitorView reducedMotion={reducedMotion} />}
+          </div>
+        </div>
+        <footer className="muted small">Real read-only records served by the local city server (127.0.0.1). The synthetic demo replay is under
+          “Demo replay”; its figures are never mixed into these views.</footer>
+      </div>
+    );
+  }
+
   if (!r.meta) return <main className="fatal"><p>Loading replay description…</p></main>;
   if (!SUPPORTED_MODES.includes(r.meta.mode)) {
     return <main className="fatal"><h1>Unexpected mode: {r.meta.mode}</h1><p>This build supports DEMO REPLAY and HISTORICAL REPLAY only. Nothing is displayed.</p></main>;
   }
 
-  const lastBar = selected ? snap?.instruments.find((i) => i.id === selected.instrument)?.last_bar_end_utc ?? null : null;
-
   return (
     <div className="app">
       <Banner text={r.meta.banner} mode={r.meta.mode} />
       <ModeStrip active={r.meta.mode} research={research} />
-      <Controls status={r.status} connection={r.connection} lastMessageAt={r.lastMessageAt} control={r.control}
-                controlError={r.controlError} view={view} setView={setView}
-                reducedMotion={reducedMotion} setReducedMotion={setReducedMotion} />
+      {controls}
       {r.connection !== "connected" && (
         <p className="warn" role="alert">Backend connection {r.connection}. Figures below are frozen at the last update.</p>
       )}
@@ -133,9 +166,6 @@ export default function App() {
             )}
             {view === "Sessions" && <SessionHistory snapshot={snap} />}
             {view === "Leaderboard" && <Leaderboard snapshot={snap} />}
-            {view === "Research" && <ResearchView research={research} />}
-            {view === "Research jobs" && <JobsView reducedMotion={reducedMotion} />}
-            {view === "Market monitor" && <MonitorView reducedMotion={reducedMotion} />}
           </div>
           <div className="side">
             <AccountPanel account={snap.account} snapshot={snap} instruments={snap.instruments} />

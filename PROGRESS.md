@@ -534,6 +534,46 @@ pipeline -> watch progress -> cancel if needed -> open the report.
 - **City:** the research jobs view lists the candidate, its blockers and its records, using the
   existing table component.
 
+## City clarity and usability (2026-11-05)
+
+- **Real vs demo views:** real views (Overview, Market monitor, Research jobs, Research) have their
+  own banner. They show no replay clock, demo controls, simulated account, demo activity or demo
+  risk alerts. Demo views keep all of these. The view tabs are grouped and labelled "Real records"
+  and "Demo replay (synthetic)".
+- **Overview (new; existing endpoints only):**
+  - server and worker health, market status, latest IEX bar times
+  - latest session state
+  - research-job states, closed experiments, the deferred candidate and its blocker
+  - paid review OPTIONAL / DISABLED; order-submission gate DISABLED
+  - a table of what stops on sleep, app close and server stop. It claims no startup task and no
+    follow-up.
+- **Market monitor:**
+  - a ticking Eastern-time clock (this computer), the server clock, and the newest live bar end
+  - definitions of IEX live coverage vs the delayed SIP comparison
+  - table columns for bar start to end, receipt time, receipt delay and data age
+  - compact tower labels
+- **Session history:**
+  - per-symbol on-time (stored within 180 s of bar end), late catch-up, missing live and
+    unrecorded worker time, each over the scheduled minutes, with written definitions
+  - catch-up is never shown as on-time; on-time + catch-up + missing = scheduled
+- **3D labels:**
+  - overlapping labels are stacked and kept inside the view
+  - the camera is fitted to the window width
+  - narrow windows open the monitor on its table, with equivalent fields
+- **Fixed while testing:**
+  - comparison access refusals during recovery of an earlier session were not counted in that
+    session's report (counted by time window); they now come from the session's own run records
+  - quality events used the wall clock instead of the checker clock (behaviour-neutral in
+    production; made a test depend on the time of day)
+- **Verified:**
+  - the displayed counts match the stored 2026-11-04 report (79 / 311 / 0; IWM 79 / 310 / 1;
+    unrecorded 166 min)
+  - labels did not overlap at desktop and 375 px widths (measured from the page), with no
+    horizontal scroll
+- **Deployment:** the server was restarted after the close to load the backend fields. The worker
+  was down 2026-11-05 00:07:30 to 00:07:59 UTC, with the market closed and no live minutes
+  affected. The supervisor relaunched it (pid 27136).
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

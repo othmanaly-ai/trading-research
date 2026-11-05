@@ -218,12 +218,19 @@ def daily_report(store: st.MonitorStore, date_s: str, now: datetime | None = Non
     errors = [dict(r) for r in store.db.execute(
         "SELECT ts_utc, kind, message FROM events WHERE level='error' AND ts_utc BETWEEN ? AND ? ORDER BY id", win)]
     other = [e for e in errors if e["kind"] in NOT_REQUEST_KINDS]      # supervisor, crash, data defects
-    errors = [e for e in errors if e["kind"] not in NOT_REQUEST_KINDS]  # failed or refused API requests only
-    refusals = [e for e in errors if "HTTP 401" in e["message"] or "HTTP 403" in e["message"]
-                or e["kind"] == "quality-access_failure"]
+    # Live-poll failures come from the session's time window. Comparison (SIP/IEX history) failures
+    # come from this session's own run records, because recovery can request a session's data long
+    # after its window (e.g. the next day); window events of the comparison kind are not used, so
+    # another session's recovery is never counted here.
+    errors = [e for e in errors if e["kind"] not in NOT_REQUEST_KINDS and not e["kind"].startswith("quality-")]
     qruns = [dict(r) for r in store.db.execute(
         "SELECT id, kind, status, http_status, requests, window_start_utc, window_end_utc, error, started_utc "
         "FROM q_runs WHERE session_date=? ORDER BY id", (date_s,))]
+    errors += [{"ts_utc": r["started_utc"], "kind": f"comparison-{r['status']}", "message": r["error"] or ""}
+               for r in qruns if r["status"] in ("access_failure", "error")]
+    errors.sort(key=lambda e: e["ts_utc"] or "")
+    refusals = [e for e in errors if "HTTP 401" in e["message"] or "HTTP 403" in e["message"]
+                or e["kind"] == "comparison-access_failure"]
     ev["operations"] = {
         "worker_runs": [{k: r[k] for k in ("pid", "started_utc", "last_alive_utc", "stopped_utc", "exit_reason",
                                             "code_version")} for r in runs],
@@ -289,6 +296,13 @@ def sessions_overview(store: st.MonitorStore, now: datetime | None = None, limit
             "session_date": r["session_date"], "state": rep["status"]["state"], "detail": rep["status"].get("detail"),
             "scheduled_minutes": sched, "early_close": ev.get("schedule", {}).get("early_close"),
             "live_received_min": min((v["received_minutes"] for v in live.values()), default=0),
+            # Display breakdown (same records as the report): per symbol, denominator = scheduled minutes.
+            "live_by_symbol": {s: {"on_time": v["received_normal"], "late_catch_up": v["received_by_catch_up"],
+                                   "missing": v["not_received_minutes"],
+                                   "missing_while_sip_had_bar": v.get("not_received_while_sip_had_a_bar")}
+                               for s, v in live.items()},
+            "on_time_threshold_s": NORMAL_LIVE_LATENCY_S,
+            "unrecorded_minutes": ev.get("operations", {}).get("unrecorded_minutes"),
             "compared_min": min((v["minutes_compared"] for v in ev.get("sip_comparison", {}).values()), default=0),
             "downtime_minutes": ev.get("operations", {}).get("downtime_minutes"),
             "unplanned_downtime_minutes": ev.get("operations", {}).get("unplanned_downtime_minutes"),

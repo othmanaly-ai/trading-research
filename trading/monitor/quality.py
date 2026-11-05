@@ -215,7 +215,7 @@ class QualityChecker:
         if prev is not None:
             counts["corrections"] += 1
             self.store.event("warning", "quality-correction",
-                             f"{feed.upper()} {symbol} {t_iso} revised (revision {rev}); earlier revision kept")
+                             f"{feed.upper()} {symbol} {t_iso} revised (revision {rev}); earlier revision kept", self.clock())
         if defects:
             counts["defects"] += 1
         avail = st.iso(t + timedelta(minutes=1) + SIP_DELAY) if (t and feed == "sip") else (
@@ -260,7 +260,7 @@ class QualityChecker:
             status = "access_failure" if code in (401, 403) or isinstance(exc, MissingCredentials) else "error"
             msg = f"{type(exc).__name__}: {exc}"
             self._finish(run_id, status=status, http_status=code, requests=n_requests, error=msg[:400])
-            self.store.event("error", "quality-" + status, msg[:400])
+            self.store.event("error", "quality-" + status, msg[:400], self.clock())
             return {"ok": False, "status": status, "http_status": code, "error": msg, "run_id": run_id}
         sizes = {}
         for feed, (bars, retrieved) in got.items():
@@ -274,7 +274,7 @@ class QualityChecker:
                     extra = []
                     if key in seen and seen[key] != b:       # conflicting duplicates inside one response
                         extra.append("conflicting duplicate bars in one response")
-                        self.store.event("error", "quality-defect", f"{feed} {sym} {key}: conflicting duplicate bars")
+                        self.store.event("error", "quality-defect", f"{feed} {sym} {key}: conflicting duplicate bars", self.clock())
                     seen[key] = b
                     if _ts_ok(b) and st.session_date_et(st.parse(b["t"])) <= st.RESERVED_END:
                         continue                              # reserved research period: never stored
@@ -476,7 +476,7 @@ class QualityChecker:
                               (date_s, version, status, st.iso(self.clock()), sha,
                                json.dumps(rep_, default=str), last["version"] if last else None))
         self.store.event("info", "quality-report", f"{date_s}: report version {version} stored ({status})"
-                         + (f"; amends version {last['version']}" if last else ""))
+                         + (f"; amends version {last['version']}" if last else ""), self.clock())
         self.store.db.commit()
         return {"stored": True, "version": version}
 

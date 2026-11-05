@@ -57,6 +57,7 @@ export interface Research {
   skills_note: string;
   scanner_news: { available: boolean; reason: string };
   product_spec: string;
+  order_submission?: { enabled: boolean; trading_mode: string; note: string };
 }
 
 export interface Evaluation {

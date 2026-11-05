@@ -2,6 +2,7 @@ import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, t
 import { useLiveJson } from "../useLiveJson";
 import type { TowerSpec } from "./CityView";
 import SessionHistory from "./SessionHistory";
+import { ageText, etTime } from "./Overview";
 
 // Read-only market monitoring (trading/monitor). The worker is a separate process; this view only
 // displays its records from /api/monitor. Not a research dataset, not a trading signal.
@@ -49,6 +50,12 @@ function age(s: number | null): string {
   return `${Math.floor(s / 3600)} h`;
 }
 
+function LiveClock() {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id); }, []);
+  return <strong aria-live="off">{etTime(now)}</strong>;
+}
+
 class Boundary extends Component<{ onError: (m: string) => void; children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
@@ -61,7 +68,8 @@ export default function MonitorView({ reducedMotion }: { reducedMotion: boolean 
   useEffect(() => { const id = setInterval(() => setTick((t) => t + 1), 2000); return () => clearInterval(id); }, []);
   const { data, error } = useLiveJson<MonitorData>("/api/monitor", tick);
   const [view, setView] = useState<"3D" | "Table">(
-    () => (new URLSearchParams(window.location.search).get("3d") === "off" ? "Table" : "3D"));
+    // Narrow windows start on the table (same information, readable); 3D stays one click away.
+    () => (new URLSearchParams(window.location.search).get("3d") === "off" || window.innerWidth < 600 ? "Table" : "3D"));
   const [cityError, setCityError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -74,23 +82,19 @@ export default function MonitorView({ reducedMotion }: { reducedMotion: boolean 
     const workerTower: TowerSpec = {
       id: "worker", color: WORKER_COLORS[w.effective_state] ?? 0x334155,
       lines: [
-        { cls: "tl-tag mon-tag", text: "MONITOR WORKER" },
-        { cls: "tl-name", text: w.alive ? `pid ${w.pid}` : "no live worker" },
-        { cls: "tl-status", text: w.effective_state.toUpperCase().replace("_", " ") },
-        { cls: "tl-inst", text: `desired: ${data.desired}` },
-        { cls: "tl-inst", text: `heartbeat ${age(w.heartbeat_age_s)} ago` },
+        { cls: "tl-tag mon-tag", text: "WORKER" },
+        { cls: "tl-status", text: w.alive ? `RUNNING · pid ${w.pid}` : "NOT RUNNING" },
+        { cls: "tl-inst", text: `${w.effective_state.replace("_", " ")} · beat ${age(w.heartbeat_age_s)}` },
       ],
       ariaLabel: `Monitoring worker: ${w.effective_state}. Show details.`, pulseKey: `${w.polls}:${w.effective_state}`,
     };
     return [workerTower, ...data.symbols.map((r) => ({
       id: r.symbol, color: FRESH_COLORS[r.freshness] ?? 0x64748b,
       lines: [
-        { cls: "tl-tag mon-tag", text: `LIVE · ${r.feed.toUpperCase()}` },
-        { cls: "tl-name", text: r.symbol },
+        { cls: "tl-tag mon-tag", text: `${r.symbol} · ${r.feed.toUpperCase()} live` },
         { cls: "tl-status", text: r.freshness },
-        { cls: "tl-pnl", text: r.close !== null ? `last close ${r.close.toFixed(2)}` : "no bar" },
-        { cls: "tl-inst", text: `bar ${et(r.last_bar_start_utc)}` },
-        { cls: "tl-sim", text: "read-only · not a signal" },
+        { cls: "tl-inst", text: r.last_bar_end_utc ? `bar end ${etTime(r.last_bar_end_utc, false)}` : "no bar yet" },
+        { cls: "tl-inst", text: `data age ${ageText(r.source_age_s)}` },
       ],
       ariaLabel: `${r.symbol} ${r.feed}: ${r.freshness}. Show details.`, pulseKey: r.last_bar_start_utc ?? "",
     }))];
@@ -128,6 +132,17 @@ export default function MonitorView({ reducedMotion }: { reducedMotion: boolean 
         {" "}· last successful poll {et(w.last_success_utc)}.
         <br /><span className="small">Runs only while this computer and the city server are running; no startup task, not a 24/7 service.</span>
       </div>
+      <div className="time-box" role="group" aria-label="Current time and data age">
+        <span>Now (this computer's clock): <LiveClock /></span>
+        <span>Server clock at last update: {etTime(data.now_utc)}</span>
+        <span>Newest live IEX bar ended: <strong>{etTime(data.symbols.map((s) => s.last_bar_end_utc).filter(Boolean).sort().slice(-1)[0] ?? null)}</strong></span>
+      </div>
+      <div className="feed-legend" aria-label="Feed definitions">
+        <div><strong>IEX coverage (live)</strong>: the bars this monitor receives in real time from one exchange (IEX). Partial volume;
+          a minute without IEX trades has no bar. This is the only live record.</div>
+        <div><strong>Delayed SIP comparison (quality check)</strong>: consolidated bars from all exchanges, available only 15 min later on the
+          free plan and compared once a minute is 20 min old. Used to describe IEX vs SIP differences; never written into the live record.</div>
+      </div>
       <div className="row">
         <span>Market: <strong className={data.market.open ? "tone-ok" : ""}>{data.market.open ? "OPEN" : "CLOSED"}</strong>
           {data.market.open ? ` (session ${data.market.session_date}, closes ${et(data.market.session_close_utc)})`
@@ -160,18 +175,21 @@ export default function MonitorView({ reducedMotion }: { reducedMotion: boolean 
         </Boundary>
       )}
       {view === "Table" && (
-        <table className="mon-table" aria-label="Monitored symbols">
-          <thead><tr><th>Symbol</th><th>Feed</th><th>Freshness</th><th>Last close</th><th>Volume</th><th>Bar start (source)</th>
-            <th>Received</th><th>Age</th><th>Bars this session</th><th></th></tr></thead>
+        <div className="scroll"><table className="mon-table" aria-label="Monitored symbols">
+          <caption className="small muted">Live IEX coverage. Data age = server clock − bar end. Receipt delay = received − bar end.</caption>
+          <thead><tr><th>Symbol</th><th>Feed</th><th>Freshness</th><th>Last close</th><th>Volume</th><th>Latest bar (start → end, source time)</th>
+            <th>Received by worker</th><th>Receipt delay</th><th>Data age</th><th>Bars this session</th><th></th></tr></thead>
           <tbody>{data.symbols.map((r) => (
             <tr key={r.symbol} className={selected === r.symbol ? "sel" : ""}>
               <td>{r.symbol}</td><td>{r.feed}</td><td title={r.freshness_detail}>{r.freshness}</td>
               <td>{r.close?.toFixed(2) ?? "—"}</td><td>{r.volume ?? "—"}</td>
-              <td>{et(r.last_bar_start_utc)}<br /><code className="small">{r.last_bar_start_utc ?? ""}</code></td>
-              <td>{et(r.received_utc)}</td><td>{age(r.source_age_s)}</td><td>{r.session_bars}</td>
+              <td>{et(r.last_bar_start_utc)} → {etTime(r.last_bar_end_utc, false)}<br /><code className="small">{r.last_bar_start_utc ?? ""}</code></td>
+              <td>{et(r.received_utc)}</td>
+              <td>{r.received_utc && r.last_bar_end_utc ? ageText((Date.parse(r.received_utc) - Date.parse(r.last_bar_end_utc)) / 1000) : "—"}</td>
+              <td>{ageText(r.source_age_s)}</td><td>{r.session_bars}</td>
               <td><button type="button" aria-pressed={selected === r.symbol} onClick={() => setSelected(r.symbol)}>Details</button></td>
             </tr>))}</tbody>
-        </table>
+        </table></div>
       )}
 
       {selected === "worker" || (!sel && selected === null) ? (

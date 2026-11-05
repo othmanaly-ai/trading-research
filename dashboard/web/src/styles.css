@@ -231,3 +231,48 @@ pre.json { max-height: 260px; overflow: auto; background: #0f0c26; padding: 8px;
 
 .health-box { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
 .sessions h5 { margin: 10px 0 4px; font-size: 13px; }
+
+/* Real-records views: own banner (no demo stripes), grouped view tabs */
+.banner-REAL { background: #0f2a1f; border-bottom-color: #22c55e; }
+.banner-REAL strong { color: #86efac; }
+.tab-group-label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; margin-left: 6px; }
+.tab-group-label.real { color: #86efac; }
+.tab-group-label.demo { color: var(--amber); margin-left: 14px; }
+.layout-real { grid-template-columns: minmax(0, 1fr); grid-template-areas: "main"; }
+
+/* Operational overview */
+.ov-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.ov-card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.ov-card p { margin: 4px 0; }
+.overview .warn { margin: 8px 0; }
+
+/* Market monitor: time and feed definitions */
+.time-box { display: flex; flex-wrap: wrap; gap: 6px 18px; border: 1px solid #b45309; border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
+.feed-legend { display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); font-size: 12px; margin: 6px 0; }
+.feed-legend > div { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.mon-table caption { text-align: left; padding: 2px 0 4px; }
+.sessions .defs { margin: 6px 0 10px; }
+
+/* Tower labels: holder is positioned by the 3D renderer; the label may be lifted to avoid overlap */
+.label-holder { pointer-events: none; }
+.label-holder .tower-label { pointer-events: auto; }
+.tower-label.lifted { outline: 1px dashed rgba(251, 191, 36, 0.6); }
+.city-monitor .tower-label, .city-jobs .tower-label { min-width: 0; max-width: 170px; }
+
+@media (max-width: 700px) {
+  .layout { padding: 8px; }
+  .panel { padding: 10px; }
+  .city, .city-monitor, .city-jobs { height: 380px; }
+  .tower-label { font-size: 11px; padding: 3px 5px; }
+  .tab-group-label { flex-basis: 100%; margin-left: 0; }
+  td:first-child { white-space: normal; }
+}
+.ov-card table { table-layout: fixed; }
+.ov-card td, .ov-card th { white-space: normal; overflow-wrap: anywhere; }
+.ov-card td:first-child { white-space: normal; }
+@media (max-width: 700px) {
+  .banner { position: static; font-size: 12px; }
+}
+@media (max-width: 700px) {
+  .city .tower-label .tl-inst, .city .tower-label .tl-pnl, .city .tower-label .tl-sim { display: none; }
+}

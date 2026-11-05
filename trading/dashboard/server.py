@@ -381,6 +381,14 @@ def _lock_status() -> dict:
             "data_status_at_lock": lock["data_status_at_lock"]}
 
 
+def _order_gate() -> dict:
+    """Order-submission gate as configured for this server process (environment flags only)."""
+    from trading.safety import order_submission_enabled, trading_mode
+    return {"enabled": order_submission_enabled(), "trading_mode": trading_mode(),
+            "note": "No order-submission code exists in this project; the Alpaca client sends HTTP GET only "
+                    "(enforced by tests). Any future order code must pass trading.safety first."}
+
+
 def research_status(history_root: Path = HISTORY_DIR, hist_config_path: Path = HIST_CONFIG) -> dict:
     """What the Research Lab can and cannot do right now, from files on disk."""
     responsibilities = json.loads(RESPONSIBILITIES.read_text(encoding="utf-8"))
@@ -413,6 +421,7 @@ def research_status(history_root: Path = HISTORY_DIR, hist_config_path: Path = H
         } | {"requests": manifest.get("requests"), "summary": manifest.get("summary")},
         "experiment_lock": _lock_status(),
         "responsibilities": responsibilities["responsibilities"],
+        "order_submission": _order_gate(),
         "skills_note": "The eleven-skill package from the reference video has not been received or installed.",
         "scanner_news": {"available": False,
                          "reason": "Universe fixed by spec (SPY). No verified, time-stamped news source."},

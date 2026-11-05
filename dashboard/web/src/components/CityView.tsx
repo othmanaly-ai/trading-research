@@ -29,6 +29,7 @@ interface Tower {
   material: THREE.MeshStandardMaterial;
   edges: THREE.LineBasicMaterial;
   label: HTMLButtonElement;
+  holder: HTMLDivElement;      // positioned by CSS2DRenderer; the label inside it can be offset freely
   pulse: number;
   lastKey: string;
 }
@@ -61,8 +62,9 @@ export default function CityView({ towers, coreColor, selectedId, onSelect, redu
   const host = useRef<HTMLDivElement>(null);
   const world = useRef<{
     scene: THREE.Scene; renderer: THREE.WebGLRenderer; core: THREE.MeshStandardMaterial;
-    towers: Map<string, Tower>; render: () => void;
+    towers: Map<string, Tower>; render: () => void; fit: () => void;
   } | null>(null);
+  const fitted = useRef(-1);
   const motion = useRef(reducedMotion);
   const selectRef = useRef(onSelect);
   selectRef.current = onSelect;
@@ -108,11 +110,39 @@ export default function CityView({ towers, coreColor, selectedId, onSelect, redu
     controls.update();
     controls.maxPolarAngle = Math.PI / 2.2;
     controls.minDistance = 10;
-    controls.maxDistance = 60;
+    controls.maxDistance = 110;
 
+    const declutter = () => {
+      const items = [...map.values()].map((t) => {
+        t.label.style.transform = "";
+        return { t, r: t.label.getBoundingClientRect() };
+      }).filter((x) => x.r.width > 0).sort((a, b) => a.r.left - b.r.left);
+      const box = el.getBoundingClientRect();
+      const placed: { left: number; right: number; top: number; bottom: number }[] = [];
+      for (const { t, r } of items) {
+        // Keep the label inside the view horizontally (narrow windows), then avoid overlaps vertically.
+        let dx = 0;
+        if (r.width < box.width - 8) {
+          if (r.left < box.left + 4) dx = box.left + 4 - r.left;
+          else if (r.right > box.right - 4) dx = box.right - 4 - r.right;
+        }
+        const left = r.left + dx, right = r.right + dx;
+        let shift = 0;
+        for (;;) {
+          const top = r.top - shift, bottom = r.bottom - shift;
+          const hit = placed.find((p) => left < p.right + 4 && right > p.left - 4 && top < p.bottom + 4 && bottom > p.top - 4);
+          if (!hit) { placed.push({ left, right, top, bottom }); break; }
+          shift += bottom - hit.top + 6;          // move this label just above the one it overlaps
+        }
+        t.label.style.transform = dx || shift ? `translate(${Math.round(dx)}px, ${-Math.round(shift)}px)` : "";
+        t.label.classList.toggle("lifted", shift > 0 || dx !== 0);
+      }
+    };
+    const map = new Map<string, Tower>();
     const render = () => {
       renderer.render(scene, camera);
       labels.render(scene, camera);
+      declutter();
     };
     controls.addEventListener("change", render);
     const resize = () => {
@@ -121,13 +151,21 @@ export default function CityView({ towers, coreColor, selectedId, onSelect, redu
       renderer.setSize(w, h);
       labels.setSize(w, h);
       camera.aspect = w / h;
+      // Fit the widest row (plus margin) horizontally: narrower windows move the camera back.
+      const cols = Math.min(PER_ROW, Math.max(1, map.size));
+      const halfWidth = ((cols - 1) * SPACING) / 2 + 4;
+      const halfFov = Math.atan(Math.tan((camera.fov * Math.PI) / 360) * camera.aspect);
+      const dist = Math.min(105, Math.max(30, halfWidth / Math.tan(halfFov) + 6));
+      const dir = camera.position.clone().sub(controls.target).normalize();
+      camera.position.copy(controls.target.clone().add(dir.multiplyScalar(dist)));
       camera.updateProjectionMatrix();
+      controls.update();
       render();
     };
     const ro = new ResizeObserver(resize);
     ro.observe(el);
-    const map = new Map<string, Tower>();
-    world.current = { scene, renderer, core, towers: map, render };
+    world.current = { scene, renderer, core, towers: map, render, fit: resize };
+    fitted.current = -1;
     resize();
 
     const raycaster = new THREE.Raycaster();
@@ -177,7 +215,7 @@ export default function CityView({ towers, coreColor, selectedId, onSelect, redu
       if (!ids.has(id)) {
         // Removing the mesh does not remove its CSS2D label element; do it explicitly, or stale
         // labels from a previous record set would stay on screen.
-        t.label.remove();
+        t.holder.remove();
         w.scene.remove(t.mesh);
         t.mesh.geometry.dispose();
         t.material.dispose();
@@ -201,12 +239,15 @@ export default function CityView({ towers, coreColor, selectedId, onSelect, redu
         // OrbitControls captures the pointer on pointerdown, which would swallow the click.
         label.addEventListener("pointerdown", (e) => e.stopPropagation());
         label.addEventListener("click", (e) => { e.stopPropagation(); selectRef.current(spec.id); });
-        const obj = new CSS2DObject(label);
+        const holder = document.createElement("div");
+        holder.className = "label-holder";
+        holder.appendChild(label);
+        const obj = new CSS2DObject(holder);
         obj.position.set(0, 3.4, 0);
         obj.center.set(0.5, 1);
         mesh.add(obj);
         w.scene.add(mesh);
-        t = { mesh, material, edges, label, pulse: 0, lastKey: spec.pulseKey };
+        t = { mesh, material, edges, label, holder, pulse: 0, lastKey: spec.pulseKey };
         w.towers.set(spec.id, t);
       }
       t.mesh.position.set((col - (inRow - 1) / 2) * SPACING, 3, -6 - row * SPACING);
@@ -223,7 +264,12 @@ export default function CityView({ towers, coreColor, selectedId, onSelect, redu
       fillLabel(t.label, spec, spec.id === selectedId, v.labelClass);
     });
     if (coreColor !== null) w.core.emissive.setHex(coreColor);
-    w.render();
+    if (w.towers.size !== fitted.current) {      // refit only when the tower count changes (keeps the user's zoom)
+      fitted.current = w.towers.size;
+      w.fit();
+    } else {
+      w.render();
+    }
   }, [towers, selectedId, coreColor, v]);
 
   return <div className={`city city-${variant}`} ref={host} />;

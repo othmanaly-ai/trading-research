@@ -8,6 +8,8 @@ interface SessionRow {
   session_date: string; state: string; detail: string | null; scheduled_minutes: number | null; early_close: boolean | null;
   live_received_min: number; compared_min: number; downtime_minutes: number | null; unplanned_downtime_minutes: number | null;
   request_failures: number | null; access_refusals: number | null; report_versions: number;
+  live_by_symbol?: Record<string, { on_time: number; late_catch_up: number; missing: number | null; missing_while_sip_had_bar: number | null }>;
+  on_time_threshold_s?: number; unrecorded_minutes?: number | null;
 }
 interface Sessions {
   sessions: SessionRow[]; operating_note: string;
@@ -30,6 +32,13 @@ function et(ts: string | null | undefined): string {
 }
 const n = (x: number | null | undefined, d = 2) => (x === null || x === undefined ? "—" : Number(x).toFixed(d));
 const pct = (x: number | null | undefined) => (x === null || x === undefined ? "—" : `${(x * 100).toFixed(1)}%`);
+// "SPY 79 · QQQ 79 · IWM 79 / 390": every symbol's own count over the stated denominator.
+function perSymbol(s: SessionRow, key: "on_time" | "late_catch_up" | "missing"): string {
+  const by = s.live_by_symbol;
+  if (!by || !Object.keys(by).length) return "—";
+  const parts = Object.entries(by).map(([sym, v]) => `${sym} ${v[key] ?? "open"}`);
+  return `${parts.join(" · ")} / ${s.scheduled_minutes ?? "?"}`;
+}
 const secs = (x: number | null | undefined) => (x === null || x === undefined ? "—" : x < 120 ? `${Math.round(x)} s` : `${Math.round(x / 60)} min`);
 
 export default function SessionHistory({ tick }: { tick: number }) {
@@ -58,20 +67,39 @@ export default function SessionHistory({ tick }: { tick: number }) {
       <p className="small">Comparison worker: <strong>{data.comparison_health.state.toUpperCase()}</strong> · {data.comparison_health.detail}
         {data.comparison_health.backoff_until_utc ? ` · retry after ${et(data.comparison_health.backoff_until_utc)}` : ""}</p>
       {data.sessions.length === 0 ? <p className="empty">No monitored session yet.</p> : (
-        <table className="q-table" aria-label="Monitored sessions">
-          <thead><tr><th>Session</th><th>State</th><th>Scheduled min</th><th>Received live (min of symbols)</th><th>Compared with SIP</th>
-            <th>Downtime (unplanned)</th><th>Request failures · refusals</th><th>Report versions</th><th></th></tr></thead>
+        <div className="scroll"><table className="q-table" aria-label="Monitored sessions">
+          <thead><tr><th>Session</th><th>State</th><th>Scheduled min</th>
+            <th>On time (live IEX)</th><th>Late catch-up</th><th>Missing live</th>
+            <th>Unrecorded worker time</th><th>Compared with delayed SIP</th>
+            <th>Downtime (unplanned)</th><th>API failures · refusals</th><th>Report versions</th><th></th></tr></thead>
           <tbody>{data.sessions.map((s) => (
             <tr key={s.session_date} className={date === s.session_date ? "sel" : ""}>
               <td>{s.session_date}{s.early_close ? " (early close)" : ""}</td>
               <td className={STATE_CLASS[s.state] ?? ""} title={s.detail ?? ""}>{STATE_LABEL[s.state] ?? s.state}</td>
-              <td>{s.scheduled_minutes ?? "—"}</td><td>{s.live_received_min}</td><td>{s.compared_min}</td>
-              <td>{s.downtime_minutes ?? "—"} ({s.unplanned_downtime_minutes ?? "—"})</td>
+              <td>{s.scheduled_minutes ?? "—"}</td>
+              <td>{perSymbol(s, "on_time")}</td><td>{perSymbol(s, "late_catch_up")}</td><td>{perSymbol(s, "missing")}</td>
+              <td>{s.unrecorded_minutes ?? "—"} min</td>
+              <td>{s.compared_min} / {s.scheduled_minutes ?? "?"}</td>
+              <td>{s.downtime_minutes ?? "—"} ({s.unplanned_downtime_minutes ?? "—"}) min</td>
               <td>{s.request_failures ?? 0} · {s.access_refusals ?? 0}</td><td>{s.report_versions}</td>
               <td><button type="button" aria-pressed={date === s.session_date} onClick={() => setDate(s.session_date)}>Report</button></td>
             </tr>))}</tbody>
-        </table>
+        </table></div>
       )}
+      <details className="defs" open={false}>
+        <summary>What these columns mean (definitions and denominators)</summary>
+        <dl className="kv small">
+          <dt>Scheduled min</dt><dd>Regular-session minutes from the exchange calendar (390, or fewer on early-close days). The denominator for the per-symbol counts.</dd>
+          <dt>On time (live IEX)</dt><dd>Minutes whose IEX bar the live worker stored within {data.sessions[0]?.on_time_threshold_s ?? 180} s of the bar's end. Only these count as on-time live coverage.</dd>
+          <dt>Late catch-up</dt><dd>Minutes whose IEX bar was stored more than {data.sessions[0]?.on_time_threshold_s ?? 180} s after the bar's end, usually fetched after an outage. They are part of the record but were <strong>not</strong> observed on time.</dd>
+          <dt>Missing live</dt><dd>Scheduled minutes with no stored IEX bar (shown once the session has closed). A minute without IEX trades has no bar, so missing does not always mean an outage; the report shows how many of these had a SIP bar.</dd>
+          <dt>Unrecorded worker time</dt><dd>Session minutes before worker-run records existed (records began 2026-11-04 17:16 UTC): whether a worker ran then is not known from the run log. Measured in time, not per symbol.</dd>
+          <dt>Compared with delayed SIP</dt><dd>Minutes (lowest across symbols) compared against delayed consolidated SIP bars, out of the scheduled minutes. A quality check, not live coverage.</dd>
+          <dt>Downtime</dt><dd>Session time with no live worker: unplanned = no recorded stop request.</dd>
+          <dt>API failures · refusals</dt><dd>Failed or refused market-data requests (live polling, and comparison runs for this session). Supervisor and crash messages are counted separately in the report.</dd>
+        </dl>
+        <p className="small muted">On time + late catch-up + missing live = scheduled minutes, per symbol.</p>
+      </details>
 
       {report && (
         <div className="report" aria-label={`Evidence report ${report.session_date}`}>
@@ -82,8 +110,8 @@ export default function SessionHistory({ tick }: { tick: number }) {
 
           {syms.length > 0 && (<>
             <h5>1 · What the live monitor received (IEX, real time) — never filled in from later re-fetches</h5>
-            <table className="q-table"><thead><tr><th>Symbol</th><th>Minutes received</th><th>Normal · by catch-up</th><th>Latency normal · catch-up (median) · max</th>
-              <th>Not received</th><th>…while SIP had a bar</th><th>Stale intervals (&gt;3 min)</th></tr></thead>
+            <table className="q-table"><thead><tr><th>Symbol</th><th>Minutes stored (on time + late)</th><th>On time · late catch-up</th><th>Receipt delay on time · catch-up (median) · max</th>
+              <th>Missing live</th><th>…of which SIP had a bar</th><th>Stale intervals (&gt;3 min)</th></tr></thead>
               <tbody>{syms.map((s) => { const l = ev.live[s]; return (
                 <tr key={s}><td>{s}</td><td>{l.received_minutes}</td><td>{l.received_normal} · {l.received_by_catch_up}</td>
                   <td>{secs(l.latency_normal_median_s)} · {secs(l.latency_catch_up_median_s)} · {secs(l.latency_max_s)}</td>
@@ -99,7 +127,7 @@ export default function SessionHistory({ tick }: { tick: number }) {
             <h5>3 · Delayed SIP comparison (eligible = bar end + 15 min under the free plan; received = actual arrival)</h5>
             <table className="q-table"><thead><tr><th>Symbol</th><th>Compared</th><th>Close diff vs re-fetched IEX |bps| median · max · max $</th>
               <th>Close diff vs live IEX |bps| median · max</th><th>High · low diff bps (median)</th><th>IEX volume share total · median</th>
-              <th>Received after eligible: normal · catch-up (median)</th><th>SIP revisions</th></tr></thead>
+              <th>SIP received after eligible: regular cycle · catch-up (median)</th><th>SIP revisions</th></tr></thead>
               <tbody>{syms.map((s) => { const c = ev.sip_comparison[s]; return (
                 <tr key={s}><td>{s}</td><td>{c.minutes_compared}</td>
                   <td>{n(c.close_diff_vs_refetched_iex_bps.median_abs)} · {n(c.close_diff_vs_refetched_iex_bps.max_abs)} · ${n(c.close_diff_vs_refetched_iex_bps.max_abs_usd)}</td>

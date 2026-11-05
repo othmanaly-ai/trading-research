@@ -294,3 +294,16 @@ def test_interval_without_run_records_is_unrecorded_not_downtime(env):
     ops = reliability.daily_report(env, "2026-11-04", s.open_utc + timedelta(minutes=120))["evidence"]["operations"]
     assert ops["downtime_minutes"] == 0 and ops["unrecorded_minutes"] == 90
     assert ops["unrecorded_intervals"][0]["kind"].startswith("unrecorded")
+
+
+def test_sessions_overview_separates_on_time_catch_up_and_missing(env):
+    """SYNTHETIC: one bar received on time, one by catch-up; the overview never merges them."""
+    s = session("2026-11-04")
+    q.QualityChecker(env, SYMS).mark_monitored(s, s.open_utc)
+    t0, t1 = s.open_utc, s.open_utc + timedelta(minutes=1)
+    env.insert_bars("SPY", "iex", [{"t": mst.iso(t0), "o": 1, "h": 1, "l": 1, "c": 1, "v": 1}], t0 + timedelta(seconds=80))
+    env.insert_bars("SPY", "iex", [{"t": mst.iso(t1), "o": 1, "h": 1, "l": 1, "c": 1, "v": 1}], t1 + timedelta(minutes=30))
+    row = reliability.sessions_overview(env, s.close_utc + timedelta(hours=4))[0]
+    spy = row["live_by_symbol"]["SPY"]
+    assert spy["on_time"] == 1 and spy["late_catch_up"] == 1
+    assert spy["missing"] == s.regular_minutes - 2 and row["on_time_threshold_s"] == 180

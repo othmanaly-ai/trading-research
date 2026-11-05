@@ -54,6 +54,22 @@ export function Banner({ text, mode = "DEMO_REPLAY" }: { text: string; mode?: st
   );
 }
 
+// Views that show REAL records (monitoring database, job store, research files) never show the
+// synthetic replay clock, demo controls, simulated account or demo risk alerts.
+export const DEMO_VIEWS = ["City", "Table", "Sessions", "Leaderboard"];
+export const REAL_VIEWS = ["Overview", "Market monitor", "Research jobs", "Research"];
+export const isDemoView = (v: string) => DEMO_VIEWS.includes(v);
+
+export function RealBanner() {
+  return (
+    <div className="banner banner-REAL" role="status">
+      <strong>REAL RECORDS · READ-ONLY</strong>
+      <span>Monitoring database, research-job store and research files on this computer. No demo data, no simulated balances.</span>
+      <span className="banner-off">Order submission: DISABLED</span>
+    </div>
+  );
+}
+
 const SPEEDS = [60, 300, 600, 1800, 3600];
 
 export function Controls({ status, connection, lastMessageAt, control, controlError, view, setView,
@@ -62,9 +78,22 @@ export function Controls({ status, connection, lastMessageAt, control, controlEr
   control: (a: string, s?: number) => void; controlError: string | null;
   view: string; setView: (v: string) => void; reducedMotion: boolean; setReducedMotion: (b: boolean) => void;
 }) {
-  const views = ["City", "Table", "Sessions", "Leaderboard", "Research", "Research jobs", "Market monitor"];
+  const demo = isDemoView(view);
+  const tab = (v: string) => (
+    <button key={v} type="button" role="tab" aria-selected={view === v} className={view === v ? "active" : ""}
+            onClick={() => setView(v)}>{v}</button>
+  );
   return (
     <div className="controls">
+      <div className="group view-tabs" role="tablist" aria-label="Views">
+        <span className="tab-group-label real">Real records:</span>{REAL_VIEWS.map(tab)}
+        <span className="tab-group-label demo">Demo replay (synthetic):</span>{DEMO_VIEWS.map(tab)}
+        <label className="rm">
+          <input type="checkbox" aria-label="Reduced motion" checked={reducedMotion}
+                 onChange={(e) => setReducedMotion(e.target.checked)} /> Reduced motion
+        </label>
+      </div>
+      {demo && (<>
       <div className="group" role="group" aria-label="Replay controls">
         {status?.playing
           ? <button type="button" onClick={() => control("pause")}>Pause</button>
@@ -82,20 +111,11 @@ export function Controls({ status, connection, lastMessageAt, control, controlEr
         <span>{status ? `${status.playing ? "PLAYING" : status.finished ? "FINISHED" : "PAUSED"} · ${status.cursor}/${status.total} events` : "—"}</span>
       </div>
       <div className={`group conn conn-${connection}`}>
-        Backend: <strong>{connection.toUpperCase()}</strong>
+        Replay stream: <strong>{connection.toUpperCase()}</strong>
         {lastMessageAt && <span className="muted"> last message {new Date(lastMessageAt).toLocaleTimeString()}</span>}
       </div>
-      <div className="group" role="tablist" aria-label="Views">
-        {views.map((v) => (
-          <button key={v} type="button" role="tab" aria-selected={view === v} className={view === v ? "active" : ""}
-                  onClick={() => setView(v)}>{v}</button>
-        ))}
-        <label className="rm">
-          <input type="checkbox" aria-label="Reduced motion" checked={reducedMotion}
-                 onChange={(e) => setReducedMotion(e.target.checked)} /> Reduced motion
-        </label>
-      </div>
-      {controlError && <p className="error" role="alert">{controlError}</p>}
+      </>)}
+      {demo && controlError && <p className="error" role="alert">{controlError}</p>}
     </div>
   );
 }
