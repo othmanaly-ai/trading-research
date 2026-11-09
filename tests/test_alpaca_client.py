@@ -72,8 +72,17 @@ def test_only_paper_and_data_hosts_allowed():
 
 def test_client_has_no_order_methods():
     public = {n for n in dir(ReadOnlyAlpacaClient) if not n.startswith("_")}
-    assert public == {"get_account", "get_bars", "get_bars_multi", "get_quotes", "get_corporate_actions", "get_quote_conditions"}
+    assert public == {"get_account", "get_bars", "get_bars_multi", "get_quotes", "get_corporate_actions",
+                      "get_quote_conditions", "get_clock"}
     assert all(n.startswith("get_") for n in public)          # read-only: GET methods only
+
+
+def test_clock_is_a_paper_host_get_with_listed_fields_only():
+    raw = {"timestamp": "2026-11-10T09:00:00.123456-05:00", "is_open": False, "next_open": "x", "next_close": "y",
+           "extra": "dropped"}
+    http = FakeHttp([FakeResponse(200, raw)])
+    out = ReadOnlyAlpacaClient(FAKE_KEY, FAKE_SECRET, http=http).get_clock()
+    assert http.calls[0]["url"] == "https://paper-api.alpaca.markets/v2/clock" and "extra" not in out
 
 
 def test_repr_hides_credentials():

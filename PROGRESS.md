@@ -649,6 +649,55 @@ pipeline -> watch progress -> cancel if needed -> open the report.
 - **Unchanged:** `trading/costs.py`, the experiment locks, both closed verdicts, and the gap-down
   block. No validation or final data was requested.
 
+## Automatic session dry run, Milestone 1: implemented (2026-11-09)
+
+- **Owner decisions (2026-11-09):**
+  - no order code
+  - runtime records in `%LOCALAPPDATA%\TradingProject`
+  - manual start, with no scheduled task or background startup
+  - five consecutive scheduled sessions must PASS (operation, not profitability)
+- **Rules written before any session evidence:** `docs/DRY_RUN_ACCEPTANCE.md`. It defines PASS,
+  FAIL, INTERRUPTED and INCOMPLETE; missing evidence is never a pass.
+- **Implemented:** `trading/operations/`
+  - session clock
+  - empty approvals registry (`config/approved_strategies.json`)
+  - entry-permission gate (DRY_RUN always denies)
+  - kill switch
+  - read-only checks (one new GET, `get_clock`)
+  - runner
+  - records store
+  - classification and acceptance
+  - CLI
+  - the dashboard "Operations" view (`/api/operations`)
+- **How to run it:** `docs/OPERATIONS.md`
+- **Tested (synthetic):** new tests `test_operations_schedule.py`, `test_operations_gate.py`,
+  `test_operations_runner.py` and `test_operations_boundary.py`; the full suite passed (368).
+  - **Calendar:** DST, early close, holiday, weekend, late start.
+  - **Approvals:** refusal of closed, failed, deferred, unknown, mismatched and multiple strategies.
+  - **Runner:** whole simulated sessions for on-time PASS, late start, machine sleep, operator stop,
+    same-day restart (no duplicates), broker outage (bounded retries), monitor down, unsafe
+    configuration, holiday, and injected violations.
+  - **Static checks:** no order code; dashboard-side modules load no broker code.
+- **A real test caught a fix:** the runner had hard-coded the monitoring database path. It now uses
+  the monitor's own constant.
+- **The boundary is now checked by imports and by the data read, not by path strings**
+  (`tests/test_operations_boundary.py`):
+  - research code imports no monitoring or operations code
+  - only `data_health.py` opens the monitoring database (read-only), and it reads only worker
+    liveness and the newest bar *time*
+  - decisions record health only, never prices
+- **Every run records its git commit**, and whether the operations code exactly matched it. The
+  session report shows this under `code_version`. A session on uncommitted operations code is
+  INCOMPLETE (I5, added before any session evidence).
+- **Verified (real, read-only), 2026-11-09 ~21:43 ET:**
+  - the `preflight` checks passed: order guard disabled; records outside OneDrive; approvals NONE;
+    kill switch off; monitor worker alive; credentials present (names only); broker clock skew
+    -1.1 s (tolerance 2 s); calendar agrees; paper account ACTIVE and not blocked
+  - `run` on a non-session day exited cleanly
+  - the Operations view rendered in the browser with no console errors
+- **Not yet verified:** any real market session. The five-session evidence starts with the next
+  manual run.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

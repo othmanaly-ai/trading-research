@@ -57,7 +57,7 @@ export function Banner({ text, mode = "DEMO_REPLAY" }: { text: string; mode?: st
 // Views that show REAL records (monitoring database, job store, research files) never show the
 // synthetic replay clock, demo controls, simulated account or demo risk alerts.
 export const DEMO_VIEWS = ["City", "Table", "Sessions", "Leaderboard"];
-export const REAL_VIEWS = ["Overview", "Market monitor", "Research jobs", "Dependencies", "Research"];
+export const REAL_VIEWS = ["Overview", "Market monitor", "Operations", "Research jobs", "Dependencies", "Research"];
 export const isDemoView = (v: string) => DEMO_VIEWS.includes(v);
 
 export function RealBanner() {

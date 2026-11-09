@@ -1,0 +1,6 @@
+{
+  "schema": 1,
+  "environment": "DRY_RUN",
+  "approved": [],
+  "note": "Empty by design (owner decision 2026-11-09, Milestone 1). Only the owner adds an entry, after a strategy passes the research track. Milestone 1 defines no approvable strategy state, so every entry would be refused."
+}

@@ -80,6 +80,16 @@ Exit codes for the data check: 0 = success, 1 = API refused or failed, 2 = no cr
   switch feeds silently. No signals or recommendations from monitoring data; it is not a research
   dataset.
 
+## Automatic session dry run (Milestone 1, read-only)
+
+- `trading/operations/` (see `docs/OPERATIONS.md`, `docs/DRY_RUN_ACCEPTANCE.md`, `docs/AUTO_TRADING_ROADMAP.md`).
+  Environment DRY_RUN only: the gate always denies entries. The package must never contain or import order code
+  (a static test enforces it). `config/approved_strategies.json` stays empty unless the owner edits it.
+- Runtime records live in `%LOCALAPPDATA%\TradingProject\operations` (never OneDrive or the project). Started manually
+  by the owner; never install a scheduled task or background startup without a new owner decision.
+- Session classification rules are fixed in `docs/DRY_RUN_ACCEPTANCE.md`; missing evidence is never a pass. Changing
+  the operations code restarts the five-session count (code fingerprint).
+
 ## Model reviewer (automated second review)
 
 - Status: OPTIONAL / DISABLED. The owner revoked paid calls on 2026-11-04; do not re-enable them without a new

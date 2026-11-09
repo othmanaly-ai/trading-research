@@ -16,6 +16,7 @@ Endpoints:
   GET  /api/strategies/<id>/journal      journal rows (JSON); /journal.csv downloads them
   GET  /api/research             mode availability, periods, responsibilities
   GET  /api/depmap               read-only dependency-and-health map (declared / recorded / proposed)
+  GET  /api/operations           Milestone 1 dry-run status from the operations store (read-only; no orders exist)
   GET  /api/jobs                 real research-job records (trading/jobs.py), read-only
   GET  /api/experiments          allowed saved experiments with artifact inventories
   GET  /api/pipelines/preview?experiment=<allowed id>
@@ -514,6 +515,9 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
             if path == "/api/depmap":
                 from trading.dashboard import depmap
                 return self._json(depmap.collect(jobs_db=JOBS_DB))
+            if path == "/api/operations":
+                from trading.operations import snapshot as ops_snapshot     # read-only; no broker code
+                return self._json(ops_snapshot.collect())
             if path == "/api/monitor":
                 return self._json(monitor_snapshot())
             if path == "/api/monitor/sessions":

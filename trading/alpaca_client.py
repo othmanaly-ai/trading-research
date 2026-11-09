@@ -97,6 +97,11 @@ class ReadOnlyAlpacaClient:
         raw = self._get(PAPER_TRADING_URL, "/v2/account")
         return {k: raw.get(k) for k in ACCOUNT_FIELDS}
 
+    def get_clock(self) -> dict:
+        """Broker market clock (GET /v2/clock): timestamp, is_open, next_open, next_close. Read-only."""
+        raw = self._get(PAPER_TRADING_URL, "/v2/clock")
+        return {k: raw.get(k) for k in ("timestamp", "is_open", "next_open", "next_close")}
+
     def get_bars(self, symbol: str, timeframe: str, start: str, end: str,
                  feed: str, adjustment: str, limit: int = 10000) -> dict:
         """All bars for one symbol, following next_page_token until exhausted."""
