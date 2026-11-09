@@ -1,0 +1,7289 @@
+{
+ "label": "FEASIBILITY EVIDENCE, PROVISIONAL: SPY quoted bid-ask spread pilot. Alpaca SIP quotes as retrieved in 2026; timestamp clock, quote construction and condition code '?' undocumented. Quotes are not fills. Not research evaluation; no returns computed.",
+ "preregistration": {
+  "plan": "feasibility/spread_measurement/PLAN.md",
+  "plan_commit": "be2d9cdf3753a4f3566cbe79411320d00e2ee247",
+  "plan_sha256": "cb9a1e275f96a4be907ac6e01f142ebd35c659964defec6bc83a0df9a7173f32",
+  "head": "be2d9cdf3753a4f3566cbe79411320d00e2ee247"
+ },
+ "rules": {
+  "stale_s": 5.0,
+  "snapshot_max_age_s": 1.0,
+  "coverage_min": 0.95,
+  "headline_codes": [
+   "?",
+   "R"
+  ],
+  "wide_spread_cents": 10.0,
+  "cost_model_half_spread_bp_for_comparison": {
+   "base": 0.5,
+   "stress": 1.0,
+   "severe": 2.0
+  }
+ },
+ "resource_usage": {
+  "http_requests": 135,
+  "request_cap": 600,
+  "http_status_counts": {
+   "200": 135
+  },
+  "pages_by_window": {
+   "2018-06-07 B0": 5,
+   "2018-06-07 B1": 1,
+   "2018-06-07 B2": 1,
+   "2018-06-07 B3": 1,
+   "2018-06-07 B4": 1,
+   "2018-06-07 B5": 1,
+   "2018-06-07 B6": 1,
+   "2018-06-07 B7": 1,
+   "2018-06-07 E1": 1,
+   "2018-06-07 X1": 2,
+   "2021-04-23 B0": 19,
+   "2021-04-23 B1": 2,
+   "2021-04-23 B2": 2,
+   "2021-04-23 B3": 1,
+   "2021-04-23 B4": 1,
+   "2021-04-23 B5": 1,
+   "2021-04-23 B6": 1,
+   "2021-04-23 B7": 2,
+   "2021-04-23 E1": 2,
+   "2021-04-23 X1": 5,
+   "2020-01-02 B0": 11,
+   "2020-01-02 B1": 2,
+   "2020-01-02 B2": 1,
+   "2020-01-02 B3": 1,
+   "2020-01-02 B4": 1,
+   "2020-01-02 B5": 1,
+   "2020-01-02 B6": 1,
+   "2020-01-02 B7": 1,
+   "2020-01-02 E1": 2,
+   "2020-01-02 X1": 4,
+   "2019-01-31 B0": 12,
+   "2019-01-31 B1": 1,
+   "2019-01-31 B2": 1,
+   "2019-01-31 B3": 1,
+   "2019-01-31 B4": 1,
+   "2019-01-31 B5": 1,
+   "2019-01-31 B6": 1,
+   "2019-01-31 B7": 1,
+   "2019-01-31 E1": 2,
+   "2019-01-31 X1": 4,
+   "2016-03-28 B0": 7,
+   "2016-03-28 B1": 1,
+   "2016-03-28 B2": 1,
+   "2016-03-28 B3": 1,
+   "2016-03-28 B4": 1,
+   "2016-03-28 B5": 1,
+   "2016-03-28 B6": 1,
+   "2016-03-28 B7": 1,
+   "2016-03-28 E1": 2,
+   "2016-03-28 X1": 2,
+   "2017-01-06 B0": 4,
+   "2017-01-06 B1": 1,
+   "2017-01-06 B2": 1,
+   "2017-01-06 B3": 1,
+   "2017-01-06 B4": 1,
+   "2017-01-06 B5": 1,
+   "2017-01-06 B6": 1,
+   "2017-01-06 B7": 1,
+   "2017-01-06 E1": 1,
+   "2017-01-06 X1": 3
+  },
+  "bytes_total_all_files": 7871451,
+  "bytes_cap": 75000000,
+  "bytes_by_file": {
+   "fetch_results.json": 15220,
+   "quote_conditions_tape_B.json": 433,
+   "quotes_2016-03-28_B0.json.gz": 297370,
+   "quotes_2016-03-28_B1.json.gz": 35658,
+   "quotes_2016-03-28_B2.json.gz": 25993,
+   "quotes_2016-03-28_B3.json.gz": 15240,
+   "quotes_2016-03-28_B4.json.gz": 18269,
+   "quotes_2016-03-28_B5.json.gz": 14311,
+   "quotes_2016-03-28_B6.json.gz": 18854,
+   "quotes_2016-03-28_B7.json.gz": 40680,
+   "quotes_2016-03-28_E1.json.gz": 71503,
+   "quotes_2016-03-28_X1.json.gz": 90576,
+   "quotes_2017-01-06_B0.json.gz": 157781,
+   "quotes_2017-01-06_B1.json.gz": 12856,
+   "quotes_2017-01-06_B2.json.gz": 17269,
+   "quotes_2017-01-06_B3.json.gz": 15809,
+   "quotes_2017-01-06_B4.json.gz": 15624,
+   "quotes_2017-01-06_B5.json.gz": 10255,
+   "quotes_2017-01-06_B6.json.gz": 15643,
+   "quotes_2017-01-06_B7.json.gz": 18308,
+   "quotes_2017-01-06_E1.json.gz": 41884,
+   "quotes_2017-01-06_X1.json.gz": 110066,
+   "quotes_2018-06-07_B0.json.gz": 314828,
+   "quotes_2018-06-07_B1.json.gz": 39401,
+   "quotes_2018-06-07_B2.json.gz": 33467,
+   "quotes_2018-06-07_B3.json.gz": 22290,
+   "quotes_2018-06-07_B4.json.gz": 29942,
+   "quotes_2018-06-07_B5.json.gz": 42774,
+   "quotes_2018-06-07_B6.json.gz": 39007,
+   "quotes_2018-06-07_B7.json.gz": 25347,
+   "quotes_2018-06-07_E1.json.gz": 56103,
+   "quotes_2018-06-07_X1.json.gz": 99899,
+   "quotes_2019-01-31_B0.json.gz": 873219,
+   "quotes_2019-01-31_B1.json.gz": 72332,
+   "quotes_2019-01-31_B2.json.gz": 52573,
+   "quotes_2019-01-31_B3.json.gz": 49542,
+   "quotes_2019-01-31_B4.json.gz": 27575,
+   "quotes_2019-01-31_B5.json.gz": 67312,
+   "quotes_2019-01-31_B6.json.gz": 18747,
+   "quotes_2019-01-31_B7.json.gz": 60511,
+   "quotes_2019-01-31_E1.json.gz": 147468,
+   "quotes_2019-01-31_X1.json.gz": 324965,
+   "quotes_2020-01-02_B0.json.gz": 887421,
+   "quotes_2020-01-02_B1.json.gz": 90964,
+   "quotes_2020-01-02_B2.json.gz": 56520,
+   "quotes_2020-01-02_B3.json.gz": 39531,
+   "quotes_2020-01-02_B4.json.gz": 33936,
+   "quotes_2020-01-02_B5.json.gz": 40309,
+   "quotes_2020-01-02_B6.json.gz": 56653,
+   "quotes_2020-01-02_B7.json.gz": 55264,
+   "quotes_2020-01-02_E1.json.gz": 112784,
+   "quotes_2020-01-02_X1.json.gz": 276951,
+   "quotes_2021-04-23_B0.json.gz": 1579452,
+   "quotes_2021-04-23_B1.json.gz": 158943,
+   "quotes_2021-04-23_B2.json.gz": 124823,
+   "quotes_2021-04-23_B3.json.gz": 55913,
+   "quotes_2021-04-23_B4.json.gz": 55705,
+   "quotes_2021-04-23_B5.json.gz": 48368,
+   "quotes_2021-04-23_B6.json.gz": 60515,
+   "quotes_2021-04-23_B7.json.gz": 87862,
+   "quotes_2021-04-23_E1.json.gz": 129387,
+   "quotes_2021-04-23_X1.json.gz": 410895,
+   "requests_log.json": 52351
+  },
+  "elapsed_s": 94.955,
+  "stop_reason": null,
+  "stopped_paths": {},
+  "local_started_utc": "2026-11-09T01:22:28.418723+00:00",
+  "local_finished_utc": "2026-11-09T01:24:03.374031+00:00"
+ },
+ "conditions": {
+  "status": "ok"
+ },
+ "windows": {
+  "2018-06-07 B0": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 5,
+    "requests": 5,
+    "quotes": 40058,
+    "complete": true,
+    "last_t": "2018-06-07T14:15:59.683343Z",
+    "file": "quotes_2018-06-07_B0.json.gz",
+    "bytes": 314828
+   },
+   "stats": {
+    "records_received": 40058,
+    "duplicates": 0,
+    "window_seconds": 960.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 40058,
+    "class_counts": {
+     "normal": 36643,
+     "locked": 3211,
+     "crossed": 204,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 3211,
+     "crossed": 204,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.994179,
+     "locked": 0.005745,
+     "crossed": 6.3e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 1.4e-05
+    },
+    "coverage": 0.994179,
+    "measured": true,
+    "headline_seconds": 954.411482,
+    "condition_codes": {
+     "?": 40058
+    },
+    "largest_gap_s": 2.784809,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010396,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010346,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0396,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0346,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3741,
+      "tw_median": 0.3598,
+      "tw_p90": 0.3603,
+      "tw_p99": 0.7204,
+      "max": 0.7206,
+      "count_mean": 0.3723,
+      "count_median": 0.3599
+     }
+    },
+    "half_spread_bp_tw_mean": 0.187,
+    "time_share_by_spread": {
+     "1_cent": 0.960378,
+     "2_cents": 0.039622,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0336,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1000.0,
+     "ask": 1300.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3741
+    },
+    "snapshots": {
+     "10:01:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3597,
+      "quote_age_s": 0.017952,
+      "label": "clock-dependent"
+     },
+     "10:05:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3595,
+      "quote_age_s": 0.141186,
+      "label": "clock-dependent"
+     },
+     "10:10:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.36,
+      "quote_age_s": 0.070545,
+      "label": "clock-dependent"
+     },
+     "10:15:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3601,
+      "quote_age_s": 0.211229,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2018-06-07 B1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 5122,
+    "complete": true,
+    "last_t": "2018-06-07T14:46:59.960647Z",
+    "file": "quotes_2018-06-07_B1.json.gz",
+    "bytes": 39401
+   },
+   "stats": {
+    "records_received": 5122,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 5122,
+    "class_counts": {
+     "normal": 4851,
+     "locked": 262,
+     "crossed": 9,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 262,
+     "crossed": 9,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.994211,
+     "locked": 0.004094,
+     "crossed": 3e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.001665
+    },
+    "coverage": 0.994211,
+    "measured": true,
+    "headline_seconds": 119.305319,
+    "condition_codes": {
+     "?": 5122
+    },
+    "largest_gap_s": 2.314049,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.01021,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010223,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.021,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0223,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3682,
+      "tw_median": 0.3606,
+      "tw_p90": 0.3608,
+      "tw_p99": 0.7212,
+      "max": 0.7216,
+      "count_mean": 0.3687,
+      "count_median": 0.3606
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1841,
+    "time_share_by_spread": {
+     "1_cent": 0.978993,
+     "2_cents": 0.021007,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0168,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 800.0,
+     "ask": 2000.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3682
+    },
+    "snapshots": {
+     "10:46:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3606,
+      "quote_age_s": 0.093034,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2018-06-07 B2": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 4277,
+    "complete": true,
+    "last_t": "2018-06-07T15:31:59.916608Z",
+    "file": "quotes_2018-06-07_B2.json.gz",
+    "bytes": 33467
+   },
+   "stats": {
+    "records_received": 4277,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 4277,
+    "class_counts": {
+     "normal": 4064,
+     "locked": 210,
+     "crossed": 3,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 210,
+     "crossed": 3,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.993758,
+     "locked": 0.006134,
+     "crossed": 4e-06,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.000105
+    },
+    "coverage": 0.993758,
+    "measured": true,
+    "headline_seconds": 119.250958,
+    "condition_codes": {
+     "?": 4277
+    },
+    "largest_gap_s": 1.954274,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.01036,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010187,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.036,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0187,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3732,
+      "tw_median": 0.3603,
+      "tw_p90": 0.3603,
+      "tw_p99": 0.7206,
+      "max": 0.7206,
+      "count_mean": 0.367,
+      "count_median": 0.3603
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1866,
+    "time_share_by_spread": {
+     "1_cent": 0.964005,
+     "2_cents": 0.035995,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0296,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1900.0,
+     "ask": 600.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3732
+    },
+    "snapshots": {
+     "11:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3603,
+      "quote_age_s": 0.206555,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2018-06-07 B3": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 2828,
+    "complete": true,
+    "last_t": "2018-06-07T16:16:59.768956Z",
+    "file": "quotes_2018-06-07_B3.json.gz",
+    "bytes": 22290
+   },
+   "stats": {
+    "records_received": 2828,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 2828,
+    "class_counts": {
+     "normal": 2622,
+     "locked": 193,
+     "crossed": 13,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 193,
+     "crossed": 13,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.996263,
+     "locked": 0.001514,
+     "crossed": 3.5e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.002189
+    },
+    "coverage": 0.996263,
+    "measured": true,
+    "headline_seconds": 119.551513,
+    "condition_codes": {
+     "?": 2828
+    },
+    "largest_gap_s": 2.614085,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010049,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010244,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0049,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0244,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3621,
+      "tw_median": 0.3603,
+      "tw_p90": 0.3604,
+      "tw_p99": 0.3604,
+      "max": 0.7207,
+      "count_mean": 0.3691,
+      "count_median": 0.3603
+     }
+    },
+    "half_spread_bp_tw_mean": 0.181,
+    "time_share_by_spread": {
+     "1_cent": 0.995078,
+     "2_cents": 0.004922,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0034,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 5000.0,
+     "ask": 1000.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3621
+    },
+    "snapshots": {
+     "12:16:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3604,
+      "quote_age_s": 0.510888,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2018-06-07 B4": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 3807,
+    "complete": true,
+    "last_t": "2018-06-07T17:01:59.885169Z",
+    "file": "quotes_2018-06-07_B4.json.gz",
+    "bytes": 29942
+   },
+   "stats": {
+    "records_received": 3807,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 3807,
+    "class_counts": {
+     "normal": 3607,
+     "locked": 193,
+     "crossed": 7,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 193,
+     "crossed": 7,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.993487,
+     "locked": 0.006094,
+     "crossed": 2.5e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.000395
+    },
+    "coverage": 0.993487,
+    "measured": true,
+    "headline_seconds": 119.218431,
+    "condition_codes": {
+     "?": 3807
+    },
+    "largest_gap_s": 2.756824,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010486,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010366,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0486,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0366,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3782,
+      "tw_median": 0.3607,
+      "tw_p90": 0.3608,
+      "tw_p99": 0.7215,
+      "max": 0.7216,
+      "count_mean": 0.3739,
+      "count_median": 0.3607
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1891,
+    "time_share_by_spread": {
+     "1_cent": 0.951448,
+     "2_cents": 0.048552,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0422,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1500.0,
+     "ask": 1000.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3782
+    },
+    "snapshots": {
+     "13:01:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3607,
+      "quote_age_s": 0.32304,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2018-06-07 B5": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 5502,
+    "complete": true,
+    "last_t": "2018-06-07T17:46:59.985221Z",
+    "file": "quotes_2018-06-07_B5.json.gz",
+    "bytes": 42774
+   },
+   "stats": {
+    "records_received": 5502,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 5502,
+    "class_counts": {
+     "normal": 5196,
+     "locked": 299,
+     "crossed": 7,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 299,
+     "crossed": 7,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.99901,
+     "locked": 0.000829,
+     "crossed": 4.8e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.000114
+    },
+    "coverage": 0.99901,
+    "measured": true,
+    "headline_seconds": 119.881179,
+    "condition_codes": {
+     "?": 5502
+    },
+    "largest_gap_s": 2.686136,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010172,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010279,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0172,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0279,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3677,
+      "tw_median": 0.3615,
+      "tw_p90": 0.3616,
+      "tw_p99": 0.723,
+      "max": 0.7231,
+      "count_mean": 0.3716,
+      "count_median": 0.3615
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1839,
+    "time_share_by_spread": {
+     "1_cent": 0.982827,
+     "2_cents": 0.017173,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0163,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2200.0,
+     "ask": 700.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3677
+    },
+    "snapshots": {
+     "13:46:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3616,
+      "quote_age_s": 0.08409,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2018-06-07 B6": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 4982,
+    "complete": true,
+    "last_t": "2018-06-07T18:31:59.768024Z",
+    "file": "quotes_2018-06-07_B6.json.gz",
+    "bytes": 39007
+   },
+   "stats": {
+    "records_received": 4982,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 4982,
+    "class_counts": {
+     "normal": 4671,
+     "locked": 299,
+     "crossed": 12,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 299,
+     "crossed": 12,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.990766,
+     "locked": 0.009177,
+     "crossed": 4.4e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 1.3e-05
+    },
+    "coverage": 0.990766,
+    "measured": true,
+    "headline_seconds": 118.891883,
+    "condition_codes": {
+     "?": 4982
+    },
+    "largest_gap_s": 2.185606,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010573,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010398,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0573,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0398,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3816,
+      "tw_median": 0.361,
+      "tw_p90": 0.361,
+      "tw_p99": 0.722,
+      "max": 0.7221,
+      "count_mean": 0.3753,
+      "count_median": 0.361
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1908,
+    "time_share_by_spread": {
+     "1_cent": 0.942725,
+     "2_cents": 0.057275,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0476,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 500.0,
+     "ask": 2300.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3816
+    },
+    "snapshots": {
+     "14:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3609,
+      "quote_age_s": 0.905162,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2018-06-07 B7": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 3245,
+    "complete": true,
+    "last_t": "2018-06-07T19:00:59.858674Z",
+    "file": "quotes_2018-06-07_B7.json.gz",
+    "bytes": 25347
+   },
+   "stats": {
+    "records_received": 3245,
+    "duplicates": 0,
+    "window_seconds": 180.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 3245,
+    "class_counts": {
+     "normal": 3144,
+     "locked": 101,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 101,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.995739,
+     "locked": 0.000193,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.003861,
+     "no quote": 0.000207
+    },
+    "coverage": 0.995739,
+    "measured": true,
+    "headline_seconds": 179.233022,
+    "condition_codes": {
+     "?": 3245
+    },
+    "largest_gap_s": 5.695032,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.011004,
+      "tw_median": 0.01,
+      "tw_p90": 0.02,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010493,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.1004,
+      "tw_median": 1.0,
+      "tw_p90": 2.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0493,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.397,
+      "tw_median": 0.3608,
+      "tw_p90": 0.7214,
+      "tw_p99": 0.7216,
+      "max": 0.7216,
+      "count_mean": 0.3786,
+      "count_median": 0.3608
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1985,
+    "time_share_by_spread": {
+     "1_cent": 0.899578,
+     "2_cents": 0.100422,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.1002,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1300.0,
+     "ask": 500.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.397
+    },
+    "snapshots": {
+     "15:00:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3608,
+      "quote_age_s": 0.052438,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2018-06-07 E1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 7293,
+    "complete": true,
+    "last_t": "2018-06-07T19:33:59.962766Z",
+    "file": "quotes_2018-06-07_E1.json.gz",
+    "bytes": 56103
+   },
+   "stats": {
+    "records_received": 7293,
+    "duplicates": 0,
+    "window_seconds": 300.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 7293,
+    "class_counts": {
+     "normal": 6646,
+     "locked": 638,
+     "crossed": 9,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 638,
+     "crossed": 9,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.978566,
+     "locked": 0.00459,
+     "crossed": 1e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.016834
+    },
+    "coverage": 0.978566,
+    "measured": true,
+    "headline_seconds": 293.569871,
+    "condition_codes": {
+     "?": 7293
+    },
+    "largest_gap_s": 4.368582,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010055,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010184,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0055,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0184,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3626,
+      "tw_median": 0.3606,
+      "tw_p90": 0.3607,
+      "tw_p99": 0.3607,
+      "max": 0.7215,
+      "count_mean": 0.3672,
+      "count_median": 0.3606
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1813,
+    "time_share_by_spread": {
+     "1_cent": 0.994499,
+     "2_cents": 0.005501,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0008,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2300.0,
+     "ask": 1100.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3626
+    },
+    "snapshots": {
+     "15:30:00": {
+      "state": "unresolved"
+     },
+     "15:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3606,
+      "quote_age_s": 0.82989,
+      "label": "clock-dependent"
+     },
+     "15:32:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3607,
+      "quote_age_s": 0.092027,
+      "label": "clock-dependent"
+     },
+     "15:33:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3607,
+      "quote_age_s": 0.013388,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2018-06-07 X1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 2,
+    "requests": 2,
+    "quotes": 12663,
+    "complete": true,
+    "last_t": "2018-06-07T19:59:59.993137Z",
+    "file": "quotes_2018-06-07_X1.json.gz",
+    "bytes": 99899
+   },
+   "stats": {
+    "records_received": 12663,
+    "duplicates": 0,
+    "window_seconds": 180.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 12663,
+    "class_counts": {
+     "normal": 12107,
+     "locked": 533,
+     "crossed": 23,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 533,
+     "crossed": 23,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.990963,
+     "locked": 0.008961,
+     "crossed": 2.5e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 5.1e-05
+    },
+    "coverage": 0.990963,
+    "measured": true,
+    "headline_seconds": 178.373402,
+    "condition_codes": {
+     "?": 12663
+    },
+    "largest_gap_s": 1.538116,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010118,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010354,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0118,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0354,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3649,
+      "tw_median": 0.3606,
+      "tw_p90": 0.3607,
+      "tw_p99": 0.7211,
+      "max": 0.7214,
+      "count_mean": 0.3734,
+      "count_median": 0.3606
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1825,
+    "time_share_by_spread": {
+     "1_cent": 0.988172,
+     "2_cents": 0.011828,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0028,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2600.0,
+     "ask": 2500.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3649
+    },
+    "snapshots": {
+     "15:59:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3607,
+      "quote_age_s": 0.034825,
+      "label": "clock-dependent"
+     },
+     "16:00:00": {
+      "state": "AMBIGUOUS",
+      "cents": 1.0,
+      "bp": 0.3606,
+      "quote_age_s": 0.009278,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2021-04-23 B0": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 19,
+    "requests": 19,
+    "quotes": 186500,
+    "complete": true,
+    "last_t": "2021-04-23T14:15:59.973262848Z",
+    "file": "quotes_2021-04-23_B0.json.gz",
+    "bytes": 1579452
+   },
+   "stats": {
+    "records_received": 186500,
+    "duplicates": 0,
+    "window_seconds": 960.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 186500,
+    "class_counts": {
+     "normal": 181746,
+     "locked": 4721,
+     "crossed": 33,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 4721,
+     "crossed": 33,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.998341,
+     "locked": 0.001644,
+     "crossed": 4e-06,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 1e-05
+    },
+    "coverage": 0.998341,
+    "measured": true,
+    "headline_seconds": 958.407809,
+    "condition_codes": {
+     "?": 186500
+    },
+    "largest_gap_s": 0.665144,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010226,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010412,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0226,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0412,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.2468,
+      "tw_median": 0.2413,
+      "tw_p90": 0.2414,
+      "tw_p99": 0.4828,
+      "max": 0.483,
+      "count_mean": 0.2513,
+      "count_median": 0.2413
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1234,
+    "time_share_by_spread": {
+     "1_cent": 0.977419,
+     "2_cents": 0.022581,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0209,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 700.0,
+     "ask": 600.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.2468
+    },
+    "snapshots": {
+     "10:01:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.2414,
+      "quote_age_s": 0.050143,
+      "label": "clock-dependent"
+     },
+     "10:05:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.2413,
+      "quote_age_s": 0.003305,
+      "label": "clock-dependent"
+     },
+     "10:10:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.2413,
+      "quote_age_s": 0.030268,
+      "label": "clock-dependent"
+     },
+     "10:15:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.2413,
+      "quote_age_s": 0.059066,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2021-04-23 B1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 2,
+    "requests": 2,
+    "quotes": 18492,
+    "complete": true,
+    "last_t": "2021-04-23T14:46:59.99672064Z",
+    "file": "quotes_2021-04-23_B1.json.gz",
+    "bytes": 158943
+   },
+   "stats": {
+    "records_received": 18492,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 18492,
+    "class_counts": {
+     "normal": 18013,
+     "locked": 468,
+     "crossed": 11,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 468,
+     "crossed": 11,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.998381,
+     "locked": 0.001591,
+     "crossed": 2.1e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 7e-06
+    },
+    "coverage": 0.998381,
+    "measured": true,
+    "headline_seconds": 119.805746,
+    "condition_codes": {
+     "?": 18492
+    },
+    "largest_gap_s": 0.533636,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010218,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010349,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0218,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0349,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.2462,
+      "tw_median": 0.2409,
+      "tw_p90": 0.241,
+      "tw_p99": 0.4819,
+      "max": 0.4819,
+      "count_mean": 0.2493,
+      "count_median": 0.2409
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1231,
+    "time_share_by_spread": {
+     "1_cent": 0.978234,
+     "2_cents": 0.021766,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0201,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1200.0,
+     "ask": 1000.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.2462
+    },
+    "snapshots": {
+     "10:46:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.241,
+      "quote_age_s": 0.058633,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2021-04-23 B2": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 2,
+    "requests": 2,
+    "quotes": 14568,
+    "complete": true,
+    "last_t": "2021-04-23T15:31:59.88825728Z",
+    "file": "quotes_2021-04-23_B2.json.gz",
+    "bytes": 124823
+   },
+   "stats": {
+    "records_received": 14568,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 14568,
+    "class_counts": {
+     "normal": 14074,
+     "locked": 494,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 494,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.998602,
+     "locked": 0.001341,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 5.7e-05
+    },
+    "coverage": 0.998602,
+    "measured": true,
+    "headline_seconds": 119.832272,
+    "condition_codes": {
+     "?": 14568
+    },
+    "largest_gap_s": 0.646384,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010088,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010341,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0088,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0341,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.2424,
+      "tw_median": 0.2403,
+      "tw_p90": 0.2403,
+      "tw_p99": 0.2403,
+      "max": 0.4806,
+      "count_mean": 0.2485,
+      "count_median": 0.2403
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1212,
+    "time_share_by_spread": {
+     "1_cent": 0.991191,
+     "2_cents": 0.008809,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0075,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1300.0,
+     "ask": 800.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.2424
+    },
+    "snapshots": {
+     "11:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.2402,
+      "quote_age_s": 0.050783,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2021-04-23 B3": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 6446,
+    "complete": true,
+    "last_t": "2021-04-23T16:16:59.989473024Z",
+    "file": "quotes_2021-04-23_B3.json.gz",
+    "bytes": 55913
+   },
+   "stats": {
+    "records_received": 6446,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 6446,
+    "class_counts": {
+     "normal": 6217,
+     "locked": 229,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 229,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.99956,
+     "locked": 0.000372,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 6.8e-05
+    },
+    "coverage": 0.99956,
+    "measured": true,
+    "headline_seconds": 119.947203,
+    "condition_codes": {
+     "?": 6446
+    },
+    "largest_gap_s": 1.447717,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010105,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010257,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0105,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0257,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.2427,
+      "tw_median": 0.2401,
+      "tw_p90": 0.2402,
+      "tw_p99": 0.4802,
+      "max": 0.4803,
+      "count_mean": 0.2463,
+      "count_median": 0.2401
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1213,
+    "time_share_by_spread": {
+     "1_cent": 0.989512,
+     "2_cents": 0.010488,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0101,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 900.0,
+     "ask": 700.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.2427
+    },
+    "snapshots": {
+     "12:16:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.2402,
+      "quote_age_s": 0.528064,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2021-04-23 B4": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 6333,
+    "complete": true,
+    "last_t": "2021-04-23T17:01:59.898868736Z",
+    "file": "quotes_2021-04-23_B4.json.gz",
+    "bytes": 55705
+   },
+   "stats": {
+    "records_received": 6333,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 6333,
+    "class_counts": {
+     "normal": 6245,
+     "locked": 88,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 88,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999821,
+     "locked": 0.000166,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 1.3e-05
+    },
+    "coverage": 0.999821,
+    "measured": true,
+    "headline_seconds": 119.978549,
+    "condition_codes": {
+     "?": 6333
+    },
+    "largest_gap_s": 0.982895,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010348,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010559,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0348,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0559,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.2481,
+      "tw_median": 0.2397,
+      "tw_p90": 0.2397,
+      "tw_p99": 0.4795,
+      "max": 0.4795,
+      "count_mean": 0.2531,
+      "count_median": 0.2397
+     }
+    },
+    "half_spread_bp_tw_mean": 0.124,
+    "time_share_by_spread": {
+     "1_cent": 0.965225,
+     "2_cents": 0.034775,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0346,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 900.0,
+     "ask": 700.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.2481
+    },
+    "snapshots": {
+     "13:01:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.2397,
+      "quote_age_s": 0.392353,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2021-04-23 B5": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 5573,
+    "complete": true,
+    "last_t": "2021-04-23T17:46:58.216837376Z",
+    "file": "quotes_2021-04-23_B5.json.gz",
+    "bytes": 48368
+   },
+   "stats": {
+    "records_received": 5573,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 5573,
+    "class_counts": {
+     "normal": 5426,
+     "locked": 147,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 147,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999758,
+     "locked": 0.000196,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 4.6e-05
+    },
+    "coverage": 0.999758,
+    "measured": true,
+    "headline_seconds": 119.970969,
+    "condition_codes": {
+     "?": 5573
+    },
+    "largest_gap_s": 1.12111,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010151,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.01037,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0151,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.037,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.2433,
+      "tw_median": 0.2397,
+      "tw_p90": 0.2397,
+      "tw_p99": 0.4794,
+      "max": 0.4794,
+      "count_mean": 0.2486,
+      "count_median": 0.2397
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1216,
+    "time_share_by_spread": {
+     "1_cent": 0.98491,
+     "2_cents": 0.01509,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0149,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1000.0,
+     "ask": 900.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.2433
+    },
+    "snapshots": {
+     "13:46:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.2397,
+      "quote_age_s": 0.025736,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2021-04-23 B6": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 7073,
+    "complete": true,
+    "last_t": "2021-04-23T18:31:59.999839232Z",
+    "file": "quotes_2021-04-23_B6.json.gz",
+    "bytes": 60515
+   },
+   "stats": {
+    "records_received": 7073,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 7073,
+    "class_counts": {
+     "normal": 6868,
+     "locked": 205,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 205,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.99861,
+     "locked": 0.001368,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 2.2e-05
+    },
+    "coverage": 0.99861,
+    "measured": true,
+    "headline_seconds": 119.833192,
+    "condition_codes": {
+     "?": 7073
+    },
+    "largest_gap_s": 1.20703,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010302,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010414,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0302,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0414,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.247,
+      "tw_median": 0.2398,
+      "tw_p90": 0.2398,
+      "tw_p99": 0.4795,
+      "max": 0.4796,
+      "count_mean": 0.2497,
+      "count_median": 0.2398
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1235,
+    "time_share_by_spread": {
+     "1_cent": 0.969766,
+     "2_cents": 0.030234,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0288,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1000.0,
+     "ask": 700.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.247
+    },
+    "snapshots": {
+     "14:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.2398,
+      "quote_age_s": 0.041174,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2021-04-23 B7": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 2,
+    "requests": 2,
+    "quotes": 10233,
+    "complete": true,
+    "last_t": "2021-04-23T19:00:59.996367872Z",
+    "file": "quotes_2021-04-23_B7.json.gz",
+    "bytes": 87862
+   },
+   "stats": {
+    "records_received": 10233,
+    "duplicates": 0,
+    "window_seconds": 180.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 10233,
+    "class_counts": {
+     "normal": 9900,
+     "locked": 324,
+     "crossed": 9,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 324,
+     "crossed": 9,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.997257,
+     "locked": 0.001892,
+     "crossed": 5e-06,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.000846
+    },
+    "coverage": 0.997257,
+    "measured": true,
+    "headline_seconds": 179.506232,
+    "condition_codes": {
+     "?": 10233
+    },
+    "largest_gap_s": 1.105373,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010009,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010163,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0009,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0163,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.2398,
+      "tw_median": 0.2396,
+      "tw_p90": 0.2396,
+      "tw_p99": 0.2396,
+      "max": 0.4792,
+      "count_mean": 0.2435,
+      "count_median": 0.2396
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1199,
+    "time_share_by_spread": {
+     "1_cent": 0.999064,
+     "2_cents": 0.000936,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.999,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1100.0,
+     "ask": 2000.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.2398
+    },
+    "snapshots": {
+     "15:00:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.2396,
+      "quote_age_s": 0.153376,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2021-04-23 E1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 2,
+    "requests": 2,
+    "quotes": 14835,
+    "complete": true,
+    "last_t": "2021-04-23T19:33:59.932967936Z",
+    "file": "quotes_2021-04-23_E1.json.gz",
+    "bytes": 129387
+   },
+   "stats": {
+    "records_received": 14835,
+    "duplicates": 0,
+    "window_seconds": 300.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 14835,
+    "class_counts": {
+     "normal": 14355,
+     "locked": 480,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 480,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.997296,
+     "locked": 0.002678,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 2.6e-05
+    },
+    "coverage": 0.997296,
+    "measured": true,
+    "headline_seconds": 299.188775,
+    "condition_codes": {
+     "?": 14835
+    },
+    "largest_gap_s": 2.863556,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010001,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010148,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0001,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0148,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.2393,
+      "tw_median": 0.2393,
+      "tw_p90": 0.2394,
+      "tw_p99": 0.2394,
+      "max": 0.4787,
+      "count_mean": 0.2428,
+      "count_median": 0.2393
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1197,
+    "time_share_by_spread": {
+     "1_cent": 0.999925,
+     "2_cents": 7.5e-05,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9974,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1800.0,
+     "ask": 1100.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.2393
+    },
+    "snapshots": {
+     "15:30:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.2394,
+      "quote_age_s": 0.042672,
+      "label": "clock-dependent"
+     },
+     "15:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.2393,
+      "quote_age_s": 0.017361,
+      "label": "clock-dependent"
+     },
+     "15:32:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.2393,
+      "quote_age_s": 0.003191,
+      "label": "clock-dependent"
+     },
+     "15:33:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.2392,
+      "quote_age_s": 0.281297,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2021-04-23 X1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 5,
+    "requests": 5,
+    "quotes": 48298,
+    "complete": true,
+    "last_t": "2021-04-23T19:59:59.998087168Z",
+    "file": "quotes_2021-04-23_X1.json.gz",
+    "bytes": 410895
+   },
+   "stats": {
+    "records_received": 48298,
+    "duplicates": 0,
+    "window_seconds": 180.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 48298,
+    "class_counts": {
+     "normal": 46271,
+     "locked": 1981,
+     "crossed": 46,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 1981,
+     "crossed": 46,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.99544,
+     "locked": 0.004535,
+     "crossed": 1.6e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 8e-06
+    },
+    "coverage": 0.99544,
+    "measured": true,
+    "headline_seconds": 179.179241,
+    "condition_codes": {
+     "?": 48298
+    },
+    "largest_gap_s": 0.760616,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010103,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.05,
+      "count_mean": 0.010814,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0103,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 5.0,
+      "count_mean": 1.0814,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.2424,
+      "tw_median": 0.2399,
+      "tw_p90": 0.24,
+      "tw_p99": 0.4796,
+      "max": 1.1998,
+      "count_mean": 0.2594,
+      "count_median": 0.2399
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1212,
+    "time_share_by_spread": {
+     "1_cent": 0.989713,
+     "2_cents": 0.010269,
+     "3_cents_or_more": 1.8e-05
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0057,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1000.0,
+     "ask": 1300.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.2424
+    },
+    "snapshots": {
+     "15:59:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.2399,
+      "quote_age_s": 0.021689,
+      "label": "clock-dependent"
+     },
+     "16:00:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.24,
+      "quote_age_s": 0.001913,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2020-01-02 B0": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 11,
+    "requests": 11,
+    "quotes": 101388,
+    "complete": true,
+    "last_t": "2020-01-02T15:15:59.941681343Z",
+    "file": "quotes_2020-01-02_B0.json.gz",
+    "bytes": 887421
+   },
+   "stats": {
+    "records_received": 101388,
+    "duplicates": 0,
+    "window_seconds": 960.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 101388,
+    "class_counts": {
+     "normal": 97328,
+     "locked": 4059,
+     "crossed": 1,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 4059,
+     "crossed": 1,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.997377,
+     "locked": 0.002621,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 1e-06
+    },
+    "coverage": 0.997377,
+    "measured": true,
+    "headline_seconds": 957.482227,
+    "condition_codes": {
+     "?": 101388
+    },
+    "largest_gap_s": 1.194075,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010821,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.04,
+      "count_mean": 0.010556,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0821,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 4.0,
+      "count_mean": 1.0556,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3345,
+      "tw_median": 0.3091,
+      "tw_p90": 0.3098,
+      "tw_p99": 0.6189,
+      "max": 1.2387,
+      "count_mean": 0.3264,
+      "count_median": 0.3091
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1673,
+    "time_share_by_spread": {
+     "1_cent": 0.917906,
+     "2_cents": 0.082093,
+     "3_cents_or_more": 1e-06
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0793,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 900.0,
+     "ask": 1000.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3345
+    },
+    "snapshots": {
+     "10:01:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3089,
+      "quote_age_s": 0.009653,
+      "label": "clock-dependent"
+     },
+     "10:05:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3091,
+      "quote_age_s": 0.003628,
+      "label": "clock-dependent"
+     },
+     "10:10:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.309,
+      "quote_age_s": 0.039781,
+      "label": "clock-dependent"
+     },
+     "10:15:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3095,
+      "quote_age_s": 0.008974,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2020-01-02 B1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 2,
+    "requests": 2,
+    "quotes": 10415,
+    "complete": true,
+    "last_t": "2020-01-02T15:46:59.99784658Z",
+    "file": "quotes_2020-01-02_B1.json.gz",
+    "bytes": 90964
+   },
+   "stats": {
+    "records_received": 10415,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 10415,
+    "class_counts": {
+     "normal": 10149,
+     "locked": 266,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 266,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999577,
+     "locked": 0.0003,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.000123
+    },
+    "coverage": 0.999577,
+    "measured": true,
+    "headline_seconds": 119.949216,
+    "condition_codes": {
+     "?": 10415
+    },
+    "largest_gap_s": 1.238873,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010438,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.03,
+      "count_mean": 0.010416,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0438,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 3.0,
+      "count_mean": 1.0416,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3233,
+      "tw_median": 0.3097,
+      "tw_p90": 0.3097,
+      "tw_p99": 0.6194,
+      "max": 0.929,
+      "count_mean": 0.3226,
+      "count_median": 0.3097
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1616,
+    "time_share_by_spread": {
+     "1_cent": 0.956172,
+     "2_cents": 0.043827,
+     "3_cents_or_more": 1e-06
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0435,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 800.0,
+     "ask": 800.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3233
+    },
+    "snapshots": {
+     "10:46:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3097,
+      "quote_age_s": 0.120402,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2020-01-02 B2": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 6466,
+    "complete": true,
+    "last_t": "2020-01-02T16:31:59.801920761Z",
+    "file": "quotes_2020-01-02_B2.json.gz",
+    "bytes": 56520
+   },
+   "stats": {
+    "records_received": 6466,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 6466,
+    "class_counts": {
+     "normal": 6194,
+     "locked": 272,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 272,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.996805,
+     "locked": 0.002841,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.000354
+    },
+    "coverage": 0.996805,
+    "measured": true,
+    "headline_seconds": 119.616634,
+    "condition_codes": {
+     "?": 6466
+    },
+    "largest_gap_s": 0.923061,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.01021,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010228,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.021,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0228,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.316,
+      "tw_median": 0.3094,
+      "tw_p90": 0.3095,
+      "tw_p99": 0.6189,
+      "max": 0.619,
+      "count_mean": 0.3165,
+      "count_median": 0.3095
+     }
+    },
+    "half_spread_bp_tw_mean": 0.158,
+    "time_share_by_spread": {
+     "1_cent": 0.978987,
+     "2_cents": 0.021013,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0181,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 900.0,
+     "ask": 1000.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.316
+    },
+    "snapshots": {
+     "11:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3094,
+      "quote_age_s": 0.013312,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2020-01-02 B3": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 4426,
+    "complete": true,
+    "last_t": "2020-01-02T17:16:59.977320802Z",
+    "file": "quotes_2020-01-02_B3.json.gz",
+    "bytes": 39531
+   },
+   "stats": {
+    "records_received": 4426,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 4426,
+    "class_counts": {
+     "normal": 4255,
+     "locked": 171,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 171,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999296,
+     "locked": 0.000609,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 9.5e-05
+    },
+    "coverage": 0.999296,
+    "measured": true,
+    "headline_seconds": 119.915526,
+    "condition_codes": {
+     "?": 4426
+    },
+    "largest_gap_s": 4.99206,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010097,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010289,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0097,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0289,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3125,
+      "tw_median": 0.3095,
+      "tw_p90": 0.3096,
+      "tw_p99": 0.3096,
+      "max": 0.6191,
+      "count_mean": 0.3185,
+      "count_median": 0.3095
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1562,
+    "time_share_by_spread": {
+     "1_cent": 0.990291,
+     "2_cents": 0.009709,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0091,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1200.0,
+     "ask": 800.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3125
+    },
+    "snapshots": {
+     "12:16:00": {
+      "state": "unresolved"
+     }
+    }
+   }
+  },
+  "2020-01-02 B4": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 3831,
+    "complete": true,
+    "last_t": "2020-01-02T18:01:59.928775911Z",
+    "file": "quotes_2020-01-02_B4.json.gz",
+    "bytes": 33936
+   },
+   "stats": {
+    "records_received": 3831,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 3831,
+    "class_counts": {
+     "normal": 3669,
+     "locked": 162,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 162,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999617,
+     "locked": 0.000147,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.000236
+    },
+    "coverage": 0.999617,
+    "measured": true,
+    "headline_seconds": 119.954064,
+    "condition_codes": {
+     "?": 3831
+    },
+    "largest_gap_s": 2.117847,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010223,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010406,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0223,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0406,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3162,
+      "tw_median": 0.3093,
+      "tw_p90": 0.3094,
+      "tw_p99": 0.6187,
+      "max": 0.6188,
+      "count_mean": 0.3219,
+      "count_median": 0.3093
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1581,
+    "time_share_by_spread": {
+     "1_cent": 0.977724,
+     "2_cents": 0.022276,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0221,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1500.0,
+     "ask": 1100.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3162
+    },
+    "snapshots": {
+     "13:01:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3093,
+      "quote_age_s": 0.02637,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2020-01-02 B5": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 4591,
+    "complete": true,
+    "last_t": "2020-01-02T18:46:59.930432066Z",
+    "file": "quotes_2020-01-02_B5.json.gz",
+    "bytes": 40309
+   },
+   "stats": {
+    "records_received": 4591,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 4591,
+    "class_counts": {
+     "normal": 4516,
+     "locked": 75,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 75,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999549,
+     "locked": 4.4e-05,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.000407
+    },
+    "coverage": 0.999549,
+    "measured": true,
+    "headline_seconds": 119.945903,
+    "condition_codes": {
+     "?": 4591
+    },
+    "largest_gap_s": 2.547656,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010229,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010405,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0229,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0405,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3167,
+      "tw_median": 0.3096,
+      "tw_p90": 0.3096,
+      "tw_p99": 0.6191,
+      "max": 0.6192,
+      "count_mean": 0.3221,
+      "count_median": 0.3096
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1583,
+    "time_share_by_spread": {
+     "1_cent": 0.97707,
+     "2_cents": 0.02293,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0229,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1000.0,
+     "ask": 1700.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3167
+    },
+    "snapshots": {
+     "13:46:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3096,
+      "quote_age_s": 0.154763,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2020-01-02 B6": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 6447,
+    "complete": true,
+    "last_t": "2020-01-02T19:31:59.819951765Z",
+    "file": "quotes_2020-01-02_B6.json.gz",
+    "bytes": 56653
+   },
+   "stats": {
+    "records_received": 6447,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 6447,
+    "class_counts": {
+     "normal": 6063,
+     "locked": 384,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 384,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.998861,
+     "locked": 0.001132,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 7e-06
+    },
+    "coverage": 0.998861,
+    "measured": true,
+    "headline_seconds": 119.863303,
+    "condition_codes": {
+     "?": 6447
+    },
+    "largest_gap_s": 1.434319,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.011188,
+      "tw_median": 0.01,
+      "tw_p90": 0.02,
+      "tw_p99": 0.02,
+      "max": 0.03,
+      "count_mean": 0.010912,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.1188,
+      "tw_median": 1.0,
+      "tw_p90": 2.0,
+      "tw_p99": 2.0,
+      "max": 3.0,
+      "count_mean": 1.0912,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3458,
+      "tw_median": 0.3091,
+      "tw_p90": 0.6182,
+      "tw_p99": 0.6182,
+      "max": 0.9273,
+      "count_mean": 0.3373,
+      "count_median": 0.3091
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1729,
+    "time_share_by_spread": {
+     "1_cent": 0.881205,
+     "2_cents": 0.118795,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.1175,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1300.0,
+     "ask": 1000.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3458
+    },
+    "snapshots": {
+     "14:31:00": {
+      "state": "ok",
+      "cents": 2.0,
+      "bp": 0.6182,
+      "quote_age_s": 0.297552,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2020-01-02 B7": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 6327,
+    "complete": true,
+    "last_t": "2020-01-02T20:00:59.769602526Z",
+    "file": "quotes_2020-01-02_B7.json.gz",
+    "bytes": 55264
+   },
+   "stats": {
+    "records_received": 6327,
+    "duplicates": 0,
+    "window_seconds": 180.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 6327,
+    "class_counts": {
+     "normal": 6082,
+     "locked": 245,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 245,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999422,
+     "locked": 0.000573,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 6e-06
+    },
+    "coverage": 0.999422,
+    "measured": true,
+    "headline_seconds": 179.895908,
+    "condition_codes": {
+     "?": 6327
+    },
+    "largest_gap_s": 1.323319,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010237,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010201,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0237,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0201,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3162,
+      "tw_median": 0.3089,
+      "tw_p90": 0.3089,
+      "tw_p99": 0.6177,
+      "max": 0.6178,
+      "count_mean": 0.3151,
+      "count_median": 0.3089
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1581,
+    "time_share_by_spread": {
+     "1_cent": 0.976252,
+     "2_cents": 0.023748,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0232,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1400.0,
+     "ask": 1500.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3162
+    },
+    "snapshots": {
+     "15:00:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3088,
+      "quote_age_s": 0.038711,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2020-01-02 E1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 2,
+    "requests": 2,
+    "quotes": 12831,
+    "complete": true,
+    "last_t": "2020-01-02T20:33:59.967137152Z",
+    "file": "quotes_2020-01-02_E1.json.gz",
+    "bytes": 112784
+   },
+   "stats": {
+    "records_received": 12831,
+    "duplicates": 0,
+    "window_seconds": 300.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 12831,
+    "class_counts": {
+     "normal": 12462,
+     "locked": 369,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 369,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.9996,
+     "locked": 0.000132,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.000268
+    },
+    "coverage": 0.9996,
+    "measured": true,
+    "headline_seconds": 299.879966,
+    "condition_codes": {
+     "?": 12831
+    },
+    "largest_gap_s": 1.983765,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.01001,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010082,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.001,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0082,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.309,
+      "tw_median": 0.3087,
+      "tw_p90": 0.3088,
+      "tw_p99": 0.3088,
+      "max": 0.6176,
+      "count_mean": 0.3112,
+      "count_median": 0.3087
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1545,
+    "time_share_by_spread": {
+     "1_cent": 0.998972,
+     "2_cents": 0.001028,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0009,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1800.0,
+     "ask": 1600.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.309
+    },
+    "snapshots": {
+     "15:30:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3088,
+      "quote_age_s": 0.08414,
+      "label": "clock-dependent"
+     },
+     "15:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3087,
+      "quote_age_s": 0.27129,
+      "label": "clock-dependent"
+     },
+     "15:32:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3087,
+      "quote_age_s": 0.012357,
+      "label": "clock-dependent"
+     },
+     "15:33:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3087,
+      "quote_age_s": 0.027742,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2020-01-02 X1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 4,
+    "requests": 4,
+    "quotes": 31720,
+    "complete": true,
+    "last_t": "2020-01-02T20:59:59.997173141Z",
+    "file": "quotes_2020-01-02_X1.json.gz",
+    "bytes": 276951
+   },
+   "stats": {
+    "records_received": 31720,
+    "duplicates": 0,
+    "window_seconds": 180.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 31720,
+    "class_counts": {
+     "normal": 30594,
+     "locked": 1126,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 1126,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.99863,
+     "locked": 0.001214,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.000156
+    },
+    "coverage": 0.99863,
+    "measured": true,
+    "headline_seconds": 179.753355,
+    "condition_codes": {
+     "?": 31720
+    },
+    "largest_gap_s": 0.713158,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010256,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.03,
+      "count_mean": 0.010361,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0256,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 3.0,
+      "count_mean": 1.0361,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3159,
+      "tw_median": 0.308,
+      "tw_p90": 0.3081,
+      "tw_p99": 0.6161,
+      "max": 0.9241,
+      "count_mean": 0.3191,
+      "count_median": 0.308
+     }
+    },
+    "half_spread_bp_tw_mean": 0.158,
+    "time_share_by_spread": {
+     "1_cent": 0.974356,
+     "2_cents": 0.025643,
+     "3_cents_or_more": 1e-06
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0244,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2100.0,
+     "ask": 1700.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3159
+    },
+    "snapshots": {
+     "15:59:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.308,
+      "quote_age_s": 0.018259,
+      "label": "clock-dependent"
+     },
+     "16:00:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3078,
+      "quote_age_s": 0.002827,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2019-01-31 B0": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 12,
+    "requests": 12,
+    "quotes": 112230,
+    "complete": true,
+    "last_t": "2019-01-31T15:15:59.994790294Z",
+    "file": "quotes_2019-01-31_B0.json.gz",
+    "bytes": 873219
+   },
+   "stats": {
+    "records_received": 112230,
+    "duplicates": 0,
+    "window_seconds": 960.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 112230,
+    "class_counts": {
+     "normal": 103739,
+     "locked": 8366,
+     "crossed": 125,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 8366,
+     "crossed": 125,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.99361,
+     "locked": 0.006349,
+     "crossed": 3.3e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 8e-06
+    },
+    "coverage": 0.99361,
+    "measured": true,
+    "headline_seconds": 953.866038,
+    "condition_codes": {
+     "?": 112230
+    },
+    "largest_gap_s": 1.495988,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.011081,
+      "tw_median": 0.01,
+      "tw_p90": 0.02,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010638,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.1081,
+      "tw_median": 1.0,
+      "tw_p90": 2.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0638,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.413,
+      "tw_median": 0.3727,
+      "tw_p90": 0.7448,
+      "tw_p99": 0.7462,
+      "max": 0.7466,
+      "count_mean": 0.3965,
+      "count_median": 0.3727
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2065,
+    "time_share_by_spread": {
+     "1_cent": 0.89192,
+     "2_cents": 0.10808,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.101,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1100.0,
+     "ask": 1700.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.413
+    },
+    "snapshots": {
+     "10:01:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.373,
+      "quote_age_s": 0.050431,
+      "label": "clock-dependent"
+     },
+     "10:05:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3727,
+      "quote_age_s": 0.005856,
+      "label": "clock-dependent"
+     },
+     "10:10:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3727,
+      "quote_age_s": 0.184991,
+      "label": "clock-dependent"
+     },
+     "10:15:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3723,
+      "quote_age_s": 0.012652,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2019-01-31 B1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 9248,
+    "complete": true,
+    "last_t": "2019-01-31T15:46:59.851643726Z",
+    "file": "quotes_2019-01-31_B1.json.gz",
+    "bytes": 72332
+   },
+   "stats": {
+    "records_received": 9248,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 9248,
+    "class_counts": {
+     "normal": 8580,
+     "locked": 654,
+     "crossed": 14,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 654,
+     "crossed": 14,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.995506,
+     "locked": 0.002781,
+     "crossed": 3.2e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.001681
+    },
+    "coverage": 0.995506,
+    "measured": true,
+    "headline_seconds": 119.460661,
+    "condition_codes": {
+     "?": 9248
+    },
+    "largest_gap_s": 2.168546,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010467,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010422,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0467,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0422,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3887,
+      "tw_median": 0.3713,
+      "tw_p90": 0.3715,
+      "tw_p99": 0.7427,
+      "max": 0.7429,
+      "count_mean": 0.387,
+      "count_median": 0.3713
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1943,
+    "time_share_by_spread": {
+     "1_cent": 0.953266,
+     "2_cents": 0.046734,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0438,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 1000.0,
+     "ask": 1900.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3887
+    },
+    "snapshots": {
+     "10:46:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3714,
+      "quote_age_s": 0.005744,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2019-01-31 B2": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 6520,
+    "complete": true,
+    "last_t": "2019-01-31T16:31:59.823910951Z",
+    "file": "quotes_2019-01-31_B2.json.gz",
+    "bytes": 52573
+   },
+   "stats": {
+    "records_received": 6520,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 6520,
+    "class_counts": {
+     "normal": 5929,
+     "locked": 591,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 591,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.998998,
+     "locked": 0.000938,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 6.4e-05
+    },
+    "coverage": 0.998998,
+    "measured": true,
+    "headline_seconds": 119.879779,
+    "condition_codes": {
+     "?": 6520
+    },
+    "largest_gap_s": 1.419057,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010145,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010253,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0145,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0253,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3766,
+      "tw_median": 0.3712,
+      "tw_p90": 0.3712,
+      "tw_p99": 0.7423,
+      "max": 0.7424,
+      "count_mean": 0.3806,
+      "count_median": 0.3712
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1883,
+    "time_share_by_spread": {
+     "1_cent": 0.98548,
+     "2_cents": 0.01452,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0136,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2500.0,
+     "ask": 1000.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3766
+    },
+    "snapshots": {
+     "11:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3712,
+      "quote_age_s": 0.667205,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2019-01-31 B3": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 5753,
+    "complete": true,
+    "last_t": "2019-01-31T17:16:59.835316348Z",
+    "file": "quotes_2019-01-31_B3.json.gz",
+    "bytes": 49542
+   },
+   "stats": {
+    "records_received": 5753,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 5753,
+    "class_counts": {
+     "normal": 5423,
+     "locked": 325,
+     "crossed": 5,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 325,
+     "crossed": 5,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999232,
+     "locked": 0.000343,
+     "crossed": 1e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.000415
+    },
+    "coverage": 0.999232,
+    "measured": true,
+    "headline_seconds": 119.907873,
+    "condition_codes": {
+     "?": 5753
+    },
+    "largest_gap_s": 2.19409,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010774,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010581,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0774,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0581,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.399,
+      "tw_median": 0.3703,
+      "tw_p90": 0.3703,
+      "tw_p99": 0.7407,
+      "max": 0.7407,
+      "count_mean": 0.3918,
+      "count_median": 0.3703
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1995,
+    "time_share_by_spread": {
+     "1_cent": 0.922563,
+     "2_cents": 0.077437,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0771,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 700.0,
+     "ask": 900.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.399
+    },
+    "snapshots": {
+     "12:16:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3703,
+      "quote_age_s": 0.023182,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2019-01-31 B4": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 3230,
+    "complete": true,
+    "last_t": "2019-01-31T18:01:59.698316755Z",
+    "file": "quotes_2019-01-31_B4.json.gz",
+    "bytes": 27575
+   },
+   "stats": {
+    "records_received": 3230,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 3230,
+    "class_counts": {
+     "normal": 3037,
+     "locked": 193,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 193,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.998721,
+     "locked": 0.001142,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.000138
+    },
+    "coverage": 0.998721,
+    "measured": true,
+    "headline_seconds": 119.846507,
+    "condition_codes": {
+     "?": 3230
+    },
+    "largest_gap_s": 4.587254,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010187,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010438,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0187,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0438,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3781,
+      "tw_median": 0.3712,
+      "tw_p90": 0.3712,
+      "tw_p99": 0.7423,
+      "max": 0.7424,
+      "count_mean": 0.3874,
+      "count_median": 0.3712
+     }
+    },
+    "half_spread_bp_tw_mean": 0.189,
+    "time_share_by_spread": {
+     "1_cent": 0.981347,
+     "2_cents": 0.018653,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0175,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 800.0,
+     "ask": 1300.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3781
+    },
+    "snapshots": {
+     "13:01:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3712,
+      "quote_age_s": 0.7717,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2019-01-31 B5": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 7769,
+    "complete": true,
+    "last_t": "2019-01-31T18:46:59.849942638Z",
+    "file": "quotes_2019-01-31_B5.json.gz",
+    "bytes": 67312
+   },
+   "stats": {
+    "records_received": 7769,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 7769,
+    "class_counts": {
+     "normal": 7165,
+     "locked": 589,
+     "crossed": 15,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 589,
+     "crossed": 15,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.985275,
+     "locked": 0.013018,
+     "crossed": 4.1e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.001666
+    },
+    "coverage": 0.985275,
+    "measured": true,
+    "headline_seconds": 118.233034,
+    "condition_codes": {
+     "?": 7769
+    },
+    "largest_gap_s": 1.482543,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010625,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.03,
+      "count_mean": 0.010507,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0625,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 3.0,
+      "count_mean": 1.0507,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3945,
+      "tw_median": 0.3713,
+      "tw_p90": 0.3714,
+      "tw_p99": 0.7426,
+      "max": 1.1136,
+      "count_mean": 0.3901,
+      "count_median": 0.3713
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1973,
+    "time_share_by_spread": {
+     "1_cent": 0.937498,
+     "2_cents": 0.062501,
+     "3_cents_or_more": 1e-06
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0486,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 700.0,
+     "ask": 1100.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3945
+    },
+    "snapshots": {
+     "13:46:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3713,
+      "quote_age_s": 0.030536,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2019-01-31 B6": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 2009,
+    "complete": true,
+    "last_t": "2019-01-31T19:31:58.922869978Z",
+    "file": "quotes_2019-01-31_B6.json.gz",
+    "bytes": 18747
+   },
+   "stats": {
+    "records_received": 2009,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 2009,
+    "class_counts": {
+     "normal": 1913,
+     "locked": 96,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 96,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.997693,
+     "locked": 0.000341,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.001965
+    },
+    "coverage": 0.997693,
+    "measured": true,
+    "headline_seconds": 119.723183,
+    "condition_codes": {
+     "?": 2009
+    },
+    "largest_gap_s": 4.281747,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010328,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010528,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0328,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0528,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3833,
+      "tw_median": 0.3711,
+      "tw_p90": 0.3711,
+      "tw_p99": 0.7422,
+      "max": 0.7423,
+      "count_mean": 0.3907,
+      "count_median": 0.3711
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1916,
+    "time_share_by_spread": {
+     "1_cent": 0.967161,
+     "2_cents": 0.032839,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0325,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 700.0,
+     "ask": 600.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3833
+    },
+    "snapshots": {
+     "14:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3711,
+      "quote_age_s": 0.065221,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2019-01-31 B7": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 6893,
+    "complete": true,
+    "last_t": "2019-01-31T20:00:59.950141204Z",
+    "file": "quotes_2019-01-31_B7.json.gz",
+    "bytes": 60511
+   },
+   "stats": {
+    "records_received": 6893,
+    "duplicates": 0,
+    "window_seconds": 180.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 6893,
+    "class_counts": {
+     "normal": 6467,
+     "locked": 424,
+     "crossed": 2,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 424,
+     "crossed": 2,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999331,
+     "locked": 0.000611,
+     "crossed": 2e-06,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 5.6e-05
+    },
+    "coverage": 0.999331,
+    "measured": true,
+    "headline_seconds": 179.87958,
+    "condition_codes": {
+     "?": 6893
+    },
+    "largest_gap_s": 2.805321,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010296,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.01049,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0296,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.049,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3819,
+      "tw_median": 0.3709,
+      "tw_p90": 0.3711,
+      "tw_p99": 0.7421,
+      "max": 0.7422,
+      "count_mean": 0.3891,
+      "count_median": 0.3709
+     }
+    },
+    "half_spread_bp_tw_mean": 0.191,
+    "time_share_by_spread": {
+     "1_cent": 0.970381,
+     "2_cents": 0.029619,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.029,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 700.0,
+     "ask": 900.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3819
+    },
+    "snapshots": {
+     "15:00:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3708,
+      "quote_age_s": 0.022012,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2019-01-31 E1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 2,
+    "requests": 2,
+    "quotes": 16888,
+    "complete": true,
+    "last_t": "2019-01-31T20:33:59.912131058Z",
+    "file": "quotes_2019-01-31_E1.json.gz",
+    "bytes": 147468
+   },
+   "stats": {
+    "records_received": 16888,
+    "duplicates": 0,
+    "window_seconds": 300.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 16888,
+    "class_counts": {
+     "normal": 15725,
+     "locked": 1132,
+     "crossed": 31,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 1132,
+     "crossed": 31,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.989626,
+     "locked": 0.010279,
+     "crossed": 4.4e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 5.1e-05
+    },
+    "coverage": 0.989626,
+    "measured": true,
+    "headline_seconds": 296.887889,
+    "condition_codes": {
+     "?": 16888
+    },
+    "largest_gap_s": 2.207384,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010498,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.03,
+      "count_mean": 0.01061,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0498,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 3.0,
+      "count_mean": 1.061,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3897,
+      "tw_median": 0.3712,
+      "tw_p90": 0.3714,
+      "tw_p99": 0.7424,
+      "max": 1.1134,
+      "count_mean": 0.3938,
+      "count_median": 0.3711
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1948,
+    "time_share_by_spread": {
+     "1_cent": 0.950171,
+     "2_cents": 0.049828,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.039,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 900.0,
+     "ask": 700.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3897
+    },
+    "snapshots": {
+     "15:30:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3713,
+      "quote_age_s": 0.194265,
+      "label": "clock-dependent"
+     },
+     "15:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3713,
+      "quote_age_s": 0.251209,
+      "label": "clock-dependent"
+     },
+     "15:32:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3709,
+      "quote_age_s": 0.009076,
+      "label": "clock-dependent"
+     },
+     "15:33:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3711,
+      "quote_age_s": 0.33277,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2019-01-31 X1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 4,
+    "requests": 4,
+    "quotes": 39506,
+    "complete": true,
+    "last_t": "2019-01-31T20:59:59.997853271Z",
+    "file": "quotes_2019-01-31_X1.json.gz",
+    "bytes": 324965
+   },
+   "stats": {
+    "records_received": 39506,
+    "duplicates": 0,
+    "window_seconds": 180.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 39506,
+    "class_counts": {
+     "normal": 37208,
+     "locked": 2237,
+     "crossed": 61,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 2237,
+     "crossed": 61,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.988552,
+     "locked": 0.010994,
+     "crossed": 8.3e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.000371
+    },
+    "coverage": 0.988552,
+    "measured": true,
+    "headline_seconds": 177.939416,
+    "condition_codes": {
+     "?": 39506
+    },
+    "largest_gap_s": 0.558553,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010036,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010244,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0036,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0244,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.3714,
+      "tw_median": 0.3701,
+      "tw_p90": 0.3702,
+      "tw_p99": 0.3704,
+      "max": 0.741,
+      "count_mean": 0.3792,
+      "count_median": 0.3701
+     }
+    },
+    "half_spread_bp_tw_mean": 0.1857,
+    "time_share_by_spread": {
+     "1_cent": 0.996428,
+     "2_cents": 0.003572,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9925,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 3100.0,
+     "ask": 3200.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.3714
+    },
+    "snapshots": {
+     "15:59:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.37,
+      "quote_age_s": 0.062299,
+      "label": "clock-dependent"
+     },
+     "16:00:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.3705,
+      "quote_age_s": 0.002147,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2016-03-28 B0": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 7,
+    "requests": 7,
+    "quotes": 62387,
+    "complete": true,
+    "last_t": "2016-03-28T14:15:59.936Z",
+    "file": "quotes_2016-03-28_B0.json.gz",
+    "bytes": 297370
+   },
+   "stats": {
+    "records_received": 62387,
+    "duplicates": 0,
+    "window_seconds": 960.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 62387,
+    "class_counts": {
+     "normal": 56700,
+     "locked": 5623,
+     "crossed": 64,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 5623,
+     "crossed": 64,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.994128,
+     "locked": 0.005864,
+     "crossed": 7e-06,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 1e-06
+    },
+    "coverage": 0.994128,
+    "measured": true,
+    "headline_seconds": 954.363,
+    "condition_codes": {
+     "?": 62387
+    },
+    "largest_gap_s": 2.002,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010006,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.04,
+      "count_mean": 0.010144,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0006,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 4.0,
+      "count_mean": 1.0144,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4924,
+      "tw_median": 0.4921,
+      "tw_p90": 0.4923,
+      "tw_p99": 0.4925,
+      "max": 1.9699,
+      "count_mean": 0.4992,
+      "count_median": 0.4921
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2462,
+    "time_share_by_spread": {
+     "1_cent": 0.999444,
+     "2_cents": 0.000548,
+     "3_cents_or_more": 8e-06
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9947,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2100.0,
+     "ask": 2400.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4924
+    },
+    "snapshots": {
+     "10:01:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4921,
+      "quote_age_s": 0.09,
+      "label": "clock-dependent"
+     },
+     "10:05:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4923,
+      "quote_age_s": 0.075,
+      "label": "clock-dependent"
+     },
+     "10:10:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.492,
+      "quote_age_s": 0.023,
+      "label": "clock-dependent"
+     },
+     "10:15:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4918,
+      "quote_age_s": 0.026,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2016-03-28 B1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 7388,
+    "complete": true,
+    "last_t": "2016-03-28T14:46:59.936Z",
+    "file": "quotes_2016-03-28_B1.json.gz",
+    "bytes": 35658
+   },
+   "stats": {
+    "records_received": 7388,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 7388,
+    "class_counts": {
+     "normal": 6580,
+     "locked": 806,
+     "crossed": 2,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 806,
+     "crossed": 2,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.99795,
+     "locked": 0.002,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 5e-05
+    },
+    "coverage": 0.99795,
+    "measured": true,
+    "headline_seconds": 119.754,
+    "condition_codes": {
+     "?": 7388
+    },
+    "largest_gap_s": 1.525,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010001,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010117,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0001,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0117,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4931,
+      "tw_median": 0.493,
+      "tw_p90": 0.4933,
+      "tw_p99": 0.4933,
+      "max": 0.9866,
+      "count_mean": 0.4989,
+      "count_median": 0.493
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2465,
+    "time_share_by_spread": {
+     "1_cent": 0.999858,
+     "2_cents": 0.000142,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9981,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2300.0,
+     "ask": 2200.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4931
+    },
+    "snapshots": {
+     "10:46:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.493,
+      "quote_age_s": 0.395,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2016-03-28 B2": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 5353,
+    "complete": true,
+    "last_t": "2016-03-28T15:31:59.96Z",
+    "file": "quotes_2016-03-28_B2.json.gz",
+    "bytes": 25993
+   },
+   "stats": {
+    "records_received": 5353,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 5353,
+    "class_counts": {
+     "normal": 4814,
+     "locked": 512,
+     "crossed": 27,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 512,
+     "crossed": 27,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999133,
+     "locked": 0.000742,
+     "crossed": 8.3e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 4.2e-05
+    },
+    "coverage": 0.999133,
+    "measured": true,
+    "headline_seconds": 119.896,
+    "condition_codes": {
+     "?": 5353
+    },
+    "largest_gap_s": 2.365,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010001,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010066,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0001,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0066,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4923,
+      "tw_median": 0.4923,
+      "tw_p90": 0.4924,
+      "tw_p99": 0.4924,
+      "max": 0.9848,
+      "count_mean": 0.4956,
+      "count_median": 0.4923
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2462,
+    "time_share_by_spread": {
+     "1_cent": 0.99995,
+     "2_cents": 5e-05,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9993,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2500.0,
+     "ask": 2800.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4923
+    },
+    "snapshots": {
+     "11:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4923,
+      "quote_age_s": 0.185,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2016-03-28 B3": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 3123,
+    "complete": true,
+    "last_t": "2016-03-28T16:16:59.879Z",
+    "file": "quotes_2016-03-28_B3.json.gz",
+    "bytes": 15240
+   },
+   "stats": {
+    "records_received": 3123,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 3123,
+    "class_counts": {
+     "normal": 2813,
+     "locked": 310,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 310,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.99605,
+     "locked": 0.003908,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 4.2e-05
+    },
+    "coverage": 0.99605,
+    "measured": true,
+    "headline_seconds": 119.526,
+    "condition_codes": {
+     "?": 3123
+    },
+    "largest_gap_s": 3.941,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010003,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010046,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0003,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0046,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4925,
+      "tw_median": 0.4924,
+      "tw_p90": 0.4924,
+      "tw_p99": 0.4924,
+      "max": 0.9847,
+      "count_mean": 0.4946,
+      "count_median": 0.4924
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2462,
+    "time_share_by_spread": {
+     "1_cent": 0.999741,
+     "2_cents": 0.000259,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9963,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 3000.0,
+     "ask": 2600.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4925
+    },
+    "snapshots": {
+     "12:16:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4924,
+      "quote_age_s": 0.31,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2016-03-28 B4": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 3747,
+    "complete": true,
+    "last_t": "2016-03-28T17:01:59.741Z",
+    "file": "quotes_2016-03-28_B4.json.gz",
+    "bytes": 18269
+   },
+   "stats": {
+    "records_received": 3747,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 3747,
+    "class_counts": {
+     "normal": 3388,
+     "locked": 359,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 359,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.989692,
+     "locked": 0.010258,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 5e-05
+    },
+    "coverage": 0.989692,
+    "measured": true,
+    "headline_seconds": 118.763,
+    "condition_codes": {
+     "?": 3747
+    },
+    "largest_gap_s": 2.937,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010001,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010115,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0001,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0115,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4912,
+      "tw_median": 0.4912,
+      "tw_p90": 0.4912,
+      "tw_p99": 0.4913,
+      "max": 0.9825,
+      "count_mean": 0.4968,
+      "count_median": 0.4912
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2456,
+    "time_share_by_spread": {
+     "1_cent": 0.999924,
+     "2_cents": 7.6e-05,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9898,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2500.0,
+     "ask": 2800.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4912
+    },
+    "snapshots": {
+     "13:01:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4912,
+      "quote_age_s": 0.038,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2016-03-28 B5": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 2959,
+    "complete": true,
+    "last_t": "2016-03-28T17:46:59.866Z",
+    "file": "quotes_2016-03-28_B5.json.gz",
+    "bytes": 14311
+   },
+   "stats": {
+    "records_received": 2959,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 2959,
+    "class_counts": {
+     "normal": 2795,
+     "locked": 164,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 164,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999692,
+     "locked": 0.000258,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 5e-05
+    },
+    "coverage": 0.999692,
+    "measured": true,
+    "headline_seconds": 119.963,
+    "condition_codes": {
+     "?": 2959
+    },
+    "largest_gap_s": 3.089,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010001,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010068,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0001,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0068,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4914,
+      "tw_median": 0.4913,
+      "tw_p90": 0.4914,
+      "tw_p99": 0.4914,
+      "max": 0.9827,
+      "count_mean": 0.4947,
+      "count_median": 0.4913
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2457,
+    "time_share_by_spread": {
+     "1_cent": 0.999883,
+     "2_cents": 0.000117,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9999,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2700.0,
+     "ask": 2000.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4914
+    },
+    "snapshots": {
+     "13:46:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4913,
+      "quote_age_s": 0.081,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2016-03-28 B6": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 3915,
+    "complete": true,
+    "last_t": "2016-03-28T18:31:59.575Z",
+    "file": "quotes_2016-03-28_B6.json.gz",
+    "bytes": 18854
+   },
+   "stats": {
+    "records_received": 3915,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 3915,
+    "class_counts": {
+     "normal": 3525,
+     "locked": 390,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 390,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.989483,
+     "locked": 0.010475,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 4.2e-05
+    },
+    "coverage": 0.989483,
+    "measured": true,
+    "headline_seconds": 118.738,
+    "condition_codes": {
+     "?": 3915
+    },
+    "largest_gap_s": 3.333,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010001,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010142,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0001,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0142,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4914,
+      "tw_median": 0.4914,
+      "tw_p90": 0.4914,
+      "tw_p99": 0.4914,
+      "max": 0.9828,
+      "count_mean": 0.4983,
+      "count_median": 0.4914
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2457,
+    "time_share_by_spread": {
+     "1_cent": 0.999882,
+     "2_cents": 0.000118,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9896,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2500.0,
+     "ask": 1800.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4914
+    },
+    "snapshots": {
+     "14:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4914,
+      "quote_age_s": 0.364,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2016-03-28 B7": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 8492,
+    "complete": true,
+    "last_t": "2016-03-28T19:00:59.629Z",
+    "file": "quotes_2016-03-28_B7.json.gz",
+    "bytes": 40680
+   },
+   "stats": {
+    "records_received": 8492,
+    "duplicates": 0,
+    "window_seconds": 180.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 8492,
+    "class_counts": {
+     "normal": 7649,
+     "locked": 821,
+     "crossed": 22,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 821,
+     "crossed": 22,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.995478,
+     "locked": 0.004478,
+     "crossed": 1.1e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 3.3e-05
+    },
+    "coverage": 0.995478,
+    "measured": true,
+    "headline_seconds": 179.186,
+    "condition_codes": {
+     "?": 8492
+    },
+    "largest_gap_s": 2.947,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010018,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010088,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0018,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0088,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.493,
+      "tw_median": 0.4922,
+      "tw_p90": 0.4923,
+      "tw_p99": 0.4923,
+      "max": 0.9846,
+      "count_mean": 0.4964,
+      "count_median": 0.492
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2465,
+    "time_share_by_spread": {
+     "1_cent": 0.998169,
+     "2_cents": 0.001831,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9973,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2300.0,
+     "ask": 2400.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.493
+    },
+    "snapshots": {
+     "15:00:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.492,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2016-03-28 E1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 2,
+    "requests": 2,
+    "quotes": 15107,
+    "complete": true,
+    "last_t": "2016-03-28T19:34:00Z",
+    "file": "quotes_2016-03-28_E1.json.gz",
+    "bytes": 71503
+   },
+   "stats": {
+    "records_received": 15107,
+    "duplicates": 0,
+    "window_seconds": 300.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 15107,
+    "class_counts": {
+     "normal": 13624,
+     "locked": 1483,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 1483,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.990673,
+     "locked": 0.009307,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 2e-05
+    },
+    "coverage": 0.990673,
+    "measured": true,
+    "headline_seconds": 297.202,
+    "condition_codes": {
+     "?": 15107
+    },
+    "largest_gap_s": 2.308,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010003,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010116,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0003,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0116,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4918,
+      "tw_median": 0.4916,
+      "tw_p90": 0.4918,
+      "tw_p99": 0.4918,
+      "max": 0.9838,
+      "count_mean": 0.4973,
+      "count_median": 0.4916
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2459,
+    "time_share_by_spread": {
+     "1_cent": 0.999653,
+     "2_cents": 0.000347,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.991,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2700.0,
+     "ask": 2500.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4918
+    },
+    "snapshots": {
+     "15:30:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4917,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     },
+     "15:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4918,
+      "quote_age_s": 0.235,
+      "label": "clock-dependent"
+     },
+     "15:32:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4915,
+      "quote_age_s": 0.103,
+      "label": "clock-dependent"
+     },
+     "15:33:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4916,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2016-03-28 X1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 2,
+    "requests": 2,
+    "quotes": 17496,
+    "complete": true,
+    "last_t": "2016-03-28T20:00:00Z",
+    "file": "quotes_2016-03-28_X1.json.gz",
+    "bytes": 90576
+   },
+   "stats": {
+    "records_received": 17496,
+    "duplicates": 0,
+    "window_seconds": 180.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 17496,
+    "class_counts": {
+     "normal": 16331,
+     "locked": 1164,
+     "crossed": 1,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 1164,
+     "crossed": 1,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.990933,
+     "locked": 0.009033,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 3.3e-05
+    },
+    "coverage": 0.990933,
+    "measured": true,
+    "headline_seconds": 178.368,
+    "condition_codes": {
+     "?": 17496
+    },
+    "largest_gap_s": 1.491,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.01016,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.02,
+      "max": 0.02,
+      "count_mean": 0.010342,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.016,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 2.0,
+      "max": 2.0,
+      "count_mean": 1.0342,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.5,
+      "tw_median": 0.4922,
+      "tw_p90": 0.4924,
+      "tw_p99": 0.9845,
+      "max": 0.9848,
+      "count_mean": 0.5089,
+      "count_median": 0.4921
+     }
+    },
+    "half_spread_bp_tw_mean": 0.25,
+    "time_share_by_spread": {
+     "1_cent": 0.984027,
+     "2_cents": 0.015973,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 1.0068,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 4100.0,
+     "ask": 4300.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.5
+    },
+    "snapshots": {
+     "15:59:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4924,
+      "quote_age_s": 0.201,
+      "label": "clock-dependent"
+     },
+     "16:00:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.492,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2017-01-06 B0": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 4,
+    "requests": 4,
+    "quotes": 32555,
+    "complete": true,
+    "last_t": "2017-01-06T15:16:00Z",
+    "file": "quotes_2017-01-06_B0.json.gz",
+    "bytes": 157781
+   },
+   "stats": {
+    "records_received": 32555,
+    "duplicates": 0,
+    "window_seconds": 960.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 32555,
+    "class_counts": {
+     "normal": 30767,
+     "locked": 1725,
+     "crossed": 63,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 1725,
+     "crossed": 63,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.996853,
+     "locked": 0.002951,
+     "crossed": 0.000195,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 1e-06
+    },
+    "coverage": 0.996853,
+    "measured": true,
+    "headline_seconds": 956.979,
+    "condition_codes": {
+     "?": 32555
+    },
+    "largest_gap_s": 3.382,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010009,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010093,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0009,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0093,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4419,
+      "tw_median": 0.4414,
+      "tw_p90": 0.4417,
+      "tw_p99": 0.4418,
+      "max": 0.8836,
+      "count_mean": 0.4456,
+      "count_median": 0.4414
+     }
+    },
+    "half_spread_bp_tw_mean": 0.221,
+    "time_share_by_spread": {
+     "1_cent": 0.999098,
+     "2_cents": 0.000902,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9979,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2300.0,
+     "ask": 3200.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4419
+    },
+    "snapshots": {
+     "10:01:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4416,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     },
+     "10:05:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4415,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     },
+     "10:10:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4413,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     },
+     "10:15:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4416,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2017-01-06 B1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 2638,
+    "complete": true,
+    "last_t": "2017-01-06T15:47:00Z",
+    "file": "quotes_2017-01-06_B1.json.gz",
+    "bytes": 12856
+   },
+   "stats": {
+    "records_received": 2638,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 2638,
+    "class_counts": {
+     "normal": 2561,
+     "locked": 77,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 77,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999892,
+     "locked": 0.000108,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.0
+    },
+    "coverage": 0.999892,
+    "measured": true,
+    "headline_seconds": 119.987,
+    "condition_codes": {
+     "?": 2638
+    },
+    "largest_gap_s": 2.012,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.01,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010027,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0027,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4417,
+      "tw_median": 0.4417,
+      "tw_p90": 0.4417,
+      "tw_p99": 0.4417,
+      "max": 0.8835,
+      "count_mean": 0.4429,
+      "count_median": 0.4417
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2208,
+    "time_share_by_spread": {
+     "1_cent": 0.999983,
+     "2_cents": 1.7e-05,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9999,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2800.0,
+     "ask": 6800.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4417
+    },
+    "snapshots": {
+     "10:46:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4417,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2017-01-06 B2": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 3528,
+    "complete": true,
+    "last_t": "2017-01-06T16:32:00Z",
+    "file": "quotes_2017-01-06_B2.json.gz",
+    "bytes": 17269
+   },
+   "stats": {
+    "records_received": 3528,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 3528,
+    "class_counts": {
+     "normal": 3365,
+     "locked": 163,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 163,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999283,
+     "locked": 0.000717,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.0
+    },
+    "coverage": 0.999283,
+    "measured": true,
+    "headline_seconds": 119.914,
+    "condition_codes": {
+     "?": 3528
+    },
+    "largest_gap_s": 2.118,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.01,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.01008,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.008,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4405,
+      "tw_median": 0.4405,
+      "tw_p90": 0.4406,
+      "tw_p99": 0.4406,
+      "max": 0.8811,
+      "count_mean": 0.4441,
+      "count_median": 0.4405
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2203,
+    "time_share_by_spread": {
+     "1_cent": 0.999975,
+     "2_cents": 2.5e-05,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9993,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2600.0,
+     "ask": 3900.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4405
+    },
+    "snapshots": {
+     "11:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4405,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2017-01-06 B3": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 3319,
+    "complete": true,
+    "last_t": "2017-01-06T17:17:00Z",
+    "file": "quotes_2017-01-06_B3.json.gz",
+    "bytes": 15809
+   },
+   "stats": {
+    "records_received": 3319,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 3319,
+    "class_counts": {
+     "normal": 3123,
+     "locked": 173,
+     "crossed": 23,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 173,
+     "crossed": 23,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999483,
+     "locked": 0.0005,
+     "crossed": 1.7e-05,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.0
+    },
+    "coverage": 0.999483,
+    "measured": true,
+    "headline_seconds": 119.938,
+    "condition_codes": {
+     "?": 3319
+    },
+    "largest_gap_s": 3.289,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.01,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010048,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0048,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4399,
+      "tw_median": 0.4399,
+      "tw_p90": 0.4399,
+      "tw_p99": 0.4399,
+      "max": 0.8798,
+      "count_mean": 0.442,
+      "count_median": 0.4399
+     }
+    },
+    "half_spread_bp_tw_mean": 0.22,
+    "time_share_by_spread": {
+     "1_cent": 1.0,
+     "2_cents": 0.0,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9995,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 3000.0,
+     "ask": 4800.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4399
+    },
+    "snapshots": {
+     "12:16:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4399,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2017-01-06 B4": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 3301,
+    "complete": true,
+    "last_t": "2017-01-06T18:02:00Z",
+    "file": "quotes_2017-01-06_B4.json.gz",
+    "bytes": 15624
+   },
+   "stats": {
+    "records_received": 3301,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 3301,
+    "class_counts": {
+     "normal": 3181,
+     "locked": 120,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 120,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999717,
+     "locked": 0.000283,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.0
+    },
+    "coverage": 0.999717,
+    "measured": true,
+    "headline_seconds": 119.966,
+    "condition_codes": {
+     "?": 3301
+    },
+    "largest_gap_s": 1.8,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010001,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010091,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0001,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0091,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4393,
+      "tw_median": 0.4393,
+      "tw_p90": 0.4393,
+      "tw_p99": 0.4393,
+      "max": 0.8786,
+      "count_mean": 0.4433,
+      "count_median": 0.4393
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2197,
+    "time_share_by_spread": {
+     "1_cent": 0.99995,
+     "2_cents": 5e-05,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9998,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2800.0,
+     "ask": 9000.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4393
+    },
+    "snapshots": {
+     "13:01:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4393,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2017-01-06 B5": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 2071,
+    "complete": true,
+    "last_t": "2017-01-06T18:47:00Z",
+    "file": "quotes_2017-01-06_B5.json.gz",
+    "bytes": 10255
+   },
+   "stats": {
+    "records_received": 2071,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 2071,
+    "class_counts": {
+     "normal": 1981,
+     "locked": 90,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 90,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.99835,
+     "locked": 0.00165,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.0
+    },
+    "coverage": 0.99835,
+    "measured": true,
+    "headline_seconds": 119.802,
+    "condition_codes": {
+     "?": 2071
+    },
+    "largest_gap_s": 4.738,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.01,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.01004,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.004,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4393,
+      "tw_median": 0.4393,
+      "tw_p90": 0.4394,
+      "tw_p99": 0.4394,
+      "max": 0.8787,
+      "count_mean": 0.4411,
+      "count_median": 0.4393
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2197,
+    "time_share_by_spread": {
+     "1_cent": 0.999992,
+     "2_cents": 8e-06,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9984,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 3600.0,
+     "ask": 8600.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4393
+    },
+    "snapshots": {
+     "13:46:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4393,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2017-01-06 B6": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 3155,
+    "complete": true,
+    "last_t": "2017-01-06T19:32:00Z",
+    "file": "quotes_2017-01-06_B6.json.gz",
+    "bytes": 15643
+   },
+   "stats": {
+    "records_received": 3155,
+    "duplicates": 0,
+    "window_seconds": 120.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 3155,
+    "class_counts": {
+     "normal": 3067,
+     "locked": 88,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 88,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.995167,
+     "locked": 0.004833,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.0
+    },
+    "coverage": 0.995167,
+    "measured": true,
+    "headline_seconds": 119.42,
+    "condition_codes": {
+     "?": 3155
+    },
+    "largest_gap_s": 2.047,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.01,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010072,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0072,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4396,
+      "tw_median": 0.4396,
+      "tw_p90": 0.4396,
+      "tw_p99": 0.4396,
+      "max": 0.8793,
+      "count_mean": 0.4427,
+      "count_median": 0.4396
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2198,
+    "time_share_by_spread": {
+     "1_cent": 0.999992,
+     "2_cents": 8e-06,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9952,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 2000.0,
+     "ask": 11500.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4396
+    },
+    "snapshots": {
+     "14:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4396,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2017-01-06 B7": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 3647,
+    "complete": true,
+    "last_t": "2017-01-06T20:01:00Z",
+    "file": "quotes_2017-01-06_B7.json.gz",
+    "bytes": 18308
+   },
+   "stats": {
+    "records_received": 3647,
+    "duplicates": 0,
+    "window_seconds": 180.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 3647,
+    "class_counts": {
+     "normal": 3488,
+     "locked": 159,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 159,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.999028,
+     "locked": 0.000972,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.0
+    },
+    "coverage": 0.999028,
+    "measured": true,
+    "headline_seconds": 179.825,
+    "condition_codes": {
+     "?": 3647
+    },
+    "largest_gap_s": 4.359,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.01,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010086,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0086,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4397,
+      "tw_median": 0.4397,
+      "tw_p90": 0.4398,
+      "tw_p99": 0.4398,
+      "max": 0.8795,
+      "count_mean": 0.4435,
+      "count_median": 0.4397
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2198,
+    "time_share_by_spread": {
+     "1_cent": 0.999994,
+     "2_cents": 6e-06,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.999,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 4400.0,
+     "ask": 5900.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4397
+    },
+    "snapshots": {
+     "15:00:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4397,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2017-01-06 E1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 1,
+    "requests": 1,
+    "quotes": 8254,
+    "complete": true,
+    "last_t": "2017-01-06T20:34:00Z",
+    "file": "quotes_2017-01-06_E1.json.gz",
+    "bytes": 41884
+   },
+   "stats": {
+    "records_received": 8254,
+    "duplicates": 0,
+    "window_seconds": 300.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 8254,
+    "class_counts": {
+     "normal": 7992,
+     "locked": 262,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 262,
+     "crossed": 0,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.99861,
+     "locked": 0.00139,
+     "crossed": 0.0,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.0
+    },
+    "coverage": 0.99861,
+    "measured": true,
+    "headline_seconds": 299.583,
+    "condition_codes": {
+     "?": 8254
+    },
+    "largest_gap_s": 2.196,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.01,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.01007,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.007,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4398,
+      "tw_median": 0.4398,
+      "tw_p90": 0.4398,
+      "tw_p99": 0.4398,
+      "max": 0.8796,
+      "count_mean": 0.4428,
+      "count_median": 0.4398
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2199,
+    "time_share_by_spread": {
+     "1_cent": 0.99996,
+     "2_cents": 4e-05,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9987,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 9900.0,
+     "ask": 10000.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4398
+    },
+    "snapshots": {
+     "15:30:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4398,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     },
+     "15:31:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4398,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     },
+     "15:32:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4397,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     },
+     "15:33:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4397,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  },
+  "2017-01-06 X1": {
+   "fetch_status": "ok",
+   "fetch": {
+    "status": "ok",
+    "pages": 3,
+    "requests": 3,
+    "quotes": 21207,
+    "complete": true,
+    "last_t": "2017-01-06T21:00:00Z",
+    "file": "quotes_2017-01-06_X1.json.gz",
+    "bytes": 110066
+   },
+   "stats": {
+    "records_received": 21207,
+    "duplicates": 0,
+    "window_seconds": 180.0,
+    "excluded_invalid": 0,
+    "out_of_order": 0,
+    "ordering_issue": false,
+    "records_valid": 21207,
+    "class_counts": {
+     "normal": 20463,
+     "locked": 737,
+     "crossed": 7,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "excluded_counts": {
+     "invalid": 0,
+     "duplicate": 0,
+     "locked": 737,
+     "crossed": 7,
+     "one-sided": 0,
+     "other condition": 0
+    },
+    "time_share": {
+     "normal": 0.995478,
+     "locked": 0.004517,
+     "crossed": 6e-06,
+     "one-sided": 0.0,
+     "other condition": 0.0,
+     "stale": 0.0,
+     "no quote": 0.0
+    },
+    "coverage": 0.995478,
+    "measured": true,
+    "headline_seconds": 179.186,
+    "condition_codes": {
+     "?": 21207
+    },
+    "largest_gap_s": 0.607,
+    "spread": {
+     "usd": {
+      "tw_mean": 0.010017,
+      "tw_median": 0.01,
+      "tw_p90": 0.01,
+      "tw_p99": 0.01,
+      "max": 0.02,
+      "count_mean": 0.010224,
+      "count_median": 0.01
+     },
+     "cents": {
+      "tw_mean": 1.0017,
+      "tw_median": 1.0,
+      "tw_p90": 1.0,
+      "tw_p99": 1.0,
+      "max": 2.0,
+      "count_mean": 1.0224,
+      "count_median": 1.0
+     },
+     "bp": {
+      "tw_mean": 0.4408,
+      "tw_median": 0.44,
+      "tw_p90": 0.4401,
+      "tw_p99": 0.4402,
+      "max": 0.8804,
+      "count_mean": 0.4499,
+      "count_median": 0.44
+     }
+    },
+    "half_spread_bp_tw_mean": 0.2204,
+    "time_share_by_spread": {
+     "1_cent": 0.998264,
+     "2_cents": 0.001736,
+     "3_cents_or_more": 0.0
+    },
+    "sensitivity_locked_as_zero_tw_mean_cents": 0.9972,
+    "wide_spreads": {
+     "count": 0,
+     "listed": []
+    },
+    "displayed_size_shares_median": {
+     "bid": 10000.0,
+     "ask": 10000.0
+    },
+    "spread_bp_tw_mean_by_code": {
+     "?": 0.4408
+    },
+    "snapshots": {
+     "15:59:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4399,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     },
+     "16:00:00": {
+      "state": "ok",
+      "cents": 1.0,
+      "bp": 0.4401,
+      "quote_age_s": 0.0,
+      "label": "clock-dependent"
+     }
+    }
+   }
+  }
+ },
+ "groups": {
+  "E1": {
+   "windows": [
+    "E1"
+   ],
+   "coverage_counts": {
+    "measured": 6,
+    "partial": 0,
+    "incomplete_or_not_fetched": 0
+   },
+   "by_date": {
+    "2016-03-28": {
+     "tw_mean_cents": 1.0003,
+     "tw_mean_bp": 0.4918,
+     "half_spread_bp": 0.2459
+    },
+    "2017-01-06": {
+     "tw_mean_cents": 1.0,
+     "tw_mean_bp": 0.4398,
+     "half_spread_bp": 0.2199
+    },
+    "2018-06-07": {
+     "tw_mean_cents": 1.0055,
+     "tw_mean_bp": 0.3626,
+     "half_spread_bp": 0.1813
+    },
+    "2019-01-31": {
+     "tw_mean_cents": 1.0498,
+     "tw_mean_bp": 0.3897,
+     "half_spread_bp": 0.1948
+    },
+    "2020-01-02": {
+     "tw_mean_cents": 1.001,
+     "tw_mean_bp": 0.309,
+     "half_spread_bp": 0.1545
+    },
+    "2021-04-23": {
+     "tw_mean_cents": 1.0001,
+     "tw_mean_bp": 0.2393,
+     "half_spread_bp": 0.1197
+    }
+   },
+   "daily_tw_mean_bp": {
+    "min": 0.2393,
+    "median": 0.3761,
+    "max": 0.4918
+   },
+   "daily_tw_mean_cents": {
+    "min": 1.0,
+    "median": 1.0006,
+    "max": 1.0498
+   },
+   "dates_with_half_spread_above": {
+    "base": 0,
+    "stress": 0,
+    "severe": 0
+   }
+  },
+  "X1": {
+   "windows": [
+    "X1"
+   ],
+   "coverage_counts": {
+    "measured": 6,
+    "partial": 0,
+    "incomplete_or_not_fetched": 0
+   },
+   "by_date": {
+    "2016-03-28": {
+     "tw_mean_cents": 1.016,
+     "tw_mean_bp": 0.5,
+     "half_spread_bp": 0.25
+    },
+    "2017-01-06": {
+     "tw_mean_cents": 1.0017,
+     "tw_mean_bp": 0.4408,
+     "half_spread_bp": 0.2204
+    },
+    "2018-06-07": {
+     "tw_mean_cents": 1.0118,
+     "tw_mean_bp": 0.3649,
+     "half_spread_bp": 0.1825
+    },
+    "2019-01-31": {
+     "tw_mean_cents": 1.0036,
+     "tw_mean_bp": 0.3714,
+     "half_spread_bp": 0.1857
+    },
+    "2020-01-02": {
+     "tw_mean_cents": 1.0256,
+     "tw_mean_bp": 0.3159,
+     "half_spread_bp": 0.158
+    },
+    "2021-04-23": {
+     "tw_mean_cents": 1.0103,
+     "tw_mean_bp": 0.2424,
+     "half_spread_bp": 0.1212
+    }
+   },
+   "daily_tw_mean_bp": {
+    "min": 0.2424,
+    "median": 0.3681,
+    "max": 0.5
+   },
+   "daily_tw_mean_cents": {
+    "min": 1.0017,
+    "median": 1.0111,
+    "max": 1.0256
+   },
+   "dates_with_half_spread_above": {
+    "base": 0,
+    "stress": 0,
+    "severe": 0
+   }
+  },
+  "B0": {
+   "windows": [
+    "B0"
+   ],
+   "coverage_counts": {
+    "measured": 6,
+    "partial": 0,
+    "incomplete_or_not_fetched": 0
+   },
+   "by_date": {
+    "2016-03-28": {
+     "tw_mean_cents": 1.0006,
+     "tw_mean_bp": 0.4924,
+     "half_spread_bp": 0.2462
+    },
+    "2017-01-06": {
+     "tw_mean_cents": 1.0009,
+     "tw_mean_bp": 0.4419,
+     "half_spread_bp": 0.221
+    },
+    "2018-06-07": {
+     "tw_mean_cents": 1.0396,
+     "tw_mean_bp": 0.3741,
+     "half_spread_bp": 0.187
+    },
+    "2019-01-31": {
+     "tw_mean_cents": 1.1081,
+     "tw_mean_bp": 0.413,
+     "half_spread_bp": 0.2065
+    },
+    "2020-01-02": {
+     "tw_mean_cents": 1.0821,
+     "tw_mean_bp": 0.3345,
+     "half_spread_bp": 0.1673
+    },
+    "2021-04-23": {
+     "tw_mean_cents": 1.0226,
+     "tw_mean_bp": 0.2468,
+     "half_spread_bp": 0.1234
+    }
+   },
+   "daily_tw_mean_bp": {
+    "min": 0.2468,
+    "median": 0.3935,
+    "max": 0.4924
+   },
+   "daily_tw_mean_cents": {
+    "min": 1.0006,
+    "median": 1.0311,
+    "max": 1.1081
+   },
+   "dates_with_half_spread_above": {
+    "base": 0,
+    "stress": 0,
+    "severe": 0
+   }
+  },
+  "B1_B7": {
+   "windows": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7"
+   ],
+   "coverage_counts": {
+    "measured": 6,
+    "partial": 0,
+    "incomplete_or_not_fetched": 0
+   },
+   "by_date": {
+    "2016-03-28": {
+     "tw_mean_cents": 1.0005,
+     "tw_mean_bp": 0.4922,
+     "half_spread_bp": 0.2461
+    },
+    "2017-01-06": {
+     "tw_mean_cents": 1.0,
+     "tw_mean_bp": 0.44,
+     "half_spread_bp": 0.22
+    },
+    "2018-06-07": {
+     "tw_mean_cents": 1.0447,
+     "tw_mean_bp": 0.3769,
+     "half_spread_bp": 0.1884
+    },
+    "2019-01-31": {
+     "tw_mean_cents": 1.0396,
+     "tw_mean_bp": 0.3857,
+     "half_spread_bp": 0.1929
+    },
+    "2020-01-02": {
+     "tw_mean_cents": 1.0365,
+     "tw_mean_bp": 0.3206,
+     "half_spread_bp": 0.1603
+    },
+    "2021-04-23": {
+     "tw_mean_cents": 1.0163,
+     "tw_mean_bp": 0.2439,
+     "half_spread_bp": 0.122
+    }
+   },
+   "daily_tw_mean_bp": {
+    "min": 0.2439,
+    "median": 0.3813,
+    "max": 0.4922
+   },
+   "daily_tw_mean_cents": {
+    "min": 1.0,
+    "median": 1.0264,
+    "max": 1.0447
+   },
+   "dates_with_half_spread_above": {
+    "base": 0,
+    "stress": 0,
+    "severe": 0
+   }
+  },
+  "B7": {
+   "windows": [
+    "B7"
+   ],
+   "coverage_counts": {
+    "measured": 6,
+    "partial": 0,
+    "incomplete_or_not_fetched": 0
+   },
+   "by_date": {
+    "2016-03-28": {
+     "tw_mean_cents": 1.0018,
+     "tw_mean_bp": 0.493,
+     "half_spread_bp": 0.2465
+    },
+    "2017-01-06": {
+     "tw_mean_cents": 1.0,
+     "tw_mean_bp": 0.4397,
+     "half_spread_bp": 0.2199
+    },
+    "2018-06-07": {
+     "tw_mean_cents": 1.1004,
+     "tw_mean_bp": 0.397,
+     "half_spread_bp": 0.1985
+    },
+    "2019-01-31": {
+     "tw_mean_cents": 1.0296,
+     "tw_mean_bp": 0.3819,
+     "half_spread_bp": 0.1909
+    },
+    "2020-01-02": {
+     "tw_mean_cents": 1.0237,
+     "tw_mean_bp": 0.3162,
+     "half_spread_bp": 0.1581
+    },
+    "2021-04-23": {
+     "tw_mean_cents": 1.0009,
+     "tw_mean_bp": 0.2398,
+     "half_spread_bp": 0.1199
+    }
+   },
+   "daily_tw_mean_bp": {
+    "min": 0.2398,
+    "median": 0.3895,
+    "max": 0.493
+   },
+   "daily_tw_mean_cents": {
+    "min": 1.0,
+    "median": 1.0128,
+    "max": 1.1004
+   },
+   "dates_with_half_spread_above": {
+    "base": 0,
+    "stress": 0,
+    "severe": 0
+   }
+  }
+ }
+}

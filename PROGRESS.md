@@ -619,6 +619,36 @@ pipeline -> watch progress -> cancel if needed -> open the report.
   - 01:20:00-01:20:31 UTC
 - **Notes:** `docs/DEPENDENCY_MAP.md`.
 
+## SPY spread-measurement pilot: PROVISIONAL (2026-11-08 to 2026-11-09)
+
+- **Pre-registered:** `feasibility/spread_measurement/PLAN.md`, commit `be2d9cd`, before any request.
+  - 6 sessions: the first drawn date of each year, 2016-2021.
+  - The quote windows match the closed 001 and 002 entry and exit times.
+  - Limits: 600 requests, 75 MB, page caps per window.
+  - The other 18 drawn sessions are refused in code, pending a separate owner decision.
+- **Implemented and tested:** `trading/spread_measurement.py`, GET only.
+  - It enforces the request, page and storage caps, and a gate that requires the committed plan.
+  - 19 synthetic tests; the suite passed (330).
+- **Run once:** 2026-11-09, 01:22:28 to 01:24:03 UTC.
+  - **Completeness:** all 60 date-windows came back complete and measured (coverage at least 97.9%),
+    with no cap reached and no access refusal.
+  - **Usage:** 135 of 600 requests, 7.87 of 75 MB.
+  - **Records:** 1,020,258. 0 invalid, 0 duplicates, 0 out of order. Locked records were 0.37% of
+    the time, crossed 0.003%.
+  - **Condition code:** every record carries the undocumented code `?`.
+- **Provisional result:**
+  - The quoted spread was 1 cent for 88-100% of the time in every window.
+  - The estimated spread component of execution cost (half-spread, time-averaged) was 0.12-0.25 bp
+    per side. The cost model assumes 0.5 bp per side at base.
+  - This is not what every order pays: slippage, fees, fills inside the spread and latency are not
+    measured.
+  - The days are calm-looking, the quote semantics are unverified, and the pilot is a check, not a
+    distribution.
+- **Records:** `feasibility/spread_measurement/FINDINGS_pilot.md` and `findings_pilot.json`
+  (statistics only). Raw quotes are in the git-ignored `data/feasibility/spreads_pilot_20261109T012228Z/`.
+- **Unchanged:** `trading/costs.py`, the experiment locks, both closed verdicts, and the gap-down
+  block. No validation or final data was requested.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca
