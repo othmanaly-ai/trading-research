@@ -16,6 +16,7 @@ Endpoints:
   GET  /api/strategies/<id>/journal      journal rows (JSON); /journal.csv downloads them
   GET  /api/research             mode availability, periods, responsibilities
   GET  /api/depmap               read-only dependency-and-health map (declared / recorded / proposed)
+  GET  /api/workflows            coordinator research workflows (tasks, evidence, report); read-only
   GET  /api/operations           Milestone 1 dry-run status from the operations store (read-only; no orders exist)
   GET  /api/jobs                 real research-job records (trading/jobs.py), read-only
   GET  /api/experiments          allowed saved experiments with artifact inventories
@@ -532,6 +533,9 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
                     return self._json(with_store(lambda st: jobs_mod.preview(exp, st, JOBS_RESEARCH_DIR, env=_server_env())))
                 except ValueError as exc:
                     return self._json({"error": str(exc)}, 400)
+            if path == "/api/workflows":
+                from trading import coordinator
+                return self._json(coordinator.overview())
             if path == "/api/depmap":
                 from trading.dashboard import depmap
                 return self._json(depmap.collect(jobs_db=JOBS_DB))
@@ -800,6 +804,8 @@ def main(argv=None) -> int:
     parser.add_argument("--config", type=Path, default=None)
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--speed", type=float, default=None)
+    parser.add_argument("--read-only-preview", action="store_true",
+                        help="second viewing instance: no research-job runner, no monitor supervision or lifecycle writes")
     args = parser.parse_args(argv)
     found = existing_server(args.port)
     if found and not found.get("unrecognised"):
@@ -810,7 +816,8 @@ def main(argv=None) -> int:
         print(f"Port {args.port} is already used by another program; not starting. Close it or use --port.")
         return 2
     try:
-        httpd, ctrl, stop = create_server(args.config, args.port, args.speed, args.mode)
+        bg = not args.read_only_preview
+        httpd, ctrl, stop = create_server(args.config, args.port, args.speed, args.mode, run_jobs=bg, supervise_monitor=bg)
     except HistoryError as exc:
         print(f"HISTORICAL REPLAY unavailable: {exc}")
         print("Not starting. (No fallback to demo data.)")

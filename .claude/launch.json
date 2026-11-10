@@ -4,14 +4,38 @@
     {
       "name": "demo-dashboard",
       "runtimeExecutable": "C:\\Users\\othma\\OneDrive\\Documents\\TradingProject\\.venv\\Scripts\\python.exe",
-      "runtimeArgs": ["-m", "trading.dashboard.server", "--port", "8765"],
+      "runtimeArgs": [
+        "-m",
+        "trading.dashboard.server",
+        "--port",
+        "8765"
+      ],
       "port": 8765
     },
     {
       "name": "demo-dashboard-empty",
       "runtimeExecutable": "C:\\Users\\othma\\OneDrive\\Documents\\TradingProject\\.venv\\Scripts\\python.exe",
-      "runtimeArgs": ["-m", "trading.dashboard.server", "--port", "8766", "--config", "dashboard/empty_config.json"],
+      "runtimeArgs": [
+        "-m",
+        "trading.dashboard.server",
+        "--port",
+        "8766",
+        "--config",
+        "dashboard/empty_config.json"
+      ],
       "port": 8766
+    },
+    {
+      "name": "workflow-preview",
+      "runtimeExecutable": "C:\\Users\\othma\\OneDrive\\Documents\\TradingProject\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": [
+        "-m",
+        "trading.dashboard.server",
+        "--port",
+        "8767",
+        "--read-only-preview"
+      ],
+      "port": 8767
     }
   ]
 }

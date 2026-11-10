@@ -1,0 +1,154 @@
+{
+  "task": "strategy_analysis",
+  "evidence_snapshot": "65c9afc345481ec35fee5d0c594a08e0ab75b33d5abf7f4b34c67c47ff410aa0",
+  "author": "Claude (Opus 5.5) in the owner's interactive Claude Code session, 2026-11-10",
+  "mode": "claude_code_session (one-time interactive response; not an unattended or autonomous agent)",
+  "requested_actions": [
+    "owner_decision",
+    "owner_sends_support_request"
+  ],
+  "sections": {
+    "why_001_failed": {
+      "claims": [
+        {
+          "id": "S1",
+          "text": "001 (late-day intraday momentum) lost 1.41% after base costs and 2.99% at stress costs on 2016-2021 development data.",
+          "cites": [
+            "E4",
+            "E3"
+          ],
+          "figures": [
+            {
+              "fact": "001.base_net_return",
+              "value": -0.0141
+            },
+            {
+              "fact": "001.stress_net_return",
+              "value": -0.0299
+            }
+          ]
+        },
+        {
+          "id": "S2",
+          "text": "The loss existed before costs: the zero-cost re-run still lost 0.50% and the mean move per trade was about -1.2 bp; the morning signal had essentially no relation to the last 30 minutes (correlation +0.02).",
+          "cites": [
+            "E3"
+          ],
+          "figures": []
+        },
+        {
+          "id": "S3",
+          "text": "It ranked at about the 10th percentile of random long/flat entry, so random days did better; it failed rules 1, 2, 4 and 5 and passed only the drawdown rule.",
+          "cites": [
+            "E4",
+            "E2"
+          ],
+          "figures": [
+            {
+              "fact": "001.random_percentile",
+              "value": 10.05
+            }
+          ]
+        },
+        {
+          "id": "S4",
+          "text": "The implementation was independently recomputed with 0 mismatches, so the failure is evidence against the hypothesis, not a software defect.",
+          "cites": [
+            "E3"
+          ],
+          "figures": []
+        }
+      ]
+    },
+    "why_002_failed": {
+      "claims": [
+        {
+          "id": "S5",
+          "text": "002 (opening-range breakout) earned a small gross edge (+$1,166 on 1,058 trades, about +2.3 bp per trade) that the base round-trip cost of 2.3 bp consumed almost exactly.",
+          "cites": [
+            "E8",
+            "E7",
+            "E9"
+          ],
+          "figures": [
+            {
+              "fact": "002.base_gross_pnl",
+              "value": 1166.46
+            },
+            {
+              "fact": "002.base_trades",
+              "value": 1058
+            },
+            {
+              "fact": "cost.base_round_trip_bp",
+              "value": 2.3
+            }
+          ]
+        },
+        {
+          "id": "S6",
+          "text": "Net was -0.014% at base costs and -2.19% at stress costs (6.6 bp round trip): the verdict depended on unmeasured cost assumptions.",
+          "cites": [
+            "E8",
+            "E9"
+          ],
+          "figures": [
+            {
+              "fact": "002.base_net_return",
+              "value": -0.000141
+            },
+            {
+              "fact": "002.stress_net_return",
+              "value": -0.0219
+            },
+            {
+              "fact": "cost.stress_round_trip_bp",
+              "value": 6.6
+            }
+          ]
+        },
+        {
+          "id": "S7",
+          "text": "It ranked at the 83rd percentile of the random-entry screen (95th required), lost $1,103.73 without its 10 largest winners, and one predeclared variation (midpoint stop) was negative; it failed D1, D4, D5 and D6.",
+          "cites": [
+            "E8",
+            "E7",
+            "E6"
+          ],
+          "figures": [
+            {
+              "fact": "002.b1_percentile",
+              "value": 82.98
+            }
+          ]
+        },
+        {
+          "id": "S8",
+          "text": "Reopening 002 with cheaper costs or promoting its best variation would be after-the-fact rescue, which the predeclared rules forbid; both experiments are closed.",
+          "cites": [
+            "E6",
+            "E2",
+            "E7"
+          ],
+          "figures": []
+        }
+      ]
+    },
+    "decision": {
+      "recommendation": "Do not start a third strategy experiment now. Make resolving the quote-data semantics the next research step: the owner sends the prepared Alpaca support request (questions A1-A5) and research waits for written answers before any further data spend or hypothesis test.",
+      "alternatives": [
+        "Pre-register a stress-day spread stratum now (dates chosen by a public event calendar, no returns), accepting it stays PROVISIONAL until A1-A5 are answered.",
+        "Run the remaining 18 pilot sessions (cheap, but the pilot itself expects little new information from more calm days).",
+        "Adopt a minimum-edge rule for future specs (expected gross edge must clear the 6.6 bp stress round trip with margin) - a process change needing no data.",
+        "Start a new hypothesis on 2016-2021 SPY - not recommended: the exploration log shows late-day, breakout and down-morning ideas already seen, and both failures hit the same cost wall."
+      ],
+      "evidence_needed": [
+        "Written Alpaca answers to A1 (timestamp clock), A2 (condition '?'), A3 (NBBO construction), A4 (locked/crossed), A5 (filtering/corrections) for 2016-2021.",
+        "For a stress stratum: a public, return-free date rule fixed in a pre-registration before any download.",
+        "For any future hypothesis: a stated expected gross edge per trade above the stress round-trip cost, and data not already used by 001/002."
+      ],
+      "is_proposal_only": true,
+      "claims": []
+    }
+  }
+}

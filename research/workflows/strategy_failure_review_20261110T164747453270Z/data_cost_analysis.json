@@ -1,0 +1,145 @@
+{
+  "task": "data_cost_analysis",
+  "evidence_snapshot": "65c9afc345481ec35fee5d0c594a08e0ab75b33d5abf7f4b34c67c47ff410aa0",
+  "author": "Claude (Opus 5.5) in the owner's interactive Claude Code session, 2026-11-10",
+  "mode": "claude_code_session (one-time interactive response; not an unattended or autonomous agent)",
+  "requested_actions": [
+    "owner_decision"
+  ],
+  "sections": {
+    "spread_establishes": {
+      "claims": [
+        {
+          "id": "D1",
+          "text": "On the 6 pilot sessions, SPY's quoted spread was 1 cent for most of the time in every strategy window; the time-weighted half-spread was 0.12-0.25 bp per side.",
+          "cites": [
+            "E10",
+            "E11"
+          ],
+          "figures": [
+            {
+              "fact": "pilot.dates",
+              "value": 6
+            },
+            {
+              "fact": "pilot.half_spread_bp_min",
+              "value": 0.1197
+            },
+            {
+              "fact": "pilot.half_spread_bp_max",
+              "value": 0.25
+            }
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "That is below the base model's 0.5 bp half-spread assumption, so for the spread component only, on these ordinary days, the base assumption looks conservative (provisionally).",
+          "cites": [
+            "E10",
+            "E9"
+          ],
+          "figures": [
+            {
+              "fact": "cost.base_half_spread_bp",
+              "value": 0.5
+            }
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "The measurement pipeline worked as pre-registered: 60 of 60 windows complete, no invalid, duplicate or out-of-order records, well inside the request and storage caps.",
+          "cites": [
+            "E10",
+            "E12"
+          ],
+          "figures": []
+        }
+      ]
+    },
+    "spread_does_not_establish": {
+      "claims": [
+        {
+          "id": "D4",
+          "text": "It says nothing about stressed or high-volatility days: none of the 6 randomly chosen sessions was a known stress day, and spreads widen exactly when costs matter most.",
+          "cites": [
+            "E10"
+          ],
+          "figures": []
+        },
+        {
+          "id": "D5",
+          "text": "It does not measure slippage (0.5 bp per side at base) or the sell fee: quotes are not fills, so most of the 2.3 bp base round trip remains unmeasured.",
+          "cites": [
+            "E10",
+            "E9"
+          ],
+          "figures": [
+            {
+              "fact": "cost.base_slippage_bp",
+              "value": 0.5
+            },
+            {
+              "fact": "cost.base_round_trip_bp",
+              "value": 2.3
+            }
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "It cannot change the cost model or any closed verdict: the pilot itself states it is not reliable enough to change trading/costs.py, and running the remaining 18 calm sessions would not make it so.",
+          "cites": [
+            "E10"
+          ],
+          "figures": []
+        },
+        {
+          "id": "D7",
+          "text": "Every measured quote carries the undocumented condition code '?', and the timestamp clock and NBBO construction are undocumented, so the numbers are labelled, not verified.",
+          "cites": [
+            "E10",
+            "E13"
+          ],
+          "figures": []
+        }
+      ]
+    },
+    "alpaca_blocked": {
+      "claims": [
+        {
+          "id": "D8",
+          "text": "Five questions remain open with Alpaca (A1 timestamp clock, A2 condition '?', A3 consolidated-quote construction, A4 locked/crossed meaning, A5 filtering/corrections); the support request is drafted and unsent - sending it is the owner's decision.",
+          "cites": [
+            "E13"
+          ],
+          "figures": [
+            {
+              "fact": "alpaca.open_questions",
+              "value": [
+                "A1",
+                "A2",
+                "A3",
+                "A4",
+                "A5"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "D9",
+          "text": "The same answers gate the deferred gap-down candidate, which stays DEFERRED_DATA_SEMANTICS (never evaluated on performance) until all five are answered in writing.",
+          "cites": [
+            "E14",
+            "E15",
+            "E13"
+          ],
+          "figures": [
+            {
+              "fact": "candidate.gap_down_state",
+              "value": "DEFERRED_DATA_SEMANTICS"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

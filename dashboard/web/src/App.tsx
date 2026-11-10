@@ -8,6 +8,7 @@ import {
 } from "./components/Panels";
 import Overview from "./components/Overview";
 import DependencyMap from "./components/DependencyMap";
+import WorkflowView from "./components/WorkflowView";
 import OperationsView from "./components/OperationsView";
 import type { Research, StrategyView } from "./types";
 import type { TowerSpec } from "./components/CityView";
@@ -128,6 +129,7 @@ export default function App() {
             {view === "Research jobs" && <JobsView reducedMotion={reducedMotion} />}
             {view === "Market monitor" && <MonitorView reducedMotion={reducedMotion} />}
             {view === "Dependencies" && <DependencyMap reducedMotion={reducedMotion} />}
+            {view === "Research workflow" && <WorkflowView reducedMotion={reducedMotion} />}
             {view === "Operations" && <OperationsView />}
           </div>
         </div>
