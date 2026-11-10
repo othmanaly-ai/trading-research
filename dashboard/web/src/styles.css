@@ -375,3 +375,20 @@ pre.json { max-height: 260px; overflow: auto; background: #0f0c26; padding: 8px;
 .ready-fail { color: var(--red); }
 .ready-unknown { color: var(--muted, #94a3b8); }
 .report-md { max-height: 520px; white-space: pre-wrap; font-size: 12px; }
+
+/* Research desk (DeskView.tsx) */
+.desk-cc { border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 8px; padding: 8px 12px; margin: 8px 0 12px; }
+.desk-cc h3 { margin: 0 0 4px; }
+.desk-tasks { list-style: none; padding: 0; margin: 6px 0; }
+.desk-tasks li { padding: 4px 0; border-bottom: 1px solid rgba(148, 163, 184, 0.15); }
+.desk-state { font-size: 0.8em; letter-spacing: 0.03em; white-space: nowrap; }
+.desk-task-detail { margin-top: 8px; border-top: 1px solid rgba(148, 163, 184, 0.35); padding-top: 6px; }
+.desk-dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; margin: 4px 0; }
+.desk-dl dt { font-weight: 600; opacity: 0.8; }
+.desk-dl dd { margin: 0; overflow-wrap: anywhere; }
+.desk .q-table .warn, .desk .desk-tasks .warn { display: block; margin: 2px 0; padding: 2px 6px; white-space: normal; }
+.desk p, .desk li, .desk-cc { overflow-wrap: anywhere; }
+.desk .q-table td { overflow-wrap: break-word; }
+.desk .q-table[aria-label="Evidence trace tasks"], .desk .q-table[aria-label="All desk tasks"] { min-width: 720px; }
+.desk .q-table td code { word-break: break-all; }
+@media (max-width: 600px) { .desk .district { display: block; } .desk .district-detail { max-height: none; } }

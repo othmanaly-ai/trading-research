@@ -128,6 +128,14 @@ Exit codes for the data check: 0 = success, 1 = API refused or failed, 2 = no cr
   separate; statuses come only from runtime records (UNKNOWN when missing); Graphify relations are code evidence only.
   Never add a trading or execution node; never let it start or change anything.
 
+## Research desk (read-only)
+
+- `trading/dashboard/desk.py` (`/api/desk`, city "Research desk" view; see `docs/RESEARCH_DESK.md`). Six departments; every
+  state from a stored record (UNKNOWN when missing). The Command Centre is a deterministic function: it runs nothing and
+  only names manual, already-authorized commands. Risk controls are labelled simulation-only; never imply they protect trades.
+- `trading/monitor/evidence_trace.py`: one session from stored monitoring evidence through the existing checks to the stored
+  report. Manual CLI only; reads a snapshot of the monitoring store, writes only `data/jobs/desk.sqlite`.
+
 ## Research candidates (not experiments)
 
 - `research/candidates/<id>/STATUS.json`, shown read-only in the city's research jobs view; no pipeline runs on them.

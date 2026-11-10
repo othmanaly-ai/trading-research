@@ -828,6 +828,29 @@ pipeline -> watch progress -> cancel if needed -> open the report.
 - **Note:** the dry-run code changed, so it must be committed before the next run, or that session
   is INCOMPLETE (I5).
 
+## Research desk and evidence trace (2026-11-10)
+
+- **Implemented:**
+  - `trading/monitor/evidence_trace.py`: one session through capture inventory, structural validation, IEX/SIP
+    comparison, revisions, reliability assessment and the stored-report check. Task records go to
+    `data/jobs/desk.sqlite`, one run at a time. Reports are recomputed at their evidence cutoff, and every
+    difference is classified.
+  - `trading/dashboard/desk.py`: six departments and the Command Centre, served at `/api/desk`.
+  - City view "Research desk". See `docs/RESEARCH_DESK.md`.
+- **Tested (synthetic fixtures only):** `tests/test_evidence_trace.py` (15) and `tests/test_desk.py` (8). Cases:
+  - missing and stale inputs, duplicate requests, upstream failure, invalid output
+  - an interrupted run and its recovery, reused versus recomputed results, changed handler source
+  - report tampering, the cutoff and later evidence, correction counts
+  - API agreement with the stored records
+- **Verified on real records (read-only):** traces for 11-04, 11-05, 11-06, 11-09 and 11-10 COMPLETED (11-10 after its
+  finalization); a repeat run reused all six results. The monitoring store was not modified. After the controlled restart,
+  production on port 8765 serves `/api/desk`, and the page, tables, building labels and API agree.
+  - Phone width: no sideways page scroll.
+  - Effects play once per recorded event.
+- **Report differences, classified:** later evidence and code changes on 11-04 to 11-06; a recorded amendment plus one
+  defect (an `other_errors` undercount) on 11-09; 11-10 is identical at its cutoff.
+- **Not done:** the reliability gate stays PROPOSED and model assistance DISABLED.
+
 ## Dry-run records split by Windows app virtualization; report reproducibility (2026-11-10)
 
 - **Confirmed cause:**
