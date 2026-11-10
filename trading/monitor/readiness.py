@@ -157,6 +157,65 @@ RUNNER_STATUS_STALE_S = 60       # the runner refreshes its status every 15 s (h
 RUNNER_STARTUP_LIMIT_S = 120     # start-up (loading code, lock, records) normally takes a few seconds
 
 
+RECORD_LAG_LIMIT_S = 120          # status file may run ahead of the stored heartbeat by at most this much
+
+
+def recorded_progress(rd, status: dict, now: datetime) -> dict:
+    """Does the run named in the status file exist in the records this process can read, with a current heartbeat?
+    A fresh status file alone proves only that a process is alive, not that its work is being recorded."""
+    import sqlite3
+    from trading.operations import paths
+    db = rd / "operations.sqlite"
+    seen = paths.view_redirected(db)
+    if seen is not None:
+        return {"ok": False, "reason": f"this process reads an app-private copy of the records ({seen}); the runner's "
+                                       "records are not visible here"}
+    if not db.is_file():
+        return {"ok": False, "reason": "no operations records file"}
+    try:
+        con = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True, timeout=5)
+        try:
+            row = con.execute("SELECT heartbeat_utc FROM runs WHERE run_id=?", (status.get("run_id"),)).fetchone()
+            n = con.execute("SELECT COUNT(*) FROM decisions WHERE session_date=?", (status.get("session_date"),)).fetchone()[0]
+        finally:
+            con.close()
+    except sqlite3.Error as exc:
+        return {"ok": False, "reason": f"records unreadable ({exc})"}
+    if row is None:
+        return {"ok": False, "reason": f"run {status.get('run_id')} named by the status file is not in the records"}
+    hb = datetime.fromisoformat(row[0]) if row[0] else None
+    lag = None if hb is None else (now - hb).total_seconds()
+    if lag is None or lag > RUNNER_STATUS_STALE_S + RECORD_LAG_LIMIT_S:
+        return {"ok": False, "reason": f"stored heartbeat for run {status.get('run_id')} is "
+                                       f"{'missing' if lag is None else f'{int(lag)} s old'} while the status file is current",
+                "decisions": n}
+    return {"ok": True, "record_heartbeat_age_s": lag, "decisions": n}
+
+
+def stored_report(rd, session_date: str) -> dict:
+    """Is a dry-run report for the date in the records this process can read?"""
+    import sqlite3
+    from trading.operations import paths
+    db = rd / "operations.sqlite"
+    seen = paths.view_redirected(db)
+    if seen is not None:
+        return {"ok": False, "reason": f"the records visible here are an app-private copy ({seen})"}
+    if not db.is_file():
+        return {"ok": False, "reason": "no operations records file"}
+    try:
+        con = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True, timeout=5)
+        try:
+            row = con.execute("SELECT MAX(version), MAX(classification) FROM reports WHERE session_date=?",
+                              (session_date,)).fetchone()
+        finally:
+            con.close()
+    except sqlite3.Error as exc:
+        return {"ok": False, "reason": f"records unreadable ({exc})"}
+    if not row or row[0] is None:
+        return {"ok": False, "reason": f"no stored report for {session_date} in the records"}
+    return {"ok": True, "version": row[0], "classification": row[1]}
+
+
 def runner_check(now: datetime, procs=None, runtime_dir=None, plan_for=None) -> dict:
     """Is the dry-run runner healthy? A stalled or missing runner during the session is FAIL, never 'ready'."""
     from trading.operations import paths, progress
@@ -175,11 +234,15 @@ def runner_check(now: datetime, procs=None, runtime_dir=None, plan_for=None) -> 
     if not plan.trading_day:
         return _c("runner", label, PASS, "no session today; the dry run is not required", now, **detail)
     if now >= plan.report_utc:
-        done = status and status.get("session_date") == str(plan.date) and status.get("stage") == "exited" \
+        said_done = status and status.get("session_date") == str(plan.date) and status.get("stage") == "exited" \
             and status.get("exit_reason") == "completed"
+        stored = stored_report(rd, str(plan.date))
+        detail["stored_report"] = stored
+        done = said_done and stored.get("ok")
         return _c("runner", label, PASS if done else WARNING,
-                  "today's dry run completed and wrote its report" if done
-                  else "today's dry run did not complete (see Operations); not required again until the next session",
+                  "today's dry run completed and its report is in the records" if done
+                  else (f"the status file says completed, but {stored.get('reason')}" if said_done else
+                        "today's dry run did not complete (see Operations); not required again until the next session"),
                   now, **detail)
     if trees is None:
         return _c("runner", label, UNKNOWN, "process list unavailable", now, **detail)
@@ -192,8 +255,15 @@ def runner_check(now: datetime, procs=None, runtime_dir=None, plan_for=None) -> 
     fresh = status and status.get("pid") in pids and status.get("stage") == "running" \
         and age(status) is not None and age(status) <= RUNNER_STATUS_STALE_S
     if fresh:
+        # Liveness is not progress: the run must also be in the records, with a heartbeat close to the status file's.
+        prog = recorded_progress(rd, status, now)
+        detail["recorded_progress"] = prog
+        if not prog["ok"]:
+            return _c("runner", label, FAIL, f"alive but NO RECORDED PROGRESS: {prog['reason']}", now, **detail)
         return _c("runner", label, PASS, f"running (pid {status['pid']}, phase {status.get('phase')}, status "
-                  f"{int(age(status))} s old, {status.get('decisions_this_run', 0)} decision(s) this run)", now, **detail)
+                  f"{int(age(status))} s old, {status.get('decisions_this_run', 0)} decision(s) this run; "
+                  f"records: heartbeat {int(prog['record_heartbeat_age_s'])} s old, {prog['decisions']} decision(s) today)",
+                  now, **detail)
     if startup and startup.get("pid") in pids and startup.get("stage") == "starting" \
             and (age(startup) or 0) <= RUNNER_STARTUP_LIMIT_S:
         return _c("runner", label, WARNING, f"starting: {startup.get('step')}", now, **detail)

@@ -17,6 +17,9 @@ from datetime import date, datetime, timedelta
 
 from trading.monitor import store as st
 
+# Version of the report calculation. Raise it whenever daily_report's output changes for the same records, so a
+# stored report can be matched to the calculation that produced it (reproducibility metadata, below).
+REPORT_CALC_VERSION = 2           # 1 = up to 4b7607d; 2 = other_error_kinds added and incidents counted as other errors (8e29925)
 NORMAL_LIVE_LATENCY_S = 180       # bar end -> received; above this the bar arrived by catch-up after a gap
 STALE_GAP_S = st.STALE_AFTER_S    # no new live bar for longer than this = stale interval
 CATEGORY_LABELS = {
@@ -96,10 +99,14 @@ NOT_REQUEST_KINDS = ("supervisor", "crash", "quality-defect", "incident")    # k
 FINALIZED_DETAIL = "compared through the close; post-close re-observation done"
 
 
-def daily_report(store: st.MonitorStore, date_s: str, now: datetime | None = None) -> dict:
+def daily_report(store: st.MonitorStore, date_s: str, now: datetime | None = None, as_of: datetime | None = None) -> dict:
+    """`as_of` is the evidence cutoff: worker runs, error events and comparison runs recorded after it are left out,
+    and a worker's last-alive time is capped at it. Recomputing a stored report with its own cutoff separates later
+    evidence from changed calculations. Without it the cutoff is `now` (as at finalization)."""
     from trading.monitor import quality as q
     q.ensure_schema(store)
     now = now or st.now_utc()
+    cutoff = as_of or now
     session = _session(date_s)
     out = {"label": "MONITORING EVIDENCE REPORT · read-only · not a research dataset · not a trading signal "
                     "or suitability certificate", "session_date": date_s, "generated_utc": st.iso(now),
@@ -113,7 +120,9 @@ def daily_report(store: st.MonitorStore, date_s: str, now: datetime | None = Non
     ev = out["evidence"]
     ev["schedule"] = {"open_utc": st.iso(session.open_utc), "close_utc": st.iso(session.close_utc),
                       "early_close": session.early_close, "scheduled_minutes": session.regular_minutes}
-    runs = store.runs_between(session.open_utc, session.close_utc + timedelta(hours=3))
+    runs = [dict(r, last_alive_utc=min(r["last_alive_utc"], st.iso(cutoff))) if r["last_alive_utc"] else r
+            for r in store.runs_between(session.open_utc, session.close_utc + timedelta(hours=3))
+            if st.parse(r["started_utc"]) <= cutoff]
     covered = [(st.parse(r["started_utc"]), st.parse(r["last_alive_utc"]) + timedelta(seconds=st.HEARTBEAT_DEAD_S))
                for r in runs]
 
@@ -223,7 +232,7 @@ def daily_report(store: st.MonitorStore, date_s: str, now: datetime | None = Non
                     "shut down)" if not prev[-1]["exit_reason"] else f"unplanned ({prev[-1]['exit_reason']})")
         downtime.append({"from_utc": st.iso(a), "to_utc": st.iso(b), "minutes": int((b - a).total_seconds() // 60),
                          "kind": kind})
-    win = (st.iso(session.open_utc - timedelta(minutes=30)), st.iso(session.close_utc + timedelta(hours=3)))
+    win = (st.iso(session.open_utc - timedelta(minutes=30)), st.iso(min(session.close_utc + timedelta(hours=3), cutoff)))
     all_errors = [dict(r) for r in store.db.execute(
         "SELECT ts_utc, kind, message FROM events WHERE level='error' AND ts_utc BETWEEN ? AND ? ORDER BY id", win)]
     # Live-poll failures come from the session's time window (explicit kinds only). Comparison (SIP/IEX
@@ -234,7 +243,7 @@ def daily_report(store: st.MonitorStore, date_s: str, now: datetime | None = Non
     other = [e for e in all_errors if e["kind"] not in REQUEST_FAILURE_KINDS and not e["kind"].startswith("quality-")]
     qruns = [dict(r) for r in store.db.execute(
         "SELECT id, kind, status, http_status, requests, window_start_utc, window_end_utc, error, started_utc "
-        "FROM q_runs WHERE session_date=? ORDER BY id", (date_s,))]
+        "FROM q_runs WHERE session_date=? AND started_utc <= ? ORDER BY id", (date_s, st.iso(cutoff)))]
     errors += [{"ts_utc": r["started_utc"], "kind": f"comparison-{r['status']}", "message": r["error"] or ""}
                for r in qruns if r["status"] in ("access_failure", "error")]
     errors.sort(key=lambda e: e["ts_utc"] or "")
@@ -285,9 +294,28 @@ def daily_report(store: st.MonitorStore, date_s: str, now: datetime | None = Non
         "code_versions": sorted({r["code_version"] or "unknown" for r in runs}),
         "store": "data/monitoring/monitor.sqlite (git-ignored; separate from research data)",
     }
+    out["reproducibility"] = reproducibility(cutoff)
     out["live_view"] = {"now_utc": st.iso(now), "comparable_now_until_utc": st.iso(min(q.boundary(now), session.close_utc)),
                         "pending_from_utc": through or st.iso(session.open_utc)}
     return out
+
+
+def reproducibility(cutoff: datetime) -> dict:
+    """What is needed to recompute this report later: evidence cutoff, calculation version, configuration and code.
+    Kept outside `evidence`, so the evidence hash (and finalization idempotence) is unchanged."""
+    import hashlib
+    from trading.monitor import quality as q
+    cfg = {"normal_live_latency_s": NORMAL_LIVE_LATENCY_S, "stale_gap_s": STALE_GAP_S, "heartbeat_dead_s": st.HEARTBEAT_DEAD_S,
+           "sip_delay_min": q.SIP_DELAY.total_seconds() / 60, "safety_margin_min": q.SAFETY_MARGIN.total_seconds() / 60,
+           "request_failure_kinds": list(REQUEST_FAILURE_KINDS), "ops_window_after_close_h": 3}
+    try:
+        from trading.monitor.worker import code_version
+        code = code_version()
+    except Exception:
+        code = None
+    return {"evidence_cutoff_utc": st.iso(cutoff), "calc_version": REPORT_CALC_VERSION, "code_version": code,
+            "config": cfg, "config_fingerprint": hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest()[:16],
+            "recompute": f"reliability.daily_report(store, date, as_of=<evidence_cutoff_utc>)"}
 
 
 # ---------------------------------------------------------------- corrections (amend-only)
@@ -318,6 +346,13 @@ def plan_correction(stored: dict) -> list[dict]:
                 changes.append({"field": "evidence.operations.request_failures", "old": ops["request_failures"],
                                 "new": len(keep), "why": f"{len(bad)} non-request event(s) ({sorted({e['kind'] for e in bad})}) "
                                                          "were counted as API request failures"})
+    moved = ops.get("failure_events_reclassified_as_other")
+    if moved and not ops.get("reclassified_counted_in_other_errors") and ops.get("other_errors") is not None:
+        # defect found 2026-11-10: an earlier correction moved events out of request_failures without counting
+        # them as other errors, so the stored totals lost them
+        changes.append({"field": "evidence.operations.other_errors", "old": ops["other_errors"],
+                        "new": ops["other_errors"] + len(moved),
+                        "why": f"{len(moved)} event(s) reclassified by an earlier correction were not added to other_errors"})
     return changes
 
 
@@ -348,6 +383,17 @@ def correct_stored_report(store: st.MonitorStore, date_s: str, reason: str, now:
                                                            if e.get("kind") not in REQUEST_FAILURE_KINDS
                                                            and not str(e.get("kind")).startswith("comparison-")]
             ops["failure_events"] = [e for e in ops["failure_events"] if e not in ops["failure_events_reclassified_as_other"]]
+            moved = ops["failure_events_reclassified_as_other"]
+            if ops.get("other_errors") is not None:            # count them where they belong (2026-11-10 fix)
+                ops["other_errors"] += len(moved)
+                kinds = ops.setdefault("other_error_kinds", {})
+                for e in moved:
+                    kinds[e["kind"]] = kinds.get(e["kind"], 0) + 1
+            ops["reclassified_counted_in_other_errors"] = True
+        elif c["field"] == "evidence.operations.other_errors":
+            ops = new["evidence"]["operations"]
+            ops["other_errors"] = c["new"]
+            ops["reclassified_counted_in_other_errors"] = True
     now = now or st.now_utc()
     new["correction"] = {"from_version": row["version"], "reason": reason, "corrected_utc": st.iso(now), "changes": changes,
                          "note": "corrected from the stored report only; no evidence was re-fetched or recomputed"}

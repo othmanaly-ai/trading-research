@@ -133,10 +133,83 @@ def test_runner_check_states(tmp_path):
     assert rc(_at("10:00"), lambda: [], empty)["status"] == rd.FAIL                          # session, none running
     assert rc(_at("10:00", date(2026, 11, 14)), lambda: [], empty)["status"] == rd.PASS      # Saturday: not required
     now = _at("10:00")
-    fresh = _files(tmp_path, status={"pid": 22352, "stage": "running", "phase": "DECISION_WINDOW",
-                                     "ts_utc": (now - timedelta(seconds=10)).isoformat()})
+    fresh = _files(tmp_path, status={"pid": 22352, "stage": "running", "phase": "DECISION_WINDOW", "run_id": "r1",
+                                     "session_date": str(MON), "ts_utc": (now - timedelta(seconds=10)).isoformat()})
+    _record(fresh, "r1", now - timedelta(seconds=10))
     assert rc(now, lambda: [[21432, 22352]], fresh)["status"] == rd.PASS
     assert rc(now, lambda: [[1], [2]], fresh)["status"] == rd.FAIL                          # two runners
+
+
+def _record(folder, run_id, heartbeat, decisions=3):
+    """SYNTHETIC dry-run records in a temporary folder."""
+    from trading.operations.store import OpsStore
+    st = OpsStore(folder / "operations.sqlite")
+    st.db.execute("INSERT INTO runs (run_id, kind, session_date, started_utc, heartbeat_utc) VALUES (?,?,?,?,?)",
+                  (run_id, "session", str(MON), heartbeat.isoformat(), heartbeat.isoformat()))
+    for i in range(decisions):
+        st.db.execute("INSERT INTO decisions (session_date, minute_utc, run_id) VALUES (?,?,?)",
+                      (str(MON), (heartbeat - timedelta(minutes=i)).isoformat(), run_id))
+    st.db.commit()
+    st.close()
+
+
+def test_alive_runner_without_recorded_progress_is_never_healthy(tmp_path):
+    """Regression (2026-11-10): a fresh status file and a live process passed while the records the city reads had no
+    run at all. Liveness is not progress: the run must be in the records with a current heartbeat."""
+    now = _at("12:00")
+    status = {"pid": 9496, "stage": "running", "phase": "DECISION_WINDOW", "run_id": "today", "session_date": str(MON),
+              "decisions_this_run": 150, "ts_utc": (now - timedelta(seconds=5)).isoformat()}
+    procs = lambda: [[25080, 9496]]
+    no_db = _files(tmp_path, status=status)                                       # no records file at all
+    c = rd.runner_check(now, procs=procs, runtime_dir=no_db)
+    assert c["status"] == rd.FAIL and "NO RECORDED PROGRESS" in c["summary"]
+    other = tmp_path / "other"
+    other.mkdir()
+    folder = _files(other, status=status)
+    _record(folder, "yesterday", now - timedelta(days=2))                        # records exist, but not this run
+    c = rd.runner_check(now, procs=procs, runtime_dir=folder)
+    assert c["status"] == rd.FAIL and "not in the records" in c["summary"]
+    third = tmp_path / "third"
+    third.mkdir()
+    folder = _files(third, status=status)
+    _record(folder, "today", now - timedelta(hours=3))                           # run recorded once, then nothing
+    c = rd.runner_check(now, procs=procs, runtime_dir=folder)
+    assert c["status"] == rd.FAIL and "stored heartbeat" in c["summary"]
+    # and it stays FAIL however long the status file keeps refreshing
+    for minutes in (1, 30, 200):                                               # 12:01 to 15:20 ET
+        later = now + timedelta(minutes=minutes)
+        status["ts_utc"] = (later - timedelta(seconds=5)).isoformat()
+        _files(third, status=status)
+        assert rd.runner_check(later, procs=procs, runtime_dir=folder)["status"] == rd.FAIL
+
+
+def test_app_private_copy_of_the_records_is_detected(tmp_path, monkeypatch):
+    """Regression (2026-11-10): inside a packaged Windows app the records path resolves to the app's private copy.
+    Simulated here with a hard link: the 'real' path and the private copy are the same file."""
+    import os
+    from trading.operations import paths
+    local = tmp_path / "Local"
+    copy_dir = local / "Packages" / "SomeApp_abc" / "LocalCache" / "Local" / "TradingProject" / "operations"
+    copy_dir.mkdir(parents=True)
+    (copy_dir / "operations.sqlite").write_bytes(b"stale copy")
+    real_dir = local / "TradingProject" / "operations"
+    real_dir.mkdir(parents=True)
+    monkeypatch.setenv("LOCALAPPDATA", str(local))
+    monkeypatch.delenv("TRADING_OPS_DIR", raising=False)
+    os.link(copy_dir / "operations.sqlite", real_dir / "operations.sqlite")      # this process "sees" the copy
+    assert paths.view_redirected(real_dir / "operations.sqlite") == copy_dir / "operations.sqlite"
+    assert "app-private copy" in paths.virtualization_problem(real_dir)
+    from trading.operations import __main__ as cli
+    assert cli.main(["status"]) == 3                                             # every command refuses
+    assert cli.main(["kill-switch", "on", "--reason", "x"]) == 3
+    assert not (copy_dir / "KILL_SWITCH.json").exists() and not (real_dir / "KILL_SWITCH.json").exists()
+    from trading.operations import snapshot
+    snap = snapshot.collect()
+    assert snap["available"] is False and snap["records_visible"] is False
+    (real_dir / "operations.sqlite").unlink()
+    (real_dir / "operations.sqlite").write_bytes(b"real file")                   # outside the app: separate file
+    assert paths.view_redirected(real_dir / "operations.sqlite") is None
+    assert paths.virtualization_problem(real_dir) is None
 
 
 def test_runner_alive_but_silent_is_stalled_with_its_last_step(tmp_path):
@@ -154,6 +227,14 @@ def test_after_report_time_completed_or_not(tmp_path):
     late = _at("17:00")
     ok = _files(tmp_path, status={"pid": 1, "stage": "exited", "exit_reason": "completed", "session_date": str(MON),
                                   "ts_utc": late.isoformat()})
+    c = rd.runner_check(late, procs=lambda: [], runtime_dir=ok)
+    assert c["status"] == rd.WARNING and "says completed, but" in c["summary"]       # status file alone is not enough
+    from trading.operations.store import OpsStore
+    st = OpsStore(ok / "operations.sqlite")
+    st.db.execute("INSERT INTO reports (session_date, version, created_utc, classification) VALUES (?,?,?,?)",
+                  (str(MON), 1, late.isoformat(), "INCOMPLETE"))
+    st.db.commit()
+    st.close()
     assert rd.runner_check(late, procs=lambda: [], runtime_dir=ok)["status"] == rd.PASS
     (ok / "runner_status.json").unlink()
     assert rd.runner_check(late, procs=lambda: [], runtime_dir=ok)["status"] == rd.WARNING
@@ -334,3 +415,25 @@ def test_check_only_never_launches(monkeypatch, capsys):
                          runner_check_fn=lambda t: {"status": "FAIL", "detail": {},
                                                     "summary": "no dry-run runner is running during today's session window"})
     assert code == 1 and "CHECK ONLY" in out and out.count("nothing was started") == 2   # launch would pytest.fail
+
+
+# ---------------------------------------------------------------- report reproducibility and correction counts (2026-11-10)
+
+def test_reports_carry_reproducibility_metadata_outside_the_evidence_hash():
+    from trading.monitor import reliability as rl
+    cut = datetime(2026, 11, 16, 21, 45, tzinfo=timezone.utc)
+    meta = rl.reproducibility(cut)
+    assert meta["evidence_cutoff_utc"].startswith("2026-11-16T21:45") and meta["calc_version"] == rl.REPORT_CALC_VERSION
+    assert len(meta["config_fingerprint"]) == 16 and "as_of" in meta["recompute"]
+
+
+def test_correction_that_left_reclassified_events_uncounted_is_flagged_once():
+    from trading.monitor import reliability as rl
+    ev = {"kind": "incident", "ts_utc": "2026-11-16T15:00:00+00:00", "message": "synthetic"}
+    stored = {"status": {"state": "finalized", "detail": rl.FINALIZED_DETAIL},
+              "evidence": {"operations": {"request_failures": 0, "failure_events": [], "other_errors": 116,
+                                          "failure_events_reclassified_as_other": [ev, ev]}}}
+    assert rl.plan_correction(stored) == [{"field": "evidence.operations.other_errors", "old": 116, "new": 118,
+                                           "why": "2 event(s) reclassified by an earlier correction were not added to other_errors"}]
+    stored["evidence"]["operations"]["reclassified_counted_in_other_errors"] = True
+    assert rl.plan_correction(stored) == []

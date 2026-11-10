@@ -828,6 +828,44 @@ pipeline -> watch progress -> cancel if needed -> open the report.
 - **Note:** the dry-run code changed, so it must be committed before the next run, or that session
   is INCOMPLETE (I5).
 
+## Dry-run records split by Windows app virtualization; report reproducibility (2026-11-10)
+
+- **Confirmed cause:**
+  - Inside the Claude desktop app, `%LOCALAPPDATA%\TradingProject\operations\operations.sqlite` resolves to the app's
+    private copy (`Packages\Claude_…\LocalCache`). An operations command run from a Claude terminal on 11-08 created
+    that copy.
+  - The runner, started outside the app, writes the real file. A reader launched outside the app (read-only) saw
+    the real data: the 11-09 run (335 decisions, classified INTERRUPTED: stopped 15:05 ET, no after-close step) and the
+    11-10 run (`20261110T145038Z-9496`, about 160 decisions and 615 heartbeats by 17:24 UTC).
+  - The city server and Claude Code saw a 45 KB copy frozen on 11-08. So "11-09 INCOMPLETE, no run record" was wrong
+    about the reason; 11-09 is INTERRUPTED.
+- **Fixed (code; tests on synthetic fixtures):**
+  - Operations CLI refuses inside an app container (exit 3).
+  - Readiness requires recorded progress, not just liveness, plus a stored report after the close.
+  - The operations snapshot reports "records NOT VISIBLE" (the research desk does too).
+  - Tests in `tests/test_reliability_fixes.py`: an alive runner without recorded progress stays FAIL for hours, and
+    a simulated private copy is detected.
+- **Reproducibility:**
+  - Reports now record their evidence cutoff, calculation version, code and configuration.
+  - `reliability.daily_report(..., as_of=)` recomputes a report at its evidence cutoff. Classifying each difference is
+    done in the research-desk evidence trace (`docs/RESEARCH_DESK.md`), committed separately.
+  - One defect found: the 11-09 v2 correction dropped 2 reclassified events from `other_errors` (116, should be 118).
+    The code is fixed; the v3 correction is previewed, not applied.
+- **Note:** operations code changed (`paths.py`, `__main__.py`, `snapshot.py`), so the operations fingerprint changed.
+  Dry-run sessions count only on a committed version (I5).
+
+## Milestone status (2026-11-10, after the close)
+
+- **Report completion (monitoring checklist): COMPLETE.** Rule (docs/MONITORING.md, unchanged): 5 consecutive scheduled
+  sessions, each FINALIZED or INCOMPLETE with a reason. Evidence: Nov 4, 5, 6, 9, 10, all FINALIZED (`readiness.reliability_summary`:
+  5 of 5). It measures report completion, not capture quality.
+- **Dry-run acceptance (Milestone 1): 0 of 5.** Rule (docs/DRY_RUN_ACCEPTANCE.md, owner decision 2026-11-09): 5 consecutive
+  PASS sessions, one committed operations fingerprint.
+  - Nov 9 INTERRUPTED (N1, N3, N5): Windows logged an unexpected shutdown at 15:04:13 ET.
+  - Nov 10 INCOMPLETE (I2, I3, N1): the computer booted at 09:49 ET and the runner started at 09:50 ET.
+  - Neither is a software fault.
+- **Reliability gate G1-G6:** PROPOSED (docs/RELIABILITY_GATE_PROPOSAL.md), not approved, not applied.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

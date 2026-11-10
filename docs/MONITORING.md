@@ -177,6 +177,10 @@ recorded.
   streak.
 - **Gap:** this criterion has no capture-quality threshold, so a finalized session with large live
   gaps still qualifies. No such threshold is applied until the owner sets one.
+- **Status: COMPLETE (2026-11-10).** Five consecutive scheduled sessions (Nov 4, 5, 6, 9, 10) are each
+  FINALIZED, so the existing criterion is met with no added requirement. This says the reporting pipeline
+  completes. It does not say live capture was reliable: on-time capture ranged from 79 to 372 of 390 minutes
+  per session (the gap above).
 
 ## Data quality: delayed SIP vs IEX (`trading/monitor/quality.py`)
 
@@ -326,8 +330,9 @@ Each trading day:
 - [ ] In each report, record: received normal vs catch-up, downtime (unplanned), request failures
       and access refusals, live vs re-fetch differences, SIP revisions, and unresolved items.
 - [ ] Over a weekend or holiday, the next session's start should recover the last session.
-- [ ] Before drawing conclusions, collect at least 5 consecutive sessions, each FINALIZED or
-      INCOMPLETE with a stated reason.
+- [x] Before drawing conclusions, collect at least 5 consecutive sessions, each FINALIZED or
+      INCOMPLETE with a stated reason. **Met 2026-11-10:** Nov 4, 5, 6, 9 and 10, all FINALIZED
+      (Nov 7-8 weekend). Rule unchanged.
 
 ## Limitations
 

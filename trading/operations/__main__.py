@@ -111,6 +111,12 @@ def main(argv=None) -> int:
     except paths.RuntimeDirRefused as exc:
         print(f"REFUSED: {exc}")
         return 3
+    # Every command opens the records (even "status" opens them for writing), so none may run where Windows
+    # would redirect them to an app-private copy: that is how the records split on 2026-11-08.
+    problem = paths.virtualization_problem(rd)
+    if problem:
+        print(f"REFUSED: {problem}")
+        return 3
 
     if a.cmd == "kill-switch":
         if a.action == "on":

@@ -33,6 +33,11 @@ def collect(now: datetime | None = None) -> dict:
     if not db.exists():
         return {**out, "available": False, "note": "no dry-run records yet (start: python -m trading.operations run)",
                 "records": str(db)}
+    seen = paths.view_redirected(db)
+    if seen is not None:            # Windows app-container copy: these are not the records the runner writes
+        return {**out, "available": False, "records": str(db), "records_visible": False,
+                "note": f"records NOT VISIBLE from this process: it reads an app-private copy ({seen}) instead of the "
+                        "file the runner writes. Start the city server from a normal PowerShell window."}
     store = OpsStore(db, read_only=True)
     try:
         last = store.latest_run()

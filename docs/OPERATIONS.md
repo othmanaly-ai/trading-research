@@ -60,6 +60,27 @@ keep the computer on mains power and awake, until about 16:45 ET.
 | Where was it stuck? | `runner_faults.log`: Python stack traces, written automatically if start-up takes over 60 s or one loop step takes over 5 min |
 | Did the city server stop cleanly? | the `server_runs` table and `server` events in the monitor database. A run with no `stopped_utc` ended without a clean stop (cause not recorded). |
 
+## Start from a normal PowerShell window, not a Claude desktop terminal (2026-11-10)
+
+Windows keeps a private copy of `%LOCALAPPDATA%` files for processes started inside a packaged app such as the
+Claude desktop app. On 2026-11-08 an operations command run from a Claude terminal created such a copy of
+`operations.sqlite`. From then on, every process inside the app (the city server, Claude Code) read that frozen copy.
+Meanwhile the runner, started in a normal window, wrote the real file: 335 decisions on 11-09 and the 11-10 run
+were recorded but invisible to the city.
+
+- Every `python -m trading.operations` command now refuses (exit 3) when its view of the records is an app-private
+  copy, or when its writes would land in one (`paths.virtualization_problem`). This covers the kill switch: one
+  set from inside the app would never reach the runner.
+- The readiness "Dry-run runner" check now needs recorded progress, not just a live process and a fresh status
+  file. The run named by the status file must be in the records, with a heartbeat at most 3 minutes older than
+  the status file, and after the close a stored report must exist. Otherwise it is FAIL ("alive but NO RECORDED
+  PROGRESS").
+- The city's operations view shows "records NOT VISIBLE" when the server itself runs inside the app.
+- Start the city server and the runner the same way (`python -m trading.startup` in a normal PowerShell window),
+  so they see the same files.
+- The stale app copy is still at `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Local\TradingProject\operations\`.
+  It holds only the two 11-08 preflight and no-session records. It was left in place pending an owner decision.
+
 ## Other commands (none of them place orders)
 
 | Command | What it does |
