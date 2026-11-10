@@ -83,7 +83,17 @@ def session_date_et(t: datetime) -> date:
     return t.astimezone(_tz()).date()
 
 
+# Set by a read-only preview server (`--read-only-preview`): every MonitorStore() it opens is then an
+# in-memory snapshot of the store, so readiness recording or schema upkeep in that process changes nothing.
+READ_ONLY_VIEW = False
+
+
 class MonitorStore:
+    def __new__(cls, *args, **kwargs):
+        if READ_ONLY_VIEW and cls is MonitorStore:
+            return super().__new__(SnapshotStore)
+        return super().__new__(cls)
+
     def __init__(self, path: Path | None = None):
         path = path or DB_PATH
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -274,3 +284,21 @@ def _freshness(row: dict, mk: dict, alive: bool, state: str, feed: str, now: dat
         return "FRESH", f"last bar ended {row['source_age_s']} s ago"
     note = " (IEX has no bar in minutes without IEX trades; not necessarily an outage)" if feed == "iex" else ""
     return "STALE", f"no new bar for {row['source_age_s'] // 60} min{note}"
+
+
+class SnapshotStore(MonitorStore):
+    """Read-only view for preview servers: an in-memory copy of the monitoring store. The store file is opened
+    read-only and never written; anything written through this object is discarded when it is closed."""
+
+    def __init__(self, path: Path | None = None):
+        path = path or DB_PATH
+        if not path.is_file():                      # nothing recorded yet: an empty in-memory store with the schema
+            MonitorStore.__init__(self, Path(":memory:"))
+            return
+        src = sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True, timeout=10)
+        try:
+            self.db = sqlite3.connect(":memory:", check_same_thread=False)
+            src.backup(self.db)
+        finally:
+            src.close()
+        self.db.row_factory = sqlite3.Row

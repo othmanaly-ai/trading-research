@@ -8,9 +8,10 @@
         "-m",
         "trading.dashboard.server",
         "--port",
-        "8765"
+        "8768",
+        "--read-only-preview"
       ],
-      "port": 8765
+      "port": 8768
     },
     {
       "name": "demo-dashboard-empty",
@@ -19,11 +20,12 @@
         "-m",
         "trading.dashboard.server",
         "--port",
-        "8766",
+        "8769",
         "--config",
-        "dashboard/empty_config.json"
+        "dashboard/empty_config.json",
+        "--read-only-preview"
       ],
-      "port": 8766
+      "port": 8769
     },
     {
       "name": "workflow-preview",

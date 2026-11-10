@@ -60,6 +60,9 @@ from trading import jobs as jobs_mod
 from trading.sessions import sessions_between
 
 HOST = "127.0.0.1"
+# Read-only preview (`--read-only-preview`): a second viewing instance that refuses every state-changing request
+# except the in-memory demo replay controls, and reads the monitoring store through in-memory snapshots.
+READ_ONLY_PREVIEW = False
 WEB_DIST = Path(__file__).resolve().parents[2] / "dashboard" / "web" / "dist"
 RESPONSIBILITIES = Path(__file__).resolve().parents[2] / "research" / "responsibilities.json"
 JOBS_DB = Path(__file__).resolve().parents[2] / "data" / "jobs" / "jobs.sqlite"
@@ -625,6 +628,8 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
         def do_POST(self):
             path = urlparse(self.path).path
             refusal = self._state_change_ok()
+            if not refusal and READ_ONLY_PREVIEW and path != "/api/control":
+                refusal = "read-only preview: this instance changes no records (use the city server on port 8765)"
             if refusal:
                 self._drain()
                 return self._json({"error": refusal}, 403)
@@ -746,9 +751,17 @@ def _ticker(ctrl: ReplayController, stop: threading.Event):
 
 
 def create_server(config_path: Path | None, port: int, speed: float | None = None, mode: str = "demo",
-                  history_root: Path = HISTORY_DIR, run_jobs: bool = True, supervise_monitor: bool = True):
+                  history_root: Path = HISTORY_DIR, run_jobs: bool = True, supervise_monitor: bool = True,
+                  read_only: bool = False):
     """mode "demo" uses synthetic fixtures; mode "historical" uses stored Alpaca bars and
-    raises HistoryError if they are missing. One server runs exactly one mode."""
+    raises HistoryError if they are missing. One server runs exactly one mode.
+    read_only: no job runner, no monitor supervision, no lifecycle records, state-changing requests refused and
+    the monitoring store read through in-memory snapshots (a preview instance)."""
+    global READ_ONLY_PREVIEW
+    if read_only:
+        from trading.monitor import store as mst
+        READ_ONLY_PREVIEW = mst.READ_ONLY_VIEW = True
+        run_jobs = supervise_monitor = False
     if mode == "historical":
         replay = build_historical(load_hist_config(config_path or HIST_CONFIG), history_root)
         ctrl = ReplayController(replay, speed or 600, duplicate_every=0)
@@ -810,7 +823,8 @@ def main(argv=None) -> int:
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--speed", type=float, default=None)
     parser.add_argument("--read-only-preview", action="store_true",
-                        help="second viewing instance: no research-job runner, no monitor supervision or lifecycle writes")
+                        help="second viewing instance: no research-job runner, no monitor supervision, no lifecycle writes, "
+                             "state-changing requests refused, monitoring store read as an in-memory snapshot")
     args = parser.parse_args(argv)
     found = existing_server(args.port)
     if found and not found.get("unrecognised"):
@@ -821,8 +835,7 @@ def main(argv=None) -> int:
         print(f"Port {args.port} is already used by another program; not starting. Close it or use --port.")
         return 2
     try:
-        bg = not args.read_only_preview
-        httpd, ctrl, stop = create_server(args.config, args.port, args.speed, args.mode, run_jobs=bg, supervise_monitor=bg)
+        httpd, ctrl, stop = create_server(args.config, args.port, args.speed, args.mode, read_only=args.read_only_preview)
     except HistoryError as exc:
         print(f"HISTORICAL REPLAY unavailable: {exc}")
         print("Not starting. (No fallback to demo data.)")
