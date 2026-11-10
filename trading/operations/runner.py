@@ -71,11 +71,14 @@ def default_client_factory():
 class Runner:
     def __init__(self, store, client_factory=default_client_factory, monitor_db: Path = MONITOR_DB,
                  approvals_path: Path = approvals.APPROVALS_PATH, now_fn=None, sleep=time.sleep, mono=time.monotonic,
-                 environment: str = ENVIRONMENT, reports_dir: Path | None = None, echo=print):
+                 environment: str = ENVIRONMENT, reports_dir: Path | None = None, echo=print,
+                 status_path: Path | None = None, on_tick=None):
         self.store, self.client_factory, self.monitor_db = store, client_factory, monitor_db
         self.approvals_path, self.environment = approvals_path, environment
         self.now = now_fn or (lambda: datetime.now(timezone.utc))
         self.sleep, self.mono, self.echo = sleep, mono, echo
+        self.status_path, self.on_tick = status_path, on_tick or (lambda: None)
+        self.decisions = 0
         self.reports_dir = reports_dir
         self.run_id = self.d = None
         self.last_clock = None              # (measured_at, ok): only real measurements
@@ -132,6 +135,12 @@ class Runner:
                                 perm.reasons, inputs)
         return perm
 
+    def _status(self, stage, **extra):
+        if self.status_path:
+            from trading.operations import progress
+            progress.record(self.status_path, stage, run_id=self.run_id, session_date=self.d,
+                            decisions_this_run=self.decisions, **extra)
+
     def _write_report(self, now):
         from datetime import date
         rep = report.classify(self.store, date.fromisoformat(self.d), now)
@@ -162,10 +171,12 @@ class Runner:
         if bad:
             self._event("error", "refused", f"refusing to operate: unsafe configuration ({', '.join(bad)})")
             self.store.end_run(self.run_id, self.now().isoformat(), "refused: unsafe configuration")
+            self._status("exited", exit_reason="refused: unsafe configuration")
             return 3
         if not plan.trading_day:
             self._event("info", "no_session", f"{d} is not an XNYS session; nothing to do")
             self.store.end_run(self.run_id, self.now().isoformat(), "no session")
+            self._status("exited", exit_reason="no session")
             return 0
         self._event("info", "start", f"DRY_RUN for {d}: start {start_class}; open "
                     f"{plan.open_utc.astimezone(sc.ET):%H:%M} ET, close {plan.close_utc.astimezone(sc.ET):%H:%M} ET; "
@@ -180,6 +191,7 @@ class Runner:
         try:
             while True:
                 now = self.now()
+                self.on_tick()
                 try:
                     wall_dt, mono_dt = (now - prev_wall).total_seconds(), self.mono() - prev_mono
                     if wall_dt - mono_dt > JUMP_S or mono_dt > JUMP_S:
@@ -189,6 +201,7 @@ class Runner:
                     if last_hb is None or (now - last_hb).total_seconds() >= HEARTBEAT_S:
                         self.store.heartbeat(self.run_id, now.isoformat())
                         last_hb = now
+                        self._status("running", phase=sc.phase_at(plan, now), heartbeat_utc=now.isoformat())
                     ph = sc.phase_at(plan, now)
                     if ph == sc.PRE_OPEN_CHECKS:
                         if not pre_done:
@@ -206,6 +219,7 @@ class Runner:
                         minute = sc.minute_floor(now)
                         if minute != last_minute:
                             perm = self._decide(plan, minute, now)
+                            self.decisions += 1
                             if last_minute is None or minute.minute % 15 == 0:
                                 self._event("info", "decision", f"{minute.astimezone(sc.ET):%H:%M} entry "
                                             f"{'ALLOWED' if perm.allowed else 'DENIED'}: {perm.reasons[0]} "
@@ -221,6 +235,7 @@ class Runner:
                         self._event("info", "report", f"session {self.d}: {rep['classification']}"
                                     + (f" ({'; '.join(rep['reasons'][:2])})" if rep["reasons"] else ""))
                         self.store.end_run(self.run_id, self.now().isoformat(), "completed")
+                        self._status("exited", exit_reason="completed", classification=rep["classification"])
                         return 0
                     self.records_ok = True
                 except sqlite3.Error as exc:            # records unavailable: no evidence, so no decisions
@@ -232,8 +247,10 @@ class Runner:
         except KeyboardInterrupt:
             self._event("warn", "stopped", "stopped by operator (Ctrl+C)")
             self.store.end_run(self.run_id, self.now().isoformat(), "stopped by operator")
+            self._status("exited", exit_reason="stopped by operator")
             return 130
         except Exception as exc:
             self._event("error", "exception", f"{type(exc).__name__}: {exc}\n{traceback.format_exc()[-1500:]}")
             self.store.end_run(self.run_id, self.now().isoformat(), f"crash: {type(exc).__name__}")
+            self._status("exited", exit_reason=f"crash: {type(exc).__name__}")
             return 1

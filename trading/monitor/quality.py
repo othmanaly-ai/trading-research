@@ -472,7 +472,8 @@ class QualityChecker:
         if last and last["report_sha"] == sha and last["status"] == status:
             return {"stored": False, "version": last["version"]}
         version = (last["version"] + 1) if last else 1
-        self.store.db.execute("INSERT INTO q_reports VALUES (?,?,?,?,?,?,?)",
+        self.store.db.execute("INSERT INTO q_reports (session_date, version, status, created_utc, report_sha, report_json,"
+                              " amends_version) VALUES (?,?,?,?,?,?,?)",
                               (date_s, version, status, st.iso(self.clock()), sha,
                                json.dumps(rep_, default=str), last["version"] if last else None))
         self.store.event("info", "quality-report", f"{date_s}: report version {version} stored ({status})"

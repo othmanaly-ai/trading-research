@@ -21,27 +21,44 @@
 - `reports\<date>.json`
 - `KILL_SWITCH.json` (exists only while the kill switch is ON)
 
-## Each trading day
+## Each trading day: one start-up command (2026-11-09)
 
-1. **Before 09:25 ET**, start the city server, if it is not already running. It keeps the
-   market-data monitor alive, which the dry run checks:
-   - In the desktop app: the `demo-dashboard` launch configuration.
-   - Or in a terminal: `.venv\Scripts\python -m trading.dashboard.server`.
-   - In the city, Market monitor should show the worker RUNNING (or MARKET CLOSED before the
-     open). If it shows STOPPED, press Start.
-2. **Before 09:25 ET**, in a separate PowerShell window in the project folder, run:
+Before 09:25 ET, in PowerShell:
 
-   ```powershell
-   .venv\Scripts\python -m trading.operations run
-   ```
+```powershell
+Set-Location "C:\Users\othma\OneDrive\Documents\TradingProject"
+.\.venv\Scripts\python.exe -m trading.startup
+```
 
-   Leave that window open until it prints the report: about 16:20 ET, or 13:20 ET on an early-close
-   day. Then it exits by itself.
-3. **Keep the computer awake and online.**
-   - On battery, this PC sleeps after 10 minutes, which would interrupt the session.
-   - Closing the desktop app stops the city server and with it the monitor.
-4. **After it exits**, check the result with
-   `.venv\Scripts\python -m trading.operations acceptance`, or open the city's **Operations** view.
+It prints each step as OK / WAIT / WARN / FAIL / SKIP and ends with **READY** (exit code 0) or
+**NOT READY** (exit code 1), with the reasons.
+
+1. **Environment:** the project's `.venv` interpreter, and order submission blocked.
+2. **City server:** reused if it already answers on 127.0.0.1:8765. Otherwise it is started in its
+   own window and awaited. Anything else on the port is a FAIL.
+3. **Market monitor:** waits until readiness shows one worker with a fresh heartbeat, and prints
+   every readiness check. A paused or stopped desired state is reported, never overridden.
+4. **Dry-run runner:**
+   - reused if healthy, and started in its own window if none is running
+   - it is awaited until it reports "running", showing each start-up step
+   - **a stalled runner is FAIL and is never killed or duplicated:** close its window (Ctrl+C) and
+     run the command again
+
+It never stops or restarts anything that is already healthy. Leave the windows it opens running, and
+keep the computer on mains power and awake, until about 16:45 ET.
+
+**After the session:** `.\.venv\Scripts\python.exe -m trading.operations acceptance`, or the city's
+**Operations** and **Market monitor** views.
+
+### When something looks wrong: where the evidence is
+
+| Question | Where to look |
+|---|---|
+| Is the runner healthy, or stalled? | Market readiness, check "Dry-run runner (operations)": FAIL "STALLED" if the process exists but has not reported for over 60 s |
+| At which start-up step did it stop? | `%LOCALAPPDATA%\TradingProject\operations\runner_startup.json`. Each step is written **before** it starts: 1/4 loading code, 2/4 lock, 3/4 records, 4/4 loop. |
+| What did the runner print? | `runner.log` in the same folder (a copy of the window's output) |
+| Where was it stuck? | `runner_faults.log`: Python stack traces, written automatically if start-up takes over 60 s or one loop step takes over 5 min |
+| Did the city server stop cleanly? | the `server_runs` table and `server` events in the monitor database. A run with no `stopped_utc` ended without a clean stop (cause not recorded). |
 
 ## Other commands (none of them place orders)
 
@@ -72,6 +89,31 @@ Prefix each with `.venv\Scripts\` when running from PowerShell.
 | Every 30 min | broker clock skew and calendar agreement |
 | 15:55 ET | closing: confirms no exposure (DRY_RUN holds none) |
 | 16:20 ET | after-close report and classification |
+
+## Persistent background operation: PROPOSED, not installed
+
+**What it would solve:** both of today's outages (10:24 and 13:00 ET) were the city server process
+ending while Windows kept running. The worker and its supervision depend on that one process staying
+alive. The cause of the ending is not recorded (see PROGRESS.md, 2026-11-09).
+
+**Option, if you approve it:** a Windows Task Scheduler task that starts the city server at log-on
+and restarts it if it exits.
+- **Trigger:** "At log on of othma".
+- **Action:** `C:\Users\othma\OneDrive\Documents\TradingProject\.venv\Scripts\python.exe -m trading.dashboard.server`,
+  "Start in" the project folder.
+- **Settings:** "If the task fails, restart every 1 minute, up to 999 times". Do not "Stop the task if
+  it runs longer than…". Run only when the user is logged on (so your own environment keys are
+  used, and no password is stored).
+- **The dry runner stays manual**, through `python -m trading.startup`.
+
+| Benefit | Cost or risk |
+|---|---|
+| Survives app or window closures and restarts the server automatically | A process runs whenever you are logged on, including outside market hours (the worker makes no API calls while the market is closed) |
+| Starts after a reboot (today's 15:04 ET crash and 17:34 ET reboot) | It does not help if Windows sleeps, crashes or loses power; nothing runs until log-on |
+| | A hidden process is harder to notice and stop. Stop it through Task Scheduler, or Market monitor > Stop. |
+| | Code changes need the task restarted to take effect |
+
+**Not done:** no task is installed and no power setting is changed. Both need your approval.
 
 ## Known limitations
 

@@ -698,6 +698,136 @@ pipeline -> watch progress -> cancel if needed -> open the report.
 - **Not yet verified:** any real market session. The five-session evidence starts with the next
   manual run.
 
+## Market readiness panel and incident history (2026-11-09)
+
+- **Already existed:**
+  - worker heartbeat and freshness labels, OS lock (one polling worker), supervisor relaunch
+    (6 per hour)
+  - `m_workers` run records, amend-only daily evidence reports with live / catch-up / downtime /
+    failures / refusals
+  - session states, and the 5-consecutive-session checklist in `docs/MONITORING.md`
+- **Added:**
+  - **`trading/monitor/readiness.py`:** 11 deterministic checks (PASS / WARNING / FAIL /
+    UNKNOWN; missing evidence is UNKNOWN).
+    - The latest result per check is stored in `readiness`, with checked and changed times.
+  - **Incidents:** a persistent, deduplicated incident history (`incidents`), with acknowledge vs
+    resolve.
+    - "service recovered" is recorded in events.
+    - A storage failure seen during a database outage is written once the database works again.
+  - **Session reliability:** a summary using **only** the existing criterion.
+  - **Server:** `GET /api/monitor/readiness` and `POST /api/monitor/incidents/ack` (same control
+    protections). The supervisor records readiness every 60 s.
+  - **Start-up:** a second server start detects an existing one and exits instead of duplicating.
+  - **City:** a "Market readiness" panel at the top of Market monitor.
+  - **Docs:** `docs/MONITORING.md` covers start-up and recovery for browser close, app exit,
+    sleep and restart.
+- **Found while building:**
+  - A venv `python.exe` launcher plus its child interpreter looked like two workers. The check now
+    groups process trees.
+  - Without this, real readiness would have reported a false duplicate.
+- **Tested:** `tests/test_readiness.py`, 12 tests on isolated temporary databases:
+  - missing and stale heartbeat
+  - duplicate workers
+  - refusal and recovery
+  - database failure
+  - restart with an unfinished session
+  - closed and early-close calendar states
+  - unmonitored sessions breaking the streak
+  - start-up detection
+  - API = stored records
+
+  Full suite: 380 passed.
+- **Verified with real records (read-only, 2026-11-09 ~23:26 ET):**
+  - a separate verification instance (no supervisor, no job runner, port 8767) showed 10 PASS and
+    1 WARNING (uncommitted code); 0 incidents
+  - API checks = the stored `readiness` table, and the reliability figures = the stored reports
+    for 11-04, 11-05 and 11-06
+  - desktop and 375 px layouts with no console errors and no page overflow
+  - a second `trading.dashboard.server` start against the running server exited 0, leaving one
+    listener
+- **Reliability under the existing criterion:** 3 of 5 consecutive qualifying sessions
+  (11-04, 11-05 and 11-06 FINALIZED).
+  - **Gap:** that criterion has no capture-quality threshold, while live on-time capture was only
+    79, 130 and 109 of 390 minutes.
+  - Owner decision needed; no threshold invented.
+- **Not done (approval needed):** restarting the running city server, so it serves the new panel.
+- **Fix (2026-11-09, during the session):**
+  - **The bug:** `reliability_summary` raised a TypeError on today's in-progress session, whose
+    per-symbol "missing" count is unavailable (null). The readiness endpoint dropped the
+    connection, and the supervisor logged the error every minute.
+  - **The fix:**
+    - The aggregates (on-time, late catch-up, missing, outstanding comparisons, anomalies,
+      revisions) now return **unknown** (null) when any input is unavailable, never 0.
+    - The panel shows "unknown".
+    - The endpoint answers HTTP 500 with a JSON UNKNOWN on any evaluation error, instead of
+      dropping the connection; the panel shows that as "server responding, evaluation failed".
+  - **Tests:** 4 regression tests.
+  - **Verified on a separate instance (port 8767, no supervisor, no job runner):** valid JSON; the
+    in-progress "missing" count shows as unknown; 375 px layout without overflow; no console
+    errors.
+- **Observed in real records that day:**
+  - The city server and monitoring worker stopped at about 13:00 ET (last heartbeat 18:00:31 UTC),
+    with no stop request recorded. The worker was also down 10:24-11:58 ET.
+  - The dry-run runner process started at 09:13 ET but recorded nothing: no run, no checks, no
+    decisions. It never acquired its single-runner lock, so it stalled before starting.
+  - Under the acceptance rules, that day is not a PASS.
+
+
+## Reporting fixes and reliability diagnosis (2026-11-09 evening)
+
+- **Fixed: request-failure count.**
+  - Request failures now come only from explicit request outcomes (live-poll `error` /
+    `disconnected` events, and failed comparison runs).
+  - Incident, supervisor, crash and quality events are "other errors", by kind.
+  - Before: anything not on an exclusion list counted, so incident events were counted as API
+    failures.
+- **Fixed: stale "pending" wording.** `finalize()` built the report before updating the session
+  description, so finalized reports said "comparison … pending". `_state` now derives the wording
+  from the computed state.
+- **Corrections stored (amend-only):** Nov 5 v2, Nov 6 v2 and Nov 9 v2.
+  - Wording corrected on all three; Nov 9's request failures corrected from 2 to 0 (the 2 were
+    incident events).
+  - Derived from each stored report only; reason recorded in the report and in
+    `q_report_corrections`.
+  - Versions 1 are unchanged. Nov 4 v2 needed no change.
+  - `finalize()` now names its insert columns.
+- **Diagnosis from records (no cause asserted beyond the evidence):**
+  - **Windows System log:**
+    - no sleep or wake events between 08:30 and 18:10 ET
+    - an **unexpected shutdown at 15:04:13 ET** (event 6008)
+    - a reboot at 17:34:46 ET without a clean shutdown (Kernel-Power 41: crash, hang or power
+      loss)
+    - **sleep did not cause the gaps**
+  - **Outages at 10:24-11:58 and 13:00-15:04 ET:** both happened while Windows was running. The
+    city server and the worker ended together: the supervisor's per-minute log stopped, and there
+    is no stop request and no Python crash or hang report. **Cause unknown.** Before this fix the
+    server recorded no lifecycle evidence.
+  - **Dry-run stall:** the process (pid 22352, launched from Windows Terminal at 09:13 ET) stayed
+    alive with about 7 s of CPU and 13 threads until the 15:04 crash.
+    - It never took its single-runner lock, and wrote no record, so it stopped before or during
+      start-up.
+    - The module's heavy imports ran before any output, so the step is **unknown**.
+    - It was checked whether venv or code files were OneDrive online-only placeholders (a known
+      blocking hazard); none were, so that hypothesis is not supported.
+- **Fixed / added for visibility:**
+  - **Runner start-up:** each step is printed and written to `runner_startup.json` before it runs;
+    heavy imports moved after the first step.
+  - **Runner files:** `runner.log` (a copy of the output), and `runner_status.json` refreshed every
+    15 s by the lock holder.
+  - **Watchdog:** a faulthandler watchdog writes stack traces to `runner_faults.log` if start-up
+    exceeds 60 s or a loop step exceeds 5 min.
+  - **Readiness:** a "Dry-run runner" check reports FAIL "STALLED" with the last step.
+  - **Server lifecycle:** `server_runs` records start, last alive (15 s) and clean stop.
+- **Start-up:** `python -m trading.startup`, one procedure with OK/WAIT/WARN/FAIL output and
+  READY / NOT READY. It reuses healthy processes, never duplicates or kills, and opens missing
+  parts in visible windows.
+- **Relabelled:** the historical count is now "Report completion" (rule unchanged, 4 of 5).
+  - A prospective reliability gate is proposed in `docs/RELIABILITY_GATE_PROPOSAL.md`; not active.
+  - The persistent server option is proposed in `docs/OPERATIONS.md`; not installed.
+- **Tests:** `tests/test_reliability_fixes.py`, 17 synthetic tests in isolated folders.
+- **Note:** the dry-run code changed, so it must be committed before the next run, or that session
+  is INCOMPLETE (I5).
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

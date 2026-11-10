@@ -34,6 +34,7 @@ import hashlib
 import json
 import math
 import mimetypes
+import os
 import re
 import sqlite3
 import sys
@@ -128,6 +129,25 @@ def quality_minute(symbol: str, t_utc: str) -> dict:
     store = mst.MonitorStore()
     try:
         return quality.minute_record(store, symbol, t_utc)
+    finally:
+        store.close()
+
+
+def monitor_readiness() -> dict:
+    """Market readiness: deterministic checks over real records (trading/monitor/readiness.py)."""
+    from trading.monitor import readiness, store as mst
+    store = mst.MonitorStore()
+    try:
+        return readiness.snapshot(store)
+    finally:
+        store.close()
+
+
+def monitor_ack(incident_id: int) -> str:
+    from trading.monitor import readiness, store as mst
+    store = mst.MonitorStore()
+    try:
+        return readiness.acknowledge(store, incident_id, "owner (city)")
     finally:
         store.close()
 
@@ -520,6 +540,12 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
                 return self._json(ops_snapshot.collect())
             if path == "/api/monitor":
                 return self._json(monitor_snapshot())
+            if path == "/api/monitor/readiness":
+                try:
+                    return self._json(monitor_readiness())
+                except Exception as exc:       # answer honestly instead of dropping the connection
+                    return self._json({"overall": "UNKNOWN", "error": f"readiness evaluation failed: "
+                                       f"{type(exc).__name__}: {str(exc)[:200]}", "checks": []}, 500)
             if path == "/api/monitor/sessions":
                 return self._json(monitor_sessions())
             if path == "/api/monitor/report":
@@ -601,6 +627,13 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
                     if set(body) != {"action"} or not isinstance(body["action"], str):
                         raise ValueError("expected only {action}")
                     return self._json(monitor_control(body["action"]))
+                if path == "/api/monitor/incidents/ack":
+                    if set(body) != {"id"} or not isinstance(body["id"], int) or isinstance(body["id"], bool):
+                        raise ValueError("expected only {id} as an integer")
+                    try:
+                        return self._json({"result": monitor_ack(body["id"])})
+                    except KeyError:
+                        return self._json({"error": "unknown incident"}, 404)
                 if path == "/api/pipelines":
                     if set(body) - {"experiment", "pipeline"} or not isinstance(body.get("experiment"), str) \
                             or not isinstance(body.get("pipeline", "reconcile_report"), str):
@@ -726,10 +759,39 @@ def create_server(config_path: Path | None, port: int, speed: float | None = Non
         runner = jobs_mod.JobRunner(JOBS_DB, JOBS_RESEARCH_DIR)
         runner.stop_event = stop
         runner.start()
+    from trading.monitor import readiness
+    from trading.monitor.worker import code_version
+    readiness.SERVER_INFO.update(pid=os.getpid(), started_utc=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                                 port=port, mode=mode, code_version=code_version())
+    if supervise_monitor:            # lifecycle evidence (start, alive every 15 s, clean stop) for outage diagnosis
+        from trading.monitor import store as mst
+        s_ = mst.MonitorStore()
+        try:
+            readiness.SERVER_INFO["run_id"] = readiness.server_started(s_, os.getpid(), httpd.server_address[1],
+                                                                        readiness.SERVER_INFO["code_version"])
+        finally:
+            s_.close()
     if supervise_monitor:
         from trading.monitor.control import Supervisor
         Supervisor(stop).start()          # restart recovery for the separate monitoring worker
     return httpd, ctrl, stop
+
+
+def existing_server(port: int, timeout: float = 2.0) -> dict | None:
+    """What already answers on 127.0.0.1:port: None (nothing), this project's server ({"mode", "banner"}),
+    or {"unrecognised": True} for anything else. Standard library only; no broker code."""
+    import urllib.error
+    import urllib.request
+    try:
+        with urllib.request.urlopen(f"http://{HOST}:{port}/api/meta", timeout=timeout) as r:
+            data = json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError:
+        return {"unrecognised": True}
+    except (OSError, ValueError):
+        return None
+    if isinstance(data, dict) and "banner" in data and "mode" in data:
+        return {"mode": data["mode"], "banner": data["banner"]}
+    return {"unrecognised": True}
 
 
 def main(argv=None) -> int:
@@ -739,6 +801,14 @@ def main(argv=None) -> int:
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--speed", type=float, default=None)
     args = parser.parse_args(argv)
+    found = existing_server(args.port)
+    if found and not found.get("unrecognised"):
+        print(f"A TradingProject city server is already running on http://{HOST}:{args.port} "
+              f"({found['mode']}); not starting a second one. Open that address in the browser.")
+        return 0
+    if found:
+        print(f"Port {args.port} is already used by another program; not starting. Close it or use --port.")
+        return 2
     try:
         httpd, ctrl, stop = create_server(args.config, args.port, args.speed, args.mode)
     except HistoryError as exc:
@@ -751,13 +821,23 @@ def main(argv=None) -> int:
     print(f"{ctrl.meta['banner']}\nServing on http://{HOST}:{args.port}")
     print(f"{ctrl.meta['event_count']} events, {len(ctrl.meta['instances'])} instances. "
           f"Order submission: disabled. Ctrl+C to stop.")
+    reason = "clean stop"
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        pass
+        reason = "clean stop (Ctrl+C)"
     finally:
         stop.set()
         httpd.server_close()
+        from trading.monitor import readiness
+        if readiness.SERVER_INFO.get("run_id"):
+            from trading.monitor import store as mst
+            try:
+                s_ = mst.MonitorStore()
+                readiness.server_stopped(s_, readiness.SERVER_INFO["run_id"], reason)
+                s_.close()
+            except sqlite3.Error:
+                pass
     return 0
 
 

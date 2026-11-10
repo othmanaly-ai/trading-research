@@ -78,13 +78,22 @@ def _state(store, date_s, session, now):
         state = "provisional"
     else:
         state = "in_progress"
-    return {"state": state, "detail": row.get("detail"), "compared_through_utc": row.get("compared_through_utc"),
+    # The description must match the computed state. finalize() historically built the report before it
+    # updated q_state.detail, so a finalized report carried the earlier "pending" wording.
+    detail = FINALIZED_DETAIL if state == "finalized" else row.get("detail")
+    return {"state": state, "detail": detail, "compared_through_utc": row.get("compared_through_utc"),
             "eod_recheck_utc": row.get("eod_recheck_utc"), "first_monitored_utc": row.get("first_monitored_utc"),
             "access_failures": row.get("access_failures") or 0, "reports": reports}
 
 
-# Error events that are not API requests: they are reported separately from request failures.
-NOT_REQUEST_KINDS = ("supervisor", "crash", "quality-defect")
+# Request failures are counted from explicit outcomes only (an allow-list, never "every other error"):
+# - live polls: the worker's _fail() records level 'error' with kind 'error' or 'disconnected'
+#   (HTTP refusals, provider errors, connection failures, missing credentials);
+# - comparison requests: q_runs rows with status 'access_failure' or 'error'.
+# Every other error-level event (supervisor, crash, incident, quality-*) is an "other error", never a request.
+REQUEST_FAILURE_KINDS = ("error", "disconnected")
+NOT_REQUEST_KINDS = ("supervisor", "crash", "quality-defect", "incident")    # kept for reference / display
+FINALIZED_DETAIL = "compared through the close; post-close re-observation done"
 
 
 def daily_report(store: st.MonitorStore, date_s: str, now: datetime | None = None) -> dict:
@@ -215,14 +224,14 @@ def daily_report(store: st.MonitorStore, date_s: str, now: datetime | None = Non
         downtime.append({"from_utc": st.iso(a), "to_utc": st.iso(b), "minutes": int((b - a).total_seconds() // 60),
                          "kind": kind})
     win = (st.iso(session.open_utc - timedelta(minutes=30)), st.iso(session.close_utc + timedelta(hours=3)))
-    errors = [dict(r) for r in store.db.execute(
+    all_errors = [dict(r) for r in store.db.execute(
         "SELECT ts_utc, kind, message FROM events WHERE level='error' AND ts_utc BETWEEN ? AND ? ORDER BY id", win)]
-    other = [e for e in errors if e["kind"] in NOT_REQUEST_KINDS]      # supervisor, crash, data defects
-    # Live-poll failures come from the session's time window. Comparison (SIP/IEX history) failures
-    # come from this session's own run records, because recovery can request a session's data long
-    # after its window (e.g. the next day); window events of the comparison kind are not used, so
+    # Live-poll failures come from the session's time window (explicit kinds only). Comparison (SIP/IEX
+    # history) failures come from this session's own run records, because recovery can request a
+    # session's data long after its window; window events of the comparison kind are not used, so
     # another session's recovery is never counted here.
-    errors = [e for e in errors if e["kind"] not in NOT_REQUEST_KINDS and not e["kind"].startswith("quality-")]
+    errors = [e for e in all_errors if e["kind"] in REQUEST_FAILURE_KINDS]
+    other = [e for e in all_errors if e["kind"] not in REQUEST_FAILURE_KINDS and not e["kind"].startswith("quality-")]
     qruns = [dict(r) for r in store.db.execute(
         "SELECT id, kind, status, http_status, requests, window_start_utc, window_end_utc, error, started_utc "
         "FROM q_runs WHERE session_date=? ORDER BY id", (date_s,))]
@@ -243,6 +252,7 @@ def daily_report(store: st.MonitorStore, date_s: str, now: datetime | None = Non
         "unplanned_downtime_minutes": sum(d["minutes"] for d in downtime if d["kind"].startswith("unplanned")),
         "request_failures": len(errors), "access_refusals": len(refusals), "failure_events": errors[:30],
         "other_errors": len(other), "other_error_events": other[:30],
+        "other_error_kinds": {k: sum(e["kind"] == k for e in other) for k in sorted({e["kind"] for e in other})},
         "comparison_runs": {"total": len(qruns), "ok": sum(r["status"] == "ok" for r in qruns),
                             "failed": [r for r in qruns if r["status"] not in ("ok", "running")][:20],
                             "by_kind": {k: sum(r["kind"] == k for r in qruns) for k in ("cycle", "recovery", "eod_recheck")},
@@ -278,6 +288,81 @@ def daily_report(store: st.MonitorStore, date_s: str, now: datetime | None = Non
     out["live_view"] = {"now_utc": st.iso(now), "comparable_now_until_utc": st.iso(min(q.boundary(now), session.close_utc)),
                         "pending_from_utc": through or st.iso(session.open_utc)}
     return out
+
+
+# ---------------------------------------------------------------- corrections (amend-only)
+
+CORRECTIONS_SCHEMA = """CREATE TABLE IF NOT EXISTS q_report_corrections (
+  session_date TEXT, version INTEGER, from_version INTEGER, created_utc TEXT, reason TEXT, changes_json TEXT,
+  PRIMARY KEY (session_date, version));"""
+
+
+def plan_correction(stored: dict) -> list[dict]:
+    """Field changes needed in a stored report, derived only from that report's own stored evidence.
+    Returns [] when nothing needs correcting. Never recomputes evidence from live tables."""
+    changes = []
+    stt = stored.get("status", {})
+    if stt.get("state") == "finalized" and stt.get("detail") != FINALIZED_DETAIL:
+        changes.append({"field": "status.detail", "old": stt.get("detail"), "new": FINALIZED_DETAIL,
+                        "why": "finalized report carried the pre-finalization 'pending' wording (ordering defect)"})
+    ops = (stored.get("evidence") or {}).get("operations") or {}
+    events = ops.get("failure_events")
+    if events is not None and ops.get("request_failures") is not None:
+        bad = [e for e in events if e.get("kind") not in REQUEST_FAILURE_KINDS and not str(e.get("kind")).startswith("comparison-")]
+        if bad:
+            if len(events) < ops["request_failures"]:      # stored list was truncated: cannot recount safely
+                changes.append({"field": "evidence.operations.request_failures", "old": ops["request_failures"],
+                                "new": None, "why": "stored event list truncated; true count unknown"})
+            else:
+                keep = [e for e in events if e not in bad]
+                changes.append({"field": "evidence.operations.request_failures", "old": ops["request_failures"],
+                                "new": len(keep), "why": f"{len(bad)} non-request event(s) ({sorted({e['kind'] for e in bad})}) "
+                                                         "were counted as API request failures"})
+    return changes
+
+
+def correct_stored_report(store: st.MonitorStore, date_s: str, reason: str, now: datetime | None = None,
+                          apply: bool = False) -> dict:
+    """Amend-only correction: the latest stored report is copied, corrected, and stored as a NEW version;
+    every earlier version is kept unchanged. The reason is recorded in q_report_corrections and in the
+    report itself. With apply=False nothing is written (preview)."""
+    import hashlib
+    from trading.monitor import quality as q
+    q.ensure_schema(store)
+    store.db.executescript(CORRECTIONS_SCHEMA)
+    row = store.db.execute("SELECT * FROM q_reports WHERE session_date=? ORDER BY version DESC LIMIT 1", (date_s,)).fetchone()
+    if row is None:
+        return {"session_date": date_s, "changes": [], "stored": False, "note": "no stored report"}
+    stored = json.loads(row["report_json"])
+    changes = plan_correction(stored)
+    if not changes or not apply:
+        return {"session_date": date_s, "from_version": row["version"], "changes": changes, "stored": False}
+    new = json.loads(row["report_json"])
+    for c in changes:
+        if c["field"] == "status.detail":
+            new["status"]["detail"] = c["new"]
+        elif c["field"] == "evidence.operations.request_failures":
+            ops = new["evidence"]["operations"]
+            ops["request_failures"] = c["new"]
+            ops["failure_events_reclassified_as_other"] = [e for e in ops["failure_events"]
+                                                           if e.get("kind") not in REQUEST_FAILURE_KINDS
+                                                           and not str(e.get("kind")).startswith("comparison-")]
+            ops["failure_events"] = [e for e in ops["failure_events"] if e not in ops["failure_events_reclassified_as_other"]]
+    now = now or st.now_utc()
+    new["correction"] = {"from_version": row["version"], "reason": reason, "corrected_utc": st.iso(now), "changes": changes,
+                         "note": "corrected from the stored report only; no evidence was re-fetched or recomputed"}
+    version = row["version"] + 1
+    sha = hashlib.sha256(json.dumps(new["evidence"], sort_keys=True, default=str).encode()).hexdigest()
+    store.db.execute("INSERT INTO q_reports (session_date, version, status, created_utc, report_sha, report_json, amends_version)"
+                     " VALUES (?,?,?,?,?,?,?)", (date_s, version, row["status"], st.iso(now), sha, json.dumps(new, default=str),
+                                                 row["version"]))
+    store.db.execute("INSERT INTO q_report_corrections VALUES (?,?,?,?,?,?)",
+                     (date_s, version, row["version"], st.iso(now), reason, json.dumps(changes, default=str)))
+    store.db.execute("INSERT INTO events (ts_utc, level, kind, message) VALUES (?, 'info', 'quality-report', ?)",
+                     (st.iso(now), f"{date_s}: report version {version} stored (correction of version {row['version']}: "
+                                   f"{reason})"[:500]))
+    store.db.commit()
+    return {"session_date": date_s, "from_version": row["version"], "version": version, "changes": changes, "stored": True}
 
 
 def sessions_overview(store: st.MonitorStore, now: datetime | None = None, limit: int = 20) -> list[dict]:

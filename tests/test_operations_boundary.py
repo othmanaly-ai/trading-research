@@ -18,6 +18,9 @@ from trading.operations import gate
 ROOT = Path(__file__).resolve().parents[1]
 TRADING = ROOT / "trading"
 NON_RESEARCH = {"monitor", "operations", "dashboard"}
+# Operational tooling at the package top level (not research): the daily start-up procedure, which
+# reads readiness and starts the server/runner. Listed explicitly so any other top-level file stays checked.
+NON_RESEARCH_FILES = {"startup.py"}
 ALLOWED_MONITOR_IMPORTS = {               # module -> names it may import from trading.monitor.*
     "runner.py": {"DB_PATH"},              # path constant, passed to data_health.read only
     "__main__.py": {"SingleInstanceLock"}, # OS lock reused for "one runner at a time"
@@ -36,7 +39,7 @@ def _imports(src: str):
 def test_research_code_never_imports_monitoring_or_operations():
     for f in TRADING.rglob("*.py"):
         rel = f.relative_to(TRADING).parts
-        if rel[0] in NON_RESEARCH:
+        if rel[0] in NON_RESEARCH or (len(rel) == 1 and rel[0] in NON_RESEARCH_FILES):
             continue
         src = f.read_text(encoding="utf-8")
         for mod, names in _imports(src):

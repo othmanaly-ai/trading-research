@@ -89,6 +89,95 @@ The same controls are available from the command line: `python -m trading.monito
   - stopping the city server through the desktop app also stops its worker; it resumes when the
     server starts again
 
+### Startup and recovery (what happens when…)
+
+There is no always-on service. Monitoring runs only while this computer is on, awake and online,
+and the city server is running.
+
+| Event | What happens | What you do |
+|---|---|---|
+| You start the server and one is already running | The new start finds the existing server on 127.0.0.1:8765 (it asks `/api/meta`), prints its address and exits **without starting a second server**. If another program holds the port, it says so and exits. | Open http://127.0.0.1:8765 |
+| You press Start and a worker is alive | Nothing new is launched ("worker already running"). The OS lock lets only one worker poll. | Nothing |
+| Browser tab closed | Nothing changes: the server and worker keep running. The browser only displays records. | Reopen the address any time |
+| Desktop app closed, or server stopped | The server stops, and with it the supervision. The worker stops too when the app stops it. Live minutes are missed, and are never recovered later. | Start the server again; the supervisor relaunches the worker if the desired state is "running" |
+| Computer sleeps | All processes pause. No data is collected, and the missed live minutes are lost. On wake, heartbeats resume; a wake mid-session shows a stale-heartbeat or stopped incident until the next poll. | Keep the PC on mains power and awake during the session (it sleeps after 10 min on battery) |
+| Computer restarts or Windows updates | Nothing starts by itself (no startup task). | Start the server again before the open |
+| Worker crashes | While the server runs, the supervisor relaunches it within about 15-20 s (at most 6 per hour). The incident is recorded, then resolved as "service recovered". | Check Market readiness |
+
+Unfinished sessions within the last 5 trading sessions are re-compared and finalized when the worker
+runs again. Live capture gaps stay gaps.
+
+### Market readiness panel (`trading/monitor/readiness.py`, `GET /api/monitor/readiness`)
+
+The top of the city's **Market monitor** view. Each check is computed from real records at request
+time, and then every 60 s by the server's supervisor. The latest result per check is stored in the
+`readiness` table, with when it was checked and since when its status holds.
+
+**Statuses:**
+- PASS, WARNING, FAIL or UNKNOWN.
+- **Missing evidence is UNKNOWN, never PASS.**
+- A closed market is expected, not a failure.
+
+| Check | PASS when | Otherwise |
+|---|---|---|
+| Server responding | the server answers with its pid and start time | the browser shows FAIL if it cannot reach the server |
+| Exactly one intended worker | one worker process tree, matching the recorded pid. A venv's `python.exe` launcher plus its child interpreter count as one. | FAIL for two or more workers, or for none while desired is running; WARNING when stopped or paused by request; UNKNOWN if the process list is unavailable |
+| Worker heartbeat | at most 20 s old | FAIL if stale; UNKNOWN if never recorded |
+| Desired vs actual | desired running, actual running or market closed | WARNING when paused or stopped by request, or disconnected; FAIL on a mismatch |
+| Exchange calendar | the next session is known, and the latest broker clock cross-check (recorded by the dry-run preflight) agreed within 7 days | WARNING with no recent cross-check; FAIL if it disagreed |
+| Latest data | open market: all symbols FRESH. Closed market: the newest bar comes from the last session. | WARNING or FAIL accordingly; UNKNOWN with no successful request |
+| Backoff and refusals | no backoff, no refusal, no unresolved incident | FAIL on an access refusal; WARNING on backoff, failures or an open incident |
+| Database | a write and read-back probe succeeds | FAIL (then the dependent checks are UNKNOWN) |
+| Disk | at least 1 GB free (the same floor as the dry run) | FAIL |
+| Unfinished sessions | none pending | WARNING while an after-close recheck is pending |
+| Code version | the worker, the server and the repository are the same commit, with no uncommitted changes | WARNING otherwise (a running process keeps old code until restarted); UNKNOWN if not available |
+
+**Incidents (`incidents` table):**
+- **Kinds:** worker stopped unexpectedly, heartbeat stale, provider access refused, storage
+  failure.
+- **One open incident per kind:** repeats only update "last seen" and the count.
+- **Acknowledge** marks it seen. It stays unresolved until the condition clears; it is then
+  **resolved**, with "service recovered" in the event log.
+- **Database outages:** a storage failure seen while the database is unwritable is kept in memory
+  and written once the database works again.
+- Each incident shows a recovery explanation. No secrets are shown.
+
+**Dry-run runner check** (added 2026-11-09):
+- **FAIL during the session window** when no runner process exists, or when a runner process exists
+  but has not refreshed `runner_status.json` for over 60 s (**STALLED**, with its last start-up
+  step).
+- **WARNING** while it is still starting (up to 120 s), or before 08:45 ET.
+- **PASS** when it is running, on non-session days, and after its report is written.
+
+**Corrections to the evidence reports (2026-11-09)** were found and fixed:
+- **Request failures** are now counted only from explicit request outcomes: live-poll failure
+  events of kind `error` or `disconnected`, and comparison runs with status `access_failure` or
+  `error`. Every other error-level event (`incident`, `supervisor`, `crash`, `quality-*`) is
+  reported as an "other error", by kind.
+- **Finalized wording:** a finalized report always says "compared through the close; post-close
+  re-observation done". `finalize()` had built the report before updating that description.
+- **Stored reports are corrected amend-only**, with
+  `python -m trading.monitor correct-reports --reason "..." [--apply]` (a preview without
+  `--apply`):
+  - each correction is a new version, derived only from the stored report
+  - the reason is in the new report's `correction` block and in `q_report_corrections`
+  - earlier versions are untouched
+  - applied 2026-11-09 to Nov 5, 6 and 9 (version 2 each)
+
+**City-server lifecycle** (`server_runs`): the server records its start, a "last alive" time every
+15 s, and a clean stop. A run without a stop time ended without a clean stop, and its cause is not
+recorded.
+
+**Report completion** (formerly labelled "session reliability"):
+- **The criterion:** the existing written one, from the checklist below, unchanged. Five
+  consecutive scheduled sessions, each FINALIZED or INCOMPLETE with a stated reason.
+- **What it counts:** completed evidence reports, not live-capture reliability. A prospective
+  reliability gate is proposed in `docs/RELIABILITY_GATE_PROPOSAL.md`; it is not active.
+- A scheduled session with no monitoring is **not monitored**, does not qualify, and breaks the
+  streak.
+- **Gap:** this criterion has no capture-quality threshold, so a finalized session with large live
+  gaps still qualifies. No such threshold is applied until the owner sets one.
+
 ## Data quality: delayed SIP vs IEX (`trading/monitor/quality.py`)
 
 Runs inside the worker process and reuses its read-only client.

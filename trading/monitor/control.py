@@ -16,6 +16,7 @@ import os
 import subprocess
 import sys
 import threading
+import time
 from datetime import timedelta
 
 from trading.monitor import store as st
@@ -23,6 +24,7 @@ from trading.monitor import store as st
 MIN_SPAWN_GAP = timedelta(seconds=20)
 MAX_SPAWNS_PER_HOUR = 6
 SUPERVISE_EVERY_S = 15
+READINESS_EVERY_S = 60          # readiness checks and incident transitions are recorded this often
 STRIP_FROM_CHILD = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
 
 
@@ -86,10 +88,33 @@ class Supervisor(threading.Thread):
         finally:
             store.close()
 
+    def record_readiness(self) -> None:
+        """Every READINESS_EVERY_S: evaluate the readiness checks and record results and incidents."""
+        from trading.monitor import readiness
+        store = st.MonitorStore()
+        try:
+            readiness.record(store, readiness.evaluate(store))
+        finally:
+            store.close()
+
+    def server_alive(self) -> None:
+        from trading.monitor import readiness
+        if readiness.SERVER_INFO.get("run_id"):
+            store = st.MonitorStore()
+            try:
+                readiness.server_alive(store, readiness.SERVER_INFO["run_id"])
+            finally:
+                store.close()
+
     def run(self):
+        last_ready = 0.0
         while True:
             try:
+                self.server_alive()
                 self.check_once()
+                if time.monotonic() - last_ready >= READINESS_EVERY_S:
+                    last_ready = time.monotonic()
+                    self.record_readiness()
             except Exception as exc:                 # never kill the dashboard over supervision
                 try:
                     s = st.MonitorStore()

@@ -89,6 +89,8 @@ Exit codes for the data check: 0 = success, 1 = API refused or failed, 2 = no cr
   by the owner; never install a scheduled task or background startup without a new owner decision.
 - Session classification rules are fixed in `docs/DRY_RUN_ACCEPTANCE.md`; missing evidence is never a pass. Changing
   the operations code restarts the five-session count (code fingerprint).
+- Daily start: `python -m trading.startup` (reuses healthy processes; never kills or restarts). Monitoring report
+  corrections are amend-only (`python -m trading.monitor correct-reports`); never edit stored report versions.
 
 ## Model reviewer (automated second review)
 

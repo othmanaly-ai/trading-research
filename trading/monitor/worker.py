@@ -320,7 +320,21 @@ def main(argv=None) -> int:
     r.add_argument("--poll", type=int, default=st.POLL_SECONDS)
     for name in ("start", "pause", "stop", "status"):
         sub.add_parser(name)
+    c = sub.add_parser("correct-reports", help="amend-only correction of stored reports (preview unless --apply)")
+    c.add_argument("--reason", required=True)
+    c.add_argument("--apply", action="store_true")
     args = ap.parse_args(argv)
+    if args.cmd == "correct-reports":
+        import json
+        from trading.monitor import reliability
+        store = st.MonitorStore()
+        try:
+            dates = [r[0] for r in store.db.execute("SELECT DISTINCT session_date FROM q_reports ORDER BY session_date")]
+            out = [reliability.correct_stored_report(store, d, args.reason, apply=args.apply) for d in dates]
+            print(json.dumps({"applied": args.apply, "reports": [o for o in out if o["changes"]]}, indent=1, default=str))
+            return 0
+        finally:
+            store.close()
     store = st.MonitorStore()
     try:
         if args.cmd == "run":

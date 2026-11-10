@@ -2,6 +2,7 @@ import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, t
 import { useLiveJson } from "../useLiveJson";
 import type { TowerSpec } from "./CityView";
 import SessionHistory from "./SessionHistory";
+import ReadinessPanel from "./ReadinessPanel";
 import { ageText, etTime } from "./Overview";
 
 // Read-only market monitoring (trading/monitor). The worker is a separate process; this view only
@@ -139,6 +140,8 @@ export default function MonitorView({ reducedMotion }: { reducedMotion: boolean 
   const sel = selected && selected !== "worker" ? data.symbols.find((s) => s.symbol === selected) : null;
 
   return (
+    <>
+    <ReadinessPanel />
     <section className="panel wide monitor" aria-label="Market monitor">
       <div className="mon-banner"><strong>LIVE MARKET MONITOR · READ-ONLY</strong> Alpaca market data, {data.config.feed.toUpperCase()} feed
         ({data.symbols[0]?.feed_label}). Not a research dataset, not a trading signal, no recommendations. Order submission is DISABLED.
@@ -243,5 +246,6 @@ export default function MonitorView({ reducedMotion }: { reducedMotion: boolean 
             <tr key={e.id}><td>{et(e.ts_utc)}</td><td className={e.level === "error" ? "tone-danger" : ""}>{e.level}</td><td>{e.kind}</td><td>{e.message}</td></tr>))}</tbody></table>
       )}
     </section>
+    </>
   );
 }

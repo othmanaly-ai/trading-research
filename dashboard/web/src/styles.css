@@ -365,3 +365,12 @@ pre.json { max-height: 260px; overflow: auto; background: #0f0c26; padding: 8px;
 .dep-detail .conn > li { margin: 4px 0; }
 .city-label.related { border-color: var(--accent); }
 .city-label-holder.lm-hidden { display: none; }
+
+/* Market readiness panel: status words are always shown as text, colour only reinforces them. */
+.readiness h2 small { font-weight: 400; font-size: 0.75em; color: var(--muted, #94a3b8); }
+.table-scroll { overflow-x: auto; max-width: 100%; }
+.readiness table td { vertical-align: top; }
+.ready-pass { color: var(--green, #22c55e); }
+.ready-warning { color: var(--amber); }
+.ready-fail { color: var(--red); }
+.ready-unknown { color: var(--muted, #94a3b8); }
