@@ -59,6 +59,19 @@ export function Banner({ text, mode = "DEMO_REPLAY" }: { text: string; mode?: st
 export const DEMO_VIEWS = ["City", "Table", "Sessions", "Leaderboard"];
 export const REAL_VIEWS = ["Overview", "Research desk", "Market monitor", "Operations", "Research jobs", "Dependencies", "Research workflow", "Research"];
 export const isDemoView = (v: string) => DEMO_VIEWS.includes(v);
+// LOCAL EXECUTION SIMULATION: fake in-memory broker, synthetic scenarios. Neither real records nor demo replay.
+export const LAB_VIEWS = ["Execution lab"];
+export const isLabView = (v: string) => LAB_VIEWS.includes(v);
+
+export function LabBanner() {
+  return (
+    <div className="banner banner-LAB" role="status">
+      <strong>LOCAL EXECUTION SIMULATION</strong>
+      <span>Fake in-memory broker, synthetic instrument, prices and clock. Not a broker integration, not a paper account, not a strategy.</span>
+      <span className="banner-off">Order submission: DISABLED · no broker connection</span>
+    </div>
+  );
+}
 
 export function RealBanner() {
   return (
@@ -88,6 +101,7 @@ export function Controls({ status, connection, lastMessageAt, control, controlEr
       <div className="group view-tabs" role="tablist" aria-label="Views">
         <span className="tab-group-label real">Real records:</span>{REAL_VIEWS.map(tab)}
         <span className="tab-group-label demo">Demo replay (synthetic):</span>{DEMO_VIEWS.map(tab)}
+        <span className="tab-group-label lab">Local execution simulation:</span>{LAB_VIEWS.map(tab)}
         <label className="rm">
           <input type="checkbox" aria-label="Reduced motion" checked={reducedMotion}
                  onChange={(e) => setReducedMotion(e.target.checked)} /> Reduced motion

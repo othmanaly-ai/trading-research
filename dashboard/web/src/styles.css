@@ -392,3 +392,11 @@ pre.json { max-height: 260px; overflow: auto; background: #0f0c26; padding: 8px;
 .desk .q-table[aria-label="Evidence trace tasks"], .desk .q-table[aria-label="All desk tasks"] { min-width: 720px; }
 .desk .q-table td code { word-break: break-all; }
 @media (max-width: 600px) { .desk .district { display: block; } .desk .district-detail { max-height: none; } }
+
+/* Local execution simulation (ExecutionLabView.tsx) */
+.banner-LAB { background: #2a1f3a; border-bottom-color: #a78bfa; }
+.banner-LAB strong { color: #c4b5fd; }
+.tab-group-label.lab { color: #c4b5fd; margin-left: 14px; }
+.xlab-step { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 10px; }
+.xlab-step input[type=range] { flex: 1 1 200px; min-width: 160px; }
+.xlab-events tbody tr { cursor: pointer; }

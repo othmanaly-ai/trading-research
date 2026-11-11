@@ -38,6 +38,20 @@
         "--read-only-preview"
       ],
       "port": 8767
+    },
+    {
+      "name": "execution-lab-preview",
+      "runtimeExecutable": "C:\\Users\\othma\\OneDrive\\Documents\\TradingProject\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": [
+        "-m",
+        "trading.dashboard.server",
+        "--port",
+        "8770",
+        "--read-only-preview",
+        "--web-dist",
+        "dashboard/web/preview/dist"
+      ],
+      "port": 8770
     }
   ]
 }

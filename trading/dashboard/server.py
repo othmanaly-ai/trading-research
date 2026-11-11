@@ -17,6 +17,7 @@ Endpoints:
   GET  /api/research             mode availability, periods, responsibilities
   GET  /api/depmap               read-only dependency-and-health map (declared / recorded / proposed)
   GET  /api/workflows            coordinator research workflows (tasks, evidence, report); read-only
+  GET  /api/execution-lab[?scenario=s01..s12]  LOCAL EXECUTION SIMULATION (fake broker, synthetic; no orders exist)
   GET  /api/desk[?run=<trace run id>]  research desk: six departments, task states from records, Command Centre (read-only)
   GET  /api/operations           Milestone 1 dry-run status from the operations store (read-only; no orders exist)
   GET  /api/jobs                 real research-job records (trading/jobs.py), read-only
@@ -537,6 +538,10 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
                     return self._json(with_store(lambda st: jobs_mod.preview(exp, st, JOBS_RESEARCH_DIR, env=_server_env())))
                 except ValueError as exc:
                     return self._json({"error": str(exc)}, 400)
+            if path == "/api/execution-lab":
+                # LOCAL EXECUTION SIMULATION: synthetic scenarios, fake in-memory broker, computed per request, no writes
+                from trading.execution_lab import scenarios as xlab
+                return self._json(xlab.api(parse_qs(urlparse(self.path).query).get("scenario", [None])[0]))
             if path == "/api/desk":
                 from trading.dashboard import desk                   # read-only; runs nothing
                 run = parse_qs(urlparse(self.path).query).get("run", [None])[0]
@@ -822,10 +827,15 @@ def main(argv=None) -> int:
     parser.add_argument("--config", type=Path, default=None)
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--speed", type=float, default=None)
+    parser.add_argument("--web-dist", type=Path, default=None,
+                        help="serve the page from this build folder instead of dashboard/web/dist (preview builds)")
     parser.add_argument("--read-only-preview", action="store_true",
                         help="second viewing instance: no research-job runner, no monitor supervision, no lifecycle writes, "
                              "state-changing requests refused, monitoring store read as an in-memory snapshot")
     args = parser.parse_args(argv)
+    if args.web_dist:
+        global WEB_DIST
+        WEB_DIST = args.web_dist.resolve()
     found = existing_server(args.port)
     if found and not found.get("unrecognised"):
         print(f"A TradingProject city server is already running on http://{HOST}:{args.port} "

@@ -3,13 +3,14 @@ import TowerPanel from "./components/TowerPanel";
 import JobsView from "./components/JobsView";
 import MonitorView from "./components/MonitorView";
 import {
-  AccountPanel, ActivityFeed, Banner, Controls, Leaderboard, ModeStrip, RealBanner, ResearchView, SessionHistory, StrategyTable,
-  isDemoView,
+  AccountPanel, ActivityFeed, Banner, Controls, LabBanner, Leaderboard, ModeStrip, RealBanner, ResearchView, SessionHistory,
+  StrategyTable, isDemoView, isLabView,
 } from "./components/Panels";
 import Overview from "./components/Overview";
 import DependencyMap from "./components/DependencyMap";
 import WorkflowView from "./components/WorkflowView";
 import DeskView from "./components/DeskView";
+import ExecutionLabView from "./components/ExecutionLabView";
 import OperationsView from "./components/OperationsView";
 import type { Research, StrategyView } from "./types";
 import type { TowerSpec } from "./components/CityView";
@@ -89,6 +90,7 @@ export default function App() {
   // The tab title follows the kind of view, so a real-records page is never titled "DEMO".
   useEffect(() => {
     document.title = isDemoView(view) ? `${r.meta?.mode === "HISTORICAL_REPLAY" ? "HISTORICAL REPLAY" : "DEMO REPLAY"} · Strategy City`
+      : isLabView(view) ? "Execution lab · LOCAL EXECUTION SIMULATION · TradingProject"
       : `${view} · Real records · TradingProject`;
   }, [view, r.meta?.mode]);
 
@@ -116,6 +118,19 @@ export default function App() {
               controlError={r.controlError} view={view} setView={setView}
               reducedMotion={reducedMotion} setReducedMotion={setReducedMotion} />
   );
+
+  if (isLabView(view)) {
+    // LOCAL EXECUTION SIMULATION: its own banner; no real records, no demo replay figures.
+    return (
+      <div className="app app-lab">
+        <LabBanner />
+        {controls}
+        <div className="layout layout-real"><div className="main-area"><ExecutionLabView reducedMotion={reducedMotion} /></div></div>
+        <footer className="muted small">Synthetic scenarios computed on request by the local city server against an in-memory fake broker.
+          Nothing is written and nothing leaves this computer.</footer>
+      </div>
+    );
+  }
 
   if (!demo) {
     // REAL views: no replay clock, demo controls, simulated account, demo activity or demo risk alerts.

@@ -889,6 +889,20 @@ pipeline -> watch progress -> cancel if needed -> open the report.
   - Neither is a software fault.
 - **Reliability gate G1-G6:** PROPOSED (docs/RELIABILITY_GATE_PROPOSAL.md), not approved, not applied.
 
+## Execution rehearsal lab: LOCAL EXECUTION SIMULATION (2026-11-10)
+
+- **Implemented:** `trading/execution_lab/`, an order-lifecycle rehearsal with a fake in-memory broker and 12
+  deterministic synthetic scenarios. Order states, the append-only ledger and the emergency-stop report are derived
+  from records.
+- **Reused unchanged:** `OWNER_BASELINE_2026_11_03`, `size_position`, `RiskState`, `costs.BASE`.
+- **City:** "Execution lab" tab, previewed read-only on port 8770 from `dashboard/web/preview/dist`. The production
+  server (8765) and its page are unchanged. See `docs/EXECUTION_LAB.md`.
+- **Tested (synthetic only):** `tests/test_execution_lab.py`, 25 tests. All 12 scenarios meet their expectations and
+  invariants. Network and project-file guards are in force.
+- **Dry run unaffected:** fingerprint `461c31297c5a6c1e`, and no acceptance-critical file changed.
+- **Not done:** no broker connection, no order capability, no strategy. The open policy decisions are listed in
+  `docs/EXECUTION_LAB.md`.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca
