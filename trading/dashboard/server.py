@@ -541,7 +541,9 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
             if path == "/api/execution-lab":
                 # LOCAL EXECUTION SIMULATION: synthetic scenarios, fake in-memory broker, computed per request, no writes
                 from trading.execution_lab import scenarios as xlab
-                return self._json(xlab.api(parse_qs(urlparse(self.path).query).get("scenario", [None])[0]))
+                from trading.dashboard import execution_readiness
+                payload = xlab.api(parse_qs(urlparse(self.path).query).get("scenario", [None])[0])
+                return self._json(payload | {"readiness": execution_readiness.collect()})
             if path == "/api/desk":
                 from trading.dashboard import desk                   # read-only; runs nothing
                 run = parse_qs(urlparse(self.path).query).get("run", [None])[0]

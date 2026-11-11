@@ -25,16 +25,18 @@ from dataclasses import dataclass, field
 CREATED, VALIDATED, BLOCKED = "CREATED", "VALIDATED", "BLOCKED"
 SUBMISSION_PENDING, ACCEPTED, PARTIALLY_FILLED, FILLED = "SUBMISSION_PENDING", "ACCEPTED", "PARTIALLY_FILLED", "FILLED"
 REJECTED, CANCEL_PENDING, CANCELLED, UNKNOWN = "REJECTED", "CANCEL_PENDING", "CANCELLED", "UNKNOWN"
+HELD = "HELD"            # a bracket leg created by the broker but NOT active (documented: until the entry fully fills)
 STATES = (CREATED, VALIDATED, BLOCKED, SUBMISSION_PENDING, ACCEPTED, PARTIALLY_FILLED, FILLED, REJECTED,
-          CANCEL_PENDING, CANCELLED, UNKNOWN)
+          CANCEL_PENDING, CANCELLED, UNKNOWN, HELD)
 TERMINAL = {FILLED, REJECTED, CANCELLED, BLOCKED}
 LIVE = {SUBMISSION_PENDING, ACCEPTED, PARTIALLY_FILLED, CANCEL_PENDING, UNKNOWN}   # may still fill: counts as exposure
 LABEL = {UNKNOWN: "OUTCOME UNKNOWN · reconciliation required", CANCEL_PENDING: "CANCELLATION PENDING (not confirmed)",
-         BLOCKED: "BLOCKED before submission"}
+         BLOCKED: "BLOCKED before submission", HELD: "HELD · inactive protective leg (not protection)"}
 
 TRANSITIONS = {
-    CREATED: {VALIDATED, BLOCKED},
-    VALIDATED: {SUBMISSION_PENDING},
+    CREATED: {VALIDATED, BLOCKED, HELD},
+    VALIDATED: {SUBMISSION_PENDING, BLOCKED},          # BLOCKED: never sent (for example, a crash before sending)
+    HELD: {ACCEPTED, CANCELLED},
     SUBMISSION_PENDING: {ACCEPTED, REJECTED, UNKNOWN, PARTIALLY_FILLED, FILLED, CANCEL_PENDING},
     UNKNOWN: {ACCEPTED, REJECTED, PARTIALLY_FILLED, FILLED, CANCELLED, CANCEL_PENDING},
     ACCEPTED: {PARTIALLY_FILLED, FILLED, CANCEL_PENDING, CANCELLED},
@@ -42,8 +44,8 @@ TRANSITIONS = {
     CANCEL_PENDING: {CANCEL_PENDING, PARTIALLY_FILLED, FILLED, CANCELLED},
     FILLED: set(), REJECTED: set(), CANCELLED: set(), BLOCKED: set(),
 }
-RANK = {CREATED: 0, VALIDATED: 1, BLOCKED: 9, SUBMISSION_PENDING: 2, UNKNOWN: 3, ACCEPTED: 4, PARTIALLY_FILLED: 5,
-        CANCEL_PENDING: 6, FILLED: 9, REJECTED: 9, CANCELLED: 9}
+RANK = {CREATED: 0, VALIDATED: 1, BLOCKED: 9, SUBMISSION_PENDING: 2, UNKNOWN: 3, HELD: 3, ACCEPTED: 4,
+        PARTIALLY_FILLED: 5, CANCEL_PENDING: 6, FILLED: 9, REJECTED: 9, CANCELLED: 9}
 
 
 def can_transition(a: str, b: str) -> bool:
@@ -154,6 +156,10 @@ def derive(events: list[dict], start_cash: float, marks: dict | None = None, cos
     flags = {"emergency_stop": False, "reconciliation_required": False, "restart_pending_reconciliation": False}
     stop_actions: list[dict] = []
     refusals: list[dict] = []
+    discrepancies: list[dict] = []
+    alerts: list[dict] = []
+    unprotected_since: dict[str, str] = {}
+    unprotected_log: list[dict] = []
     for e in events:
         p, seq, kind, oid = e["payload"], e["seq"], e["kind"], e["order_id"]
         o = orders.get(oid) if oid else None
@@ -184,14 +190,12 @@ def derive(events: list[dict], start_cash: float, marks: dict | None = None, cos
             elif kind == "broker_reject":
                 o.reasons = [p.get("reason", "rejected")]
                 _move(o, REJECTED, seq, kind)
+            elif kind == "fill" and p["exec_id"] in o.exec_ids:
+                o.ignored.append((seq, kind, f"execution {p['exec_id']} already applied"))
+            elif kind == "fill" and (o.state in (FILLED, CANCELLED, REJECTED, BLOCKED, HELD) or o.filled_qty + p["qty"] > o.qty):
+                o.anomalies.append(f"seq {seq}: fill {p['exec_id']} of {p['qty']} not applicable in {o.state} "
+                                   f"(filled {o.filled_qty}/{o.qty})")
             elif kind == "fill":
-                if p["exec_id"] in o.exec_ids:
-                    o.ignored.append((seq, kind, f"execution {p['exec_id']} already applied"))
-                    continue
-                if o.state in (FILLED, CANCELLED, REJECTED, BLOCKED) or o.filled_qty + p["qty"] > o.qty:
-                    o.anomalies.append(f"seq {seq}: fill {p['exec_id']} of {p['qty']} not applicable in {o.state} "
-                                       f"(filled {o.filled_qty}/{o.qty})")
-                    continue
                 o.exec_ids.append(p["exec_id"])
                 o.filled_qty += p["qty"]
                 value = p["qty"] * p["price"]
@@ -210,6 +214,20 @@ def derive(events: list[dict], start_cash: float, marks: dict | None = None, cos
                 _move(o, CANCELLED, seq, kind)
             elif kind == "cancel_rejected":
                 o.reasons = [p.get("reason", "cancel rejected")]
+        elif kind == "leg_held" and o:
+            _move(o, HELD, seq, kind)
+        elif kind == "leg_active" and o:
+            _move(o, ACCEPTED, seq, kind)
+        elif kind == "intent_expired_unsent" and o:
+            o.reasons = [p.get("reason", "never sent")]
+            _move(o, BLOCKED, seq, kind)
+        elif kind == "reconciliation_incomplete":
+            discrepancies = list(p.get("discrepancies", []))
+        elif kind == "reconciliation_complete":
+            discrepancies = []
+            flags["restart_pending_reconciliation"] = False
+        elif kind == "protection_alert":
+            alerts.append({"seq": seq, "ts_utc": e["ts_utc"], **p})
         elif kind == "cancel_requested" and o:
             if o.state in TERMINAL:
                 o.ignored.append((seq, kind, f"cancel requested for a {o.state} order"))
@@ -222,7 +240,7 @@ def derive(events: list[dict], start_cash: float, marks: dict | None = None, cos
             else:
                 o.broker_order_id = b.get("broker_order_id") or o.broker_order_id
                 target = {"accepted": ACCEPTED, "partially_filled": PARTIALLY_FILLED, "filled": FILLED,
-                          "cancelled": CANCELLED, "rejected": REJECTED}.get(b["status"])
+                          "cancelled": CANCELLED, "rejected": REJECTED, "held": HELD}.get(b["status"])
                 if target in (ACCEPTED, PARTIALLY_FILLED) and o.state == CANCEL_PENDING:
                     target = CANCEL_PENDING
                 if target and target != o.state and not (target == PARTIALLY_FILLED and o.state == PARTIALLY_FILLED):
@@ -231,13 +249,20 @@ def derive(events: list[dict], start_cash: float, marks: dict | None = None, cos
                     _move(o, target, seq, kind)
         elif kind == "process_start":
             flags["restart_pending_reconciliation"] = bool(p.get("restart"))
-        elif kind == "reconciliation_complete":
-            flags["restart_pending_reconciliation"] = False
         elif kind == "emergency_stop":
             flags["emergency_stop"] = True
         elif kind == "stop_action":
             stop_actions.append({"seq": seq, "ts_utc": e["ts_utc"], **p})
-    flags["reconciliation_required"] = any(o.state == UNKNOWN for o in orders.values()) or flags["restart_pending_reconciliation"]
+        # protection after every event: only ACTIVE protective orders count; a HELD (inactive) leg does not
+        for sym in set(pos) | set(unprotected_since):
+            unp = max(0, pos.get(sym, 0) - _protected(orders, sym))
+            if unp > 0 and sym not in unprotected_since:
+                unprotected_since[sym] = e["ts_utc"]
+            elif unp == 0 and sym in unprotected_since:
+                unprotected_log.append({"symbol": sym, "from_utc": unprotected_since.pop(sym), "to_utc": e["ts_utc"]})
+    flags["reconciliation_required"] = (any(o.state == UNKNOWN for o in orders.values())
+                                        or flags["restart_pending_reconciliation"] or bool(discrepancies))
+    flags["unresolved_discrepancies"] = bool(discrepancies)
     # positions, exposure (pending entries count), equity
     positions = {s: {"qty": q, "mark": marks.get(s), "value": q * marks[s] if s in marks else None} for s, q in pos.items() if q}
     held = sum(abs(v["value"]) for v in positions.values() if v["value"] is not None)
@@ -247,12 +272,25 @@ def derive(events: list[dict], start_cash: float, marks: dict | None = None, cos
     pending_notional = sum(x["notional"] for x in pending)
     equity = cash + sum(v["value"] for v in positions.values() if v["value"] is not None)
     fees = sum(o.fees for o in orders.values())
+    protection = [{"symbol": s, "position": q, "protected_qty": min(q, _protected(orders, s)),
+                   "held_inactive_qty": sum(o.qty for o in orders.values() if o.symbol == s and o.purpose == "protect"
+                                            and o.state == HELD),
+                   "unprotected_qty": max(0, q - _protected(orders, s)), "unprotected_since": unprotected_since.get(s)}
+                  for s, q in pos.items() if q > 0]
     return {"orders": orders, "cash": round(cash, 6), "positions": positions, "equity": round(equity, 6),
+            "protection": protection, "unprotected_intervals": unprotected_log, "discrepancies": discrepancies,
+            "protection_alerts": alerts,
             "fees": round(fees, 6), "held_exposure": round(held, 6), "pending_entries": pending,
             "pending_exposure": round(pending_notional, 6), "gross_exposure": round(held + pending_notional, 6),
             "positions_in_use": len({s for s in positions} | {o.symbol for o in orders.values()
                                                               if o.purpose == "entry" and o.state in LIVE}),
             "flags": flags, "stop_actions": stop_actions, "refusals": refusals, "marks": marks}
+
+
+def _protected(orders: dict, symbol: str) -> int:
+    """Shares covered by an ACTIVE broker-side protective order (accepted or partly filled). HELD legs don't count."""
+    return sum(o.qty - o.filled_qty for o in orders.values()
+               if o.symbol == symbol and o.purpose == "protect" and o.state in (ACCEPTED, PARTIALLY_FILLED))
 
 
 def order_dict(o: OrderView) -> dict:

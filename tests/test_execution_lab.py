@@ -13,6 +13,7 @@ from trading.execution_lab import ledger as L
 from trading.execution_lab import scenarios as S
 from trading.execution_lab.fake_broker import FakeBroker
 from trading.execution_lab.lab import Clock, Lab, LabConfig
+from trading.execution_lab.policy import LAB_TEST_POLICY
 
 ROOT = Path(__file__).resolve().parents[1]
 LAB_DIR = ROOT / "trading" / "execution_lab"
@@ -62,7 +63,7 @@ def test_scenarios_are_reproducible():
 
 
 def _lab():
-    return Lab(L.Ledger(), FakeBroker(), Clock(S.T0), LabConfig())
+    return Lab(L.Ledger(), FakeBroker(), Clock(S.T0), LabConfig(), policy=LAB_TEST_POLICY)
 
 
 def test_duplicate_fill_events_never_duplicate_fills():
@@ -111,10 +112,10 @@ def test_restart_preserves_outstanding_obligations(tmp_path):
     p = tempfile.mktemp(suffix=".sqlite")
     try:
         clock = Clock(S.T0); b = FakeBroker()
-        lab = Lab(L.Ledger(p), b, clock, LabConfig()); lab.mark("SYN", 100.0)
+        lab = Lab(L.Ledger(p), b, clock, LabConfig(), policy=LAB_TEST_POLICY); lab.mark("SYN", 100.0)
         cid = lab.request_entry("SYN", 10, 100.0, 0.5)["order_id"]; lab.cancel(cid, "x")
         lab.ledger.close()
-        lab2 = Lab(L.Ledger(p), b, clock, LabConfig(), restart=True)
+        lab2 = Lab(L.Ledger(p), b, clock, LabConfig(), restart=True, policy=LAB_TEST_POLICY)
         st = lab2.state()
         assert st["orders"][cid].state == L.CANCEL_PENDING and st["flags"]["reconciliation_required"]
         assert st["pending_exposure"] == 1000.0
@@ -195,5 +196,5 @@ def test_api_serves_the_same_records_and_writes_nothing(tmp_path, monkeypatch):
     direct = S.run("s11")
     assert api["mode"] == "LOCAL_EXECUTION_SIMULATION" and api["selected"]["id"] == "s11"
     assert api["selected"]["orders"] == json.loads(json.dumps(direct["orders"]))
-    assert api["selected"]["emergency_stop"]["overall"] == "INCOMPLETE" and len(api["scenarios"]) == 12
+    assert api["selected"]["emergency_stop"]["overall"] == "INCOMPLETE" and len(api["scenarios"]) == len(S.SCENARIOS)
     assert all(s["passed"] for s in api["scenarios"]) and api["policy_gaps"]

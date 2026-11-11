@@ -950,6 +950,46 @@ pipeline -> watch progress -> cancel if needed -> open the report.
 - **Fingerprint:** changed again, from `7625e4a30914ef98`, on which no session has run; see the commit. The count was 0
   of 5.
 
+## Offline execution core completed; paper-test decisions and proposal (2026-11-11)
+
+- **Scope:** OFFLINE SIMULATION ONLY.
+  - Fake broker, synthetic instrument SYN, synthetic clock.
+  - No network transport exists, and no order exists anywhere.
+  - **NO APPROVED ACTIVE STRATEGY.**
+- **Verified (offline):**
+  - **18 scenarios**, all EXPECTED, with invariants recomputed from the ledger: partial fills, duplicate and
+    out-of-order updates, unknown outcomes, reconciliation, cancellation races, restart, emergency stop, manual
+    activity, and a live order missing at the broker.
+  - **7 fresh-process crash drills**, all passing (`results/execution_lab/crash_drills.json`, git-ignored).
+  - **Offline paper-adapter fixture tests.**
+- **Fixed (confirmed by probes, then by regression tests):**
+  1. A live order the broker had no record of was treated as reconciled, and entries were allowed again. It is now
+     an `order_missing_at_broker` discrepancy that blocks entries, and the order is not assumed cancelled.
+  2. A cancel request repeated by a fresh process was filed as a duplicate. Request evidence is now numbered from
+     the ledger.
+  3. An intent orphaned by a crash during the checks stayed CREATED forever. It now expires as never sent, with a
+     new crash point and drill.
+  4. The dashboard's readiness text named the adapter module, which the boundary test forbids.
+- **City (Execution lab):**
+  - **Operational board per step:** working, partially filled, uncertain, held legs (not protection) and blocked.
+  - **Protection per step:** protected / unprotected / held-inactive, with the time since unprotected.
+  - **Evidence links** from an order's history to its ledger event.
+  - **A controls table:** ENFORCED (with evidence) vs PROPOSED / UNSET / NOT IMPLEMENTED / NOT CONNECTED.
+  - **Verified** in the read-only preview on port 8770, using a preview build only. Production's `dist` and
+    production server are unchanged.
+- **Documents:**
+  - `docs/PAPER_TEST_DECISION_SHEET.md`: six minimum decisions, nothing approved.
+  - `docs/PAPER_TEST_PLAN_DRAFT.md`: corrected stale statements, a control-status table (7 rows block a first
+    order), and an exact unexecuted session script with stop conditions and final account checks.
+- **Dry-run fingerprint:** `6cc6999855edd4f1` measured before and after; unchanged; commit `1ed518e`.
+- **Missing or blocked:**
+  - the paper network transport (not built; needs authorization)
+  - the kill switch, NOT CONNECTED to the execution core
+  - the test-loss limit, NOT DEFINED
+  - all 11 execution-policy fields UNSET
+  - the intended account and written authorization, absent
+  - Milestone 1 acceptance not met
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

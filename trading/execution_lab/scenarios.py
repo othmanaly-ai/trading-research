@@ -1,4 +1,4 @@
-"""Twelve deterministic SYNTHETIC execution scenarios for the LOCAL EXECUTION SIMULATION.
+"""Eighteen deterministic SYNTHETIC execution scenarios (s01-s18) for the LOCAL EXECUTION SIMULATION.
 
 Every scenario is a fixed script (no randomness; seed recorded as 0), runs on a controllable clock starting at a
 synthetic session (2030-06-03 10:05 ET), uses the synthetic instrument SYN, an in-memory ledger (the restart scenario
@@ -16,16 +16,20 @@ from datetime import datetime, timezone
 from trading.execution_lab import ledger as L
 from trading.execution_lab.fake_broker import FakeBroker
 from trading.execution_lab.lab import Clock, Lab, LabConfig, stop_report
+from dataclasses import replace
+
+from trading.execution_lab.intents import IntentSource
+from trading.execution_lab.policy import APPROVED, LAB_TEST_POLICY
 
 T0 = datetime(2030, 6, 3, 14, 5, tzinfo=timezone.utc)      # SYNTHETIC: 10:05 ET on a synthetic session date
 SYM, PX, STOP = "SYN", 100.00, 0.50
 SEED = 0
 
 
-def _new(path=None, restart=False, broker=None, clock=None):
+def _new(path=None, restart=False, broker=None, clock=None, policy=LAB_TEST_POLICY):
     clock = clock or Clock(T0)
     broker = broker or FakeBroker()
-    lab = Lab(L.Ledger(path), broker, clock, LabConfig(), restart=restart)
+    lab = Lab(L.Ledger(path), broker, clock, LabConfig(), restart=restart, policy=policy)
     if not restart:
         lab.mark(SYM, PX)
     return lab, broker, clock
@@ -171,7 +175,7 @@ def s08_restart(x):
         before = L.order_dict(lab.state()["orders"][a])
         lab.ledger.close()                                       # the process stops
         c.advance(120); b.fill(a, "S2", 10, 100.02)              # meanwhile the broker filled 10 more
-        lab2 = Lab(L.Ledger(path), b, c, LabConfig(), restart=True)
+        lab2 = Lab(L.Ledger(path), b, c, LabConfig(), restart=True, policy=LAB_TEST_POLICY)
         o = lab2.state()["orders"][a]
         _expect(x, "after restart the outstanding order is rebuilt from the ledger (20/40, remaining 20)",
                 o.state == L.PARTIALLY_FILLED and o.filled_qty == 20 and o.remaining_qty == 20, f"{o.state} {o.filled_qty}")
@@ -182,7 +186,9 @@ def s08_restart(x):
         _expect(x, "reconciliation applies the fill made while down: 30/40, broker submit count still 1",
                 o.filled_qty == 30 and b.submit_calls[a] == 1 and rec["ok"], rec)
         r = lab2.request_entry(SYM, 5, PX, STOP)
-        _expect(x, "after reconciliation a small entry passes the gates again", r["submitted"] is True, r)
+        _expect(x, "after reconciliation the restart block is gone, but 30 shares without an active stop for longer than "
+                   "the policy time still block new entries", not r["submitted"] and not any("restart" in s for s in r["reasons"])
+                and any(s.startswith("UNPROTECTED") for s in r["reasons"]), r["reasons"])
         x.append({"check": "state before the stop", "passed": True, "detail": f"{before['state']} {before['filled_qty']}/{before['qty']}"})
         events = lab2.ledger.events()
         lab2.ledger.close()
@@ -259,6 +265,109 @@ def s12_estop_unavailable(x):
     return lab
 
 
+def s13_bracket_partial(x):
+    lab, b, c = _new(policy=replace(LAB_TEST_POLICY, protection_method="bracket"))
+    a = lab.request_entry(SYM, 40, PX, STOP)["order_id"]
+    leg = f"{a}:stop"
+    st = lab.state()
+    _expect(x, "bracket stop leg recorded as HELD (inactive), not as protection", st["orders"][leg].state == L.HELD)
+    b.fill(a, "B1", 25, 100.01); lab.poll()
+    pr = lab.state()["protection"][0]
+    _expect(x, "25 filled, 0 protected, 25 unprotected while the entry is partly filled (documented: legs wait for a complete fill)",
+            pr["position"] == 25 and pr["protected_qty"] == 0 and pr["unprotected_qty"] == 25 and pr["held_inactive_qty"] == 40, pr)
+    c.advance(45)
+    r = lab.request_entry(SYM, 5, PX, STOP)
+    _expect(x, "after 45 s unprotected (limit 30, LAB TEST VALUE) new entries are blocked", not r["submitted"] and
+            any(s.startswith("UNPROTECTED") for s in r["reasons"]), r["reasons"])
+    _expect(x, "attention lists the HELD leg as 'not protection'", any("HELD" in a2["what"] for a2 in lab.attention()), lab.attention())
+    b.fill(a, "B2", 15, 100.02); lab.poll()
+    pr = lab.state()["protection"][0]
+    _expect(x, "entry complete: the leg becomes active, 40 protected, 0 unprotected",
+            lab.state()["orders"][leg].state == L.ACCEPTED and pr["protected_qty"] == 40 and pr["unprotected_qty"] == 0, pr)
+    _expect(x, "the unprotected interval is kept in the record", len(lab.state()["unprotected_intervals"]) == 1,
+            lab.state()["unprotected_intervals"])
+    return lab
+
+
+def s14_stop_after_fill(x):
+    lab, b, c = _new()
+    a = lab.request_entry(SYM, 40, PX, STOP)["order_id"]
+    b.fill(a, "F1", 20, 100.00); lab.poll()
+    r = lab.protect(a)
+    _expect(x, "protect refused while the entry can still fill (a stop sell next to an open buy is wash-trade rejected)",
+            not r["submitted"] and "final" in r["reasons"][0], r)
+    lab.cancel(a, "stop working the remainder"); c.advance(2); b.confirm_cancel(a, "k1"); lab.poll()
+    r = lab.protect(a)
+    st = lab.state()
+    pr = st["protection"][0]
+    _expect(x, "after the cancel is CONFIRMED a stop for the 20 filled shares is accepted: 20 protected",
+            r["submitted"] is True and pr["protected_qty"] == 20 and pr["unprotected_qty"] == 0, (r, pr))
+    _expect(x, "the unprotected interval (fill to stop acknowledgement) is recorded", st["unprotected_intervals"],
+            st["unprotected_intervals"])
+    return lab
+
+
+def s15_missing_policy(x):
+    lab, b, c = _new(policy=APPROVED)
+    r = lab.request_entry(SYM, 10, PX, STOP)
+    _expect(x, "no approved execution policy: entry BLOCKED with each unset field named, nothing sent",
+            not r["submitted"] and sum(s.startswith("POLICY UNSET") for s in r["reasons"]) == 8 and not b.submit_calls, r["reasons"])
+    r2 = lab.request_entry(SYM, 10, PX, STOP, source=IntentSource("strategy", "any-strategy", "v1"))
+    _expect(x, "a strategy intent is refused: NO APPROVED ACTIVE STRATEGY", any("NO APPROVED ACTIVE STRATEGY" in s for s in r2["reasons"]),
+            r2["reasons"])
+    rec = lab.reconcile()
+    _expect(x, "risk-reducing work still runs without policy: reconciliation completes", rec["ok"], rec)
+    return lab
+
+
+def s16_manual_mismatch(x):
+    lab, b, c = _new()
+    a = lab.request_entry(SYM, 20, PX, STOP)["order_id"]; b.fill(a, "G1", 20, 100.00); lab.poll()
+    b.manual_trade(SYM, "buy", 5, 100.50)
+    b.manual_order(SYM, "buy", 7)
+    rec = lab.reconcile()
+    kinds = sorted(d["kind"] for d in rec["discrepancies"])
+    _expect(x, "manual activity found: position, foreign order and cash discrepancies; not corrected",
+            kinds == ["cash", "foreign_order", "position"] and lab.state()["positions"][SYM]["qty"] == 20, rec["discrepancies"])
+    r = lab.request_entry(SYM, 1, PX, STOP)
+    _expect(x, "entries blocked while discrepancies are unresolved", not r["submitted"] and
+            any("discrepancies" in s for s in r["reasons"]), r["reasons"])
+    return lab
+
+
+def s17_ack_not_fill(x):
+    lab, b, c = _new()
+    a = lab.request_entry(SYM, 30, PX, STOP)["order_id"]
+    b.ack(a, "q1"); lab.poll()
+    st = lab.state()
+    _expect(x, "acknowledged order: ACCEPTED, 0 filled, no position, 3,000 pending exposure",
+            st["orders"][a].state == L.ACCEPTED and st["orders"][a].filled_qty == 0 and not st["positions"]
+            and st["pending_exposure"] == 3000.0)
+    rec = lab.reconcile()
+    _expect(x, "reconciliation clean: positions and cash agree (broker 100,000.00)", rec["ok"] and rec["broker_cash"] == 100000.0, rec)
+    return lab
+
+
+def s18_missing_at_broker(x):
+    lab, b, c = _new()
+    a = lab.request_entry(SYM, 20, PX, STOP)["order_id"]
+    b.ack(a, "m1"); lab.poll()
+    b.forget(a)                                       # SIMULATION: the broker has no record of this client order id
+    rec = lab.reconcile()
+    o = lab.state()["orders"][a]
+    _expect(x, "reconciliation is NOT complete: the ledger's live order is missing at the broker",
+            not rec["ok"] and any(d["kind"] == "order_missing_at_broker" and d["order_id"] == a for d in rec["discrepancies"]),
+            rec["discrepancies"])
+    _expect(x, "the order is not assumed cancelled or filled: it stays ACCEPTED, 20 shares pending exposure",
+            o.state == L.ACCEPTED and lab.state()["pending_exposure"] == 2000.0, o.state)
+    r = lab.request_entry(SYM, 1, PX, STOP)
+    _expect(x, "new entries blocked until an owner resolves the discrepancy", not r["submitted"] and
+            any("discrepancies" in s for s in r["reasons"]), r["reasons"])
+    _expect(x, "attention lists the discrepancy for owner review",
+            any("order_missing_at_broker" in a2["what"] for a2 in lab.attention()), lab.attention())
+    return lab
+
+
 SCENARIOS = [
     ("s01", "Normal acceptance and fill", s01_normal),
     ("s02", "Broker rejection", s02_reject),
@@ -272,6 +381,12 @@ SCENARIOS = [
     ("s10", "Exposure and daily-loss limits block orders", s10_limits),
     ("s11", "Emergency stop with outstanding orders", s11_estop),
     ("s12", "Broker unavailable during emergency-stop handling", s12_estop_unavailable),
+    ("s13", "Bracket entry partly filled: stop leg held, shares unprotected", s13_bracket_partial),
+    ("s14", "Stop after fill: protect only after a confirmed cancel", s14_stop_after_fill),
+    ("s15", "Missing policy and unapproved strategy refuse entries", s15_missing_policy),
+    ("s16", "Manual account activity: discrepancies shown, not corrected", s16_manual_mismatch),
+    ("s17", "An acknowledgement is not a fill", s17_ack_not_fill),
+    ("s18", "Live order missing at the broker: discrepancy, not completion", s18_missing_at_broker),
 ]
 
 
@@ -317,7 +432,7 @@ def _snapshot(st: dict, events: list[dict]) -> dict:
             "cash": round(st["cash"], 2), "equity": round(st["equity"], 2),
             "positions": {s: v["qty"] for s, v in st["positions"].items()},
             "held_exposure": round(st["held_exposure"], 2), "pending_exposure": round(st["pending_exposure"], 2),
-            "flags": st["flags"]}
+            "flags": st["flags"], "protection": st["protection"], "discrepancies": len(st["discrepancies"])}
 
 
 def run(sid: str) -> dict:
@@ -349,7 +464,31 @@ def run(sid: str) -> dict:
                                                   if o.state == L.BLOCKED],
         "unknown_outcomes": unknown, "unresolved": unresolved, "emergency_stop": rep,
         "broker_submit_calls": dict(lab.broker.submit_calls), "broker_cancel_calls": dict(lab.broker.cancel_calls),
+        "protection": st["protection"], "unprotected_intervals": st["unprotected_intervals"],
+        "discrepancies": st["discrepancies"], "attention": lab.attention(), "policy_label": lab.policy.label,
+        "policy": lab.policy.table(), "intents": _intents(events),
     }
+
+
+def _intents(events: list[dict]) -> list[dict]:
+    """Every intent with its validation outcome, straight from the ledger."""
+    out = {}
+    for e in events:
+        p, oid = e["payload"], e["order_id"]
+        if e["kind"] == "intent_created":
+            out[oid] = {"order_id": oid, "seq": e["seq"], "purpose": p.get("purpose"), "symbol": p.get("symbol"),
+                        "side": p.get("side"), "qty": p.get("qty"), "spec": p.get("spec"),
+                        "source": (p.get("source") or {}).get("kind", "broker leg" if e["source"] == "broker" else "lab"),
+                        "validation": "PENDING", "reasons": []}
+        elif oid in out and e["kind"] == "validated":
+            out[oid]["validation"] = "VALIDATED"
+        elif oid in out and e["kind"] == "blocked":
+            out[oid]["validation"], out[oid]["reasons"] = "BLOCKED", p.get("reasons", [])
+        elif oid in out and e["kind"] == "leg_held":
+            out[oid]["validation"] = "CREATED BY BROKER (HELD)"
+        elif oid in out and e["kind"] == "intent_expired_unsent":
+            out[oid]["validation"] += " · EXPIRED UNSENT"
+    return list(out.values())
 
 
 def run_all() -> list[dict]:
@@ -369,6 +508,38 @@ POLICY_GAPS = [
     "Emergency-stop reset: who may clear it and what must be reconciled first.",
     "Whether the real broker rejects a reused client order id (must be verified in its paper documentation, not assumed).",
     "Detection and handling of manual positions or orders made outside the system.",
+]
+
+
+# What is enforced by code (and where the evidence is) versus proposed, unset or missing. Never infer "enforced" from a
+# document or an animation: each ENFORCED row names the code path and the test that proves it.
+CONTROLS = [
+    {"control": "Order-submission guard (trading.safety: paper mode plus an explicit enable flag)", "status": "ENFORCED",
+     "evidence": "trading/safety.py; the offline order adapter calls it before every write (adapter tests)"},
+    {"control": "No broker-write networking anywhere in trading/", "status": "ENFORCED",
+     "evidence": "only a fixture transport exists; a repository-wide test refuses any HTTP write call (adapter tests)"},
+    {"control": "Approved-strategy gate", "status": "ENFORCED",
+     "evidence": "config/approved_strategies.json is empty: every strategy intent is refused (NO APPROVED ACTIVE STRATEGY)"},
+    {"control": "Execution policy required before any entry", "status": "ENFORCED",
+     "evidence": "every APPROVED field is UNSET, so every real entry is blocked (tests/test_execution_core.py)"},
+    {"control": "Journal before broker call; no resubmission; unknown outcome blocks entries", "status": "ENFORCED (offline simulation)",
+     "evidence": "scenarios s05, s06; fresh-process crash drills (tests/test_execution_recovery.py)"},
+    {"control": "Reconciliation gate (incl. an order the broker has no record of)", "status": "ENFORCED (offline simulation)",
+     "evidence": "scenarios s06, s08, s16; tests/test_execution_core.py"},
+    {"control": "Owner risk baseline (size, exposure incl. pending/unknown, daily loss, drawdown)", "status": "ENFORCED (offline simulation)",
+     "evidence": "trading/risk.py OWNER_BASELINE_2026_11_03 reused unchanged; scenario s10"},
+    {"control": "Maximum unprotected time (A3)", "status": "PROPOSED / UNSET",
+     "evidence": "enforced only with a policy value; the approved value is UNSET, so entries are blocked instead"},
+    {"control": "Unknown-outcome and cancellation escalation timers (A4, A5)", "status": "PROPOSED / UNSET",
+     "evidence": "shown as attention items only; no timer is approved"},
+    {"control": "Emergency stop: block, cancel, confirm, reconcile", "status": "ENFORCED (offline simulation)",
+     "evidence": "scenarios s11, s12; it never reports COMPLETE while anything is unresolved"},
+    {"control": "Emergency exposure action (A6) / automatic liquidation", "status": "UNSET / NOT IMPLEMENTED",
+     "evidence": "no default chosen; no automatic liquidation code exists"},
+    {"control": "Kill switch (trading.operations) checked by the execution core", "status": "NOT CONNECTED",
+     "evidence": "the dry run's kill switch is not read by trading/execution_lab or the adapter (plan C7)"},
+    {"control": "Test-loss limit for a paper test", "status": "NOT DEFINED",
+     "evidence": "owner decision; no code or record defines it"},
 ]
 
 
@@ -396,4 +567,7 @@ def api(sid: str | None = None) -> dict:
                       for r in results],
         "selected": sel,
         "policy_gaps": POLICY_GAPS,
+        "controls": CONTROLS,
+        "approved_policy": __import__("trading.execution_lab.policy", fromlist=["APPROVED"]).APPROVED.table(),
+        "strategy_status": "NO APPROVED ACTIVE STRATEGY",
     }
