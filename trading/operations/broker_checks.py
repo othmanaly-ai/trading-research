@@ -28,22 +28,27 @@ def clock_check(client, now_fn) -> dict:
 
 
 def calendar_agreement(clock: dict, plan, now: datetime) -> tuple[bool, dict]:
-    """Our XNYS calendar against the broker clock. Comparisons within 5 s of the open or close are skipped."""
+    """Our XNYS calendar against the broker clock. Within 5 s of the open or close no comparison is possible; that
+    is reported as not compared (ok=False), never as agreement."""
     ours_open = bool(plan.trading_day and plan.open_utc <= now < plan.close_utc)
     detail = {"ours_open": ours_open, "broker_open": clock["is_open"]}
     if plan.trading_day and min(abs((now - plan.open_utc).total_seconds()),
                                 abs((now - plan.close_utc).total_seconds())) < BOUNDARY_S:
-        return True, {**detail, "compared": False,
-                      "note": "SKIPPED: within 5 s of a boundary; not compared (an explicit assumption, not evidence)"}
+        # Not compared, so not verified: recorded as a failed check ("could not be performed"), never as a pass.
+        # The runner's required comparisons (08:45, 09:25, then every 30 min from 09:55 ET) never fall in this window;
+        # only a start or restart within 5 s of the open or close can.
+        return False, {**detail, "compared": False,
+                       "note": "NOT COMPARED: within 5 s of the open or close, where the broker's open/closed state is "
+                               "ambiguous; no evidence either way"}
     if clock["is_open"] != ours_open:
-        return False, {**detail, "note": "open/closed state disagrees"}
+        return False, {**detail, "compared": True, "note": "open/closed state disagrees"}
     if plan.trading_day and now < plan.open_utc:
         ok = _parse(clock["next_open"]) == plan.open_utc
-        return ok, {**detail, "broker_next_open": clock["next_open"], "ours_open_utc": plan.open_utc.isoformat()}
+        return ok, {**detail, "compared": True, "broker_next_open": clock["next_open"], "ours_open_utc": plan.open_utc.isoformat()}
     if ours_open:
         ok = _parse(clock["next_close"]) == plan.close_utc
-        return ok, {**detail, "broker_next_close": clock["next_close"], "ours_close_utc": plan.close_utc.isoformat()}
-    return True, detail
+        return ok, {**detail, "compared": True, "broker_next_close": clock["next_close"], "ours_close_utc": plan.close_utc.isoformat()}
+    return True, {**detail, "compared": True}
 
 
 def account_check(client) -> tuple[bool, dict]:

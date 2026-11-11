@@ -933,6 +933,23 @@ pipeline -> watch progress -> cancel if needed -> open the report.
 - **Also identified:** `calendar_agreement` skips comparison within 5 s of the open or close and still counts as
   ok. It is now labelled `compared: false`; its result is unchanged, pending an owner decision.
 
+## Calendar agreement and closing evidence clarified (2026-11-11)
+
+- **Calendar:**
+  - My 2026-11-10 note was wrong. The real records hold 26 calendar checks (11-09, 11-10), all compared, none
+    skipped; the first periodic check is 30 minutes after the 09:25 final check.
+  - A comparison that can't be made (within 5 s of the open or close) is now recorded as not compared and
+    **ok=false**, not as agreement. On-time sessions are unaffected.
+- **Closing exposure:**
+  - The 15:55 ET observation proves no positions and no open orders at its recorded time only. It does not cover
+    after the close, or activity between snapshots.
+  - The approved Milestone 1 rules require an after-close report, not an after-close account reconciliation (that is
+    Milestone 3), so acceptance keeps the 15:55 pre-close observation.
+  - An after-close account check would be a new requirement, for the owner to decide.
+- **Tests:** four more in `tests/test_exposure_check.py`, synthetic fixtures.
+- **Fingerprint:** changed again, from `7625e4a30914ef98`, on which no session has run; see the commit. The count was 0
+  of 5.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

@@ -250,3 +250,47 @@ def test_sessions_before_the_correction_keep_their_original_rules(tmp_path):
     rep = report.classify(store, d.date, d.report_utc + timedelta(hours=1))
     assert not any(r.startswith(("I6", "F9")) for r in rep["reasons"])
     assert isinstance(rep["exposure_evidence"], str) and "not required" in rep["exposure_evidence"]
+
+
+# ---------------------------------------------------------------- calendar agreement: compared or not ok
+
+def _clock(now, is_open, plan):
+    return {"is_open": is_open, "next_open": plan.open_utc.isoformat(), "next_close": plan.close_utc.isoformat()}
+
+
+def test_calendar_not_compared_near_a_boundary_is_not_ok():
+    plan = sc.plan_for(EARLY)
+    for t in (plan.open_utc - timedelta(seconds=3), plan.open_utc + timedelta(seconds=2), plan.close_utc - timedelta(seconds=1)):
+        ok, d = bc.calendar_agreement(_clock(t, plan.open_utc <= t < plan.close_utc, plan), plan, t)
+        assert ok is False and d["compared"] is False and "NOT COMPARED" in d["note"]
+
+
+def test_calendar_at_the_final_check_and_in_session_is_a_positive_comparison():
+    plan = sc.plan_for(EARLY)
+    ok, d = bc.calendar_agreement(_clock(plan.final_check_utc, False, plan), plan, plan.final_check_utc)
+    assert ok and d["compared"] is True and d["broker_next_open"] == plan.open_utc.isoformat()
+    t = plan.open_utc + timedelta(minutes=25)
+    ok, d = bc.calendar_agreement(_clock(t, True, plan), plan, t)
+    assert ok and d["compared"] is True and d["broker_next_close"] == plan.close_utc.isoformat()
+    bad = dict(_clock(t, True, plan), next_close=(plan.close_utc + timedelta(hours=3)).isoformat())
+    assert bc.calendar_agreement(bad, plan, t)[0] is False
+
+
+def test_on_time_session_compares_every_calendar_check_and_still_passes(env):
+    tmp, _ = env
+    rep, store = run_session(tmp, lambda clk, plan: FakeBroker(clk, plan))
+    cal = [(c["stage"], json.loads(c["detail_json"])) for c in store.checks_for(str(EARLY)) if c["name"] == "calendar_agreement"]
+    assert cal and all(d["compared"] is True for _, d in cal), cal
+    assert {s for s, _ in cal} >= {"pre_open", "final", "periodic"} and rep["classification"] == "PASS"
+
+
+def test_a_not_compared_periodic_calendar_check_cannot_count_as_verified(env):
+    tmp, _ = env
+    rep, store = run_session(tmp, lambda clk, plan: FakeBroker(clk, plan))
+    run_id = store.runs_for(str(EARLY))[0]["run_id"]
+    plan = sc.plan_for(EARLY)
+    t = plan.open_utc + timedelta(seconds=2)
+    ok, d = bc.calendar_agreement(_clock(t, True, plan), plan, t)
+    store.add_check(run_id, str(EARLY), t.isoformat(), "periodic", "calendar_agreement", ok, True, d)
+    rep = report.classify(store, EARLY, plan.report_utc + timedelta(hours=1))
+    assert rep["classification"] == "INTERRUPTED" and any(r.startswith("N5") and "calendar_agreement" in r for r in rep["reasons"])

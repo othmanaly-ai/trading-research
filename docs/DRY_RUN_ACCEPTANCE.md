@@ -52,10 +52,39 @@ corrected version's fingerprint (`PROGRESS.md`). The five-session count was alre
 The count starts with the first session that runs the committed corrected code. No other requirement or waiting
 period is added.
 
-**Also labelled, not changed.** `calendar_agreement` within 5 s of the open or close is not compared. It is now
-recorded as `compared: false`, "SKIPPED ... an explicit assumption, not evidence". Its pass/fail value is unchanged,
-because the first periodic check falls at 09:30:00 ET. Changing it would turn every on-time session into a failure
-without adding evidence; that would need a separate owner decision.
+**Also labelled, not changed (2026-11-10; SUPERSEDED by the correction below).** `calendar_agreement` within 5 s
+of the open or close is not compared. It is now recorded as `compared: false`, "SKIPPED ... an explicit assumption,
+not evidence". Its pass/fail value is unchanged, because the first periodic check falls at 09:30:00 ET. Changing it
+would turn every on-time session into a failure without adding evidence; that would need a separate owner decision.
+
+**What the 15:55 ET observation proves, and what it doesn't.**
+- **It proves:** at its recorded observation time (seconds after 15:55 ET), the paper account answered from the paper
+  host, was the same account as at the earlier verified observation, and listed no positions and no open orders
+  (including partially filled ones).
+- **It doesn't prove:**
+  - the account state after that moment: an order placed between 15:55 and 16:00 could still fill at the close, and
+    nothing is checked after the close;
+  - that nothing happened between the observations (08:45, 09:25, 15:55): an order opened and closed between two
+    snapshots is not visible to a positions-and-open-orders check.
+- **Why that is acceptable:** the dry run contains no order code (a static test enforces it), so this check guards
+  against outside or manual activity; it is not a full audit.
+- **The approved Milestone 1 requirement** (roadmap, and the rules above) asks for an after-close **report**, not an
+  after-close **account reconciliation**; broker reconciliation belongs to Milestone 3. The after-close step at
+  16:20 ET therefore does not query the broker, and acceptance uses the 15:55 observation as a **pre-close
+  observation**.
+- **Adding an after-close account check would be a new requirement**, which needs an owner decision. It would not
+  need any extra waiting: the runner is already running at 16:20 ET.
+
+**Calendar agreement: corrected 2026-11-11.** The superseded note above was wrong. It said the first
+periodic check falls at 09:30:00 ET, so the 5-second boundary skip would affect every session. In fact:
+- The first periodic check runs 30 minutes after the 09:25 ET final check, at 09:55 ET.
+- The real records of 2026-11-09 and 2026-11-10 hold 26 calendar checks, **all actually compared, none skipped**:
+  pre-open or late start, the 09:25 final check, then every 30 minutes.
+- A comparison within 5 s of the open or close (possible only for a start or restart at that moment) is now recorded
+  as **not compared, ok=false**. Under the existing rules (N4 for the final check, N5 for a periodic check) it cannot
+  count as verified.
+- On-time sessions are unaffected. Their required comparisons are positive: at 08:45 and 09:25, the broker's next
+  open equals the XNYS open; in session, both sides are open and the broker's next close equals the XNYS close.
 
 ## Principle: missing evidence is never a pass
 
