@@ -73,7 +73,9 @@ def test_only_paper_and_data_hosts_allowed():
 def test_client_has_no_order_methods():
     public = {n for n in dir(ReadOnlyAlpacaClient) if not n.startswith("_")}
     assert public == {"get_account", "get_bars", "get_bars_multi", "get_quotes", "get_corporate_actions",
-                      "get_quote_conditions", "get_clock"}
+                      "get_quote_conditions", "get_clock",
+                      # read-only exposure evidence for the dry run (owner-authorized, 2026-11-10)
+                      "get_account_identity", "get_positions", "get_open_orders"}
     assert all(n.startswith("get_") for n in public)          # read-only: GET methods only
 
 

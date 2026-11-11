@@ -2,9 +2,12 @@
 
 This class can only send HTTP GET requests, and only to the paper trading host
 and the market-data host. It has no method that submits, replaces, cancels or
-closes orders or positions, or changes account settings.
+closes orders or positions, or changes account settings. Position and open-order
+reads exist only so the dry run can verify, with broker evidence, that it holds
+no exposure.
 """
 
+import hashlib
 import os
 import time
 from pathlib import Path
@@ -96,6 +99,31 @@ class ReadOnlyAlpacaClient:
     def get_account(self) -> dict:
         raw = self._get(PAPER_TRADING_URL, "/v2/account")
         return {k: raw.get(k) for k in ACCOUNT_FIELDS}
+
+    def get_account_identity(self) -> dict:
+        """Which environment and account answered (GET /v2/account), without storing identifiers: the trading host
+        actually queried and a short one-way reference (first 12 hex digits of SHA-256 of the account id)."""
+        raw = self._get(PAPER_TRADING_URL, "/v2/account")
+        aid = raw.get("id")
+        ref = hashlib.sha256(str(aid).encode()).hexdigest()[:12] if aid else None
+        return {"environment_host": PAPER_TRADING_URL, "account_ref": ref}
+
+    def get_positions(self) -> list:
+        """Open positions (GET /v2/positions), reduced to symbol, qty and side. Read-only."""
+        raw = self._get(PAPER_TRADING_URL, "/v2/positions")
+        if not isinstance(raw, list):
+            raise ValueError("positions response is not a list")
+        return [{k: x.get(k) for k in ("symbol", "qty", "side")} if isinstance(x, dict) else x for x in raw]
+
+    def get_open_orders(self, limit: int = 500) -> list:
+        """Open orders, including partially filled and pending ones (GET /v2/orders?status=open), reduced to
+        symbol, side, qty, filled_qty, status and type. No order ids are returned. Read-only."""
+        raw = self._get(PAPER_TRADING_URL, "/v2/orders", {"status": "open", "limit": limit, "nested": "true",
+                                                          "direction": "desc"})
+        if not isinstance(raw, list):
+            raise ValueError("orders response is not a list")
+        return [{k: x.get(k) for k in ("symbol", "side", "qty", "filled_qty", "status", "type")}
+                if isinstance(x, dict) else x for x in raw]
 
     def get_clock(self) -> dict:
         """Broker market clock (GET /v2/clock): timestamp, is_open, next_open, next_close. Read-only."""

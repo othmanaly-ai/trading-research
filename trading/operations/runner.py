@@ -2,8 +2,8 @@
 
 It follows the XNYS session clock, runs the pre-open checks, records one entry-permission decision per
 minute (always denied in DRY_RUN, with every reason), checks the broker clock every 30 minutes,
-confirms the closing phase holds no exposure, and writes the after-close report. It contains no order
-code. Past decisions are never replayed: a minute the runner was not awake for stays missing.
+verifies at the closing phase, by read-only broker evidence (positions and open orders), that the paper
+account holds no exposure, and writes the after-close report. It contains no order code. Past decisions are never replayed: a minute the runner was not awake for stays missing.
 Ctrl+C stops it cleanly (the session is then INTERRUPTED).
 """
 
@@ -103,10 +103,29 @@ class Runner:
     def _preflight(self, stage, plan):
         self.last_clock_attempt = self.now()
         items = checks.local_checks(self.store, self.approvals_path, self.monitor_db, self.now())
-        bitems, clock = checks.broker_checks(self.client_factory, plan, self.now)
+        bitems, clock = checks.broker_checks(self.client_factory, plan, self.now, self._session_account_ref())
         if clock is not None:
             self.last_clock = (self.now(), clock["ok"])
         return self._record_checks(stage, items + bitems)
+
+    def _session_account_ref(self):
+        """The account reference first observed by broker evidence this session (None if none yet)."""
+        for c in self.store.checks_for(self.d):
+            if c["name"] == "exposure_none":
+                ref = json.loads(c["detail_json"] or "{}").get("account_ref")
+                if ref:
+                    return ref
+        return None
+
+    def _closing_exposure(self):
+        """Broker evidence that the account holds no positions and no open orders. Never assumed."""
+        from trading.operations import broker_checks as bc
+        try:
+            client = self.client_factory()
+        except Exception as exc:                       # missing credentials or anything else: unverifiable
+            return False, {"verified": False, "status": bc.UNVERIFIABLE, "observed_from_utc": self.now().isoformat(),
+                           "reason": f"broker client unavailable: {type(exc).__name__}"}
+        return bc.exposure_check(client, self.now, self._session_account_ref())
 
     def _periodic(self, plan):
         self.last_clock_attempt = self.now()           # schedules the next attempt even if this one fails
@@ -226,8 +245,8 @@ class Runner:
                                             f"(+{len(perm.reasons) - 1} more reasons)")
                             last_minute = minute
                     elif ph == sc.CLOSING and not closing_done:
-                        self._record_checks("closing", [("exposure_none", True, False,
-                                                         {"note": "DRY_RUN holds no positions and contains no order code"})])
+                        ok, det = self._closing_exposure()
+                        self._record_checks("closing", [("exposure_none", ok, True, det)])
                         closing_done = True
                     elif ph == sc.REPORT_DUE:
                         self._event("info", "after_close", "after-close step reached; writing the report")

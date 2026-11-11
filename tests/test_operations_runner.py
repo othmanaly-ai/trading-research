@@ -60,6 +60,20 @@ class FakeBroker:
     def get_account(self):
         return {"status": "ACTIVE", "trading_blocked": False, "account_blocked": False, "cash": "SYNTHETIC"}
 
+    # read-only exposure evidence (SYNTHETIC): an empty paper account unless a test sets positions/orders
+    positions: list = []
+    orders: list = []
+    account_ref = "0123456789ab"
+
+    def get_account_identity(self):
+        return {"environment_host": "https://paper-api.alpaca.markets", "account_ref": self.account_ref}
+
+    def get_positions(self):
+        return list(self.positions)
+
+    def get_open_orders(self, limit=500):
+        return list(self.orders)
+
 
 @pytest.fixture
 def env(tmp_path, monkeypatch):

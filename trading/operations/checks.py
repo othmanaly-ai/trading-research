@@ -52,8 +52,9 @@ def local_checks(store, approvals_path: Path, monitor_db: Path, now) -> list[tup
     return out
 
 
-def broker_checks(client_factory, plan, now_fn) -> tuple[list, dict | None]:
-    """credentials -> clock skew -> calendar agreement -> account status. Returns (checks, clock)."""
+def broker_checks(client_factory, plan, now_fn, expected_ref: str | None = None) -> tuple[list, dict | None]:
+    """credentials -> clock skew -> calendar agreement -> account status -> exposure. Returns (checks, clock).
+    Exposure (no positions, no open orders) is broker evidence only; any failure to obtain it is a failed check."""
     from trading.operations import broker_checks as bc
     out, clock = [], None
     try:
@@ -74,4 +75,6 @@ def broker_checks(client_factory, plan, now_fn) -> tuple[list, dict | None]:
         out.append(("account_status", ok, True, det))
     except Exception as exc:
         out.append(("account_status", False, True, {"error": f"{type(exc).__name__}: {str(exc)[:200]}"}))
+    ok, det = bc.exposure_check(client, now_fn, expected_ref)
+    out.append(("exposure_none", ok, True, det))
     return out, clock

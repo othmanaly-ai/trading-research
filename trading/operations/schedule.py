@@ -3,7 +3,7 @@
 Regular day (times shift with early closes; DST is handled by the exchange calendar):
     PRE_OPEN_CHECKS   08:45 -> 09:30 ET   (final pre-open check at 09:25)
     DECISION_WINDOW   09:30 -> 15:55 ET   (one entry-permission decision per minute)
-    CLOSING           15:55 -> 16:00 ET   (exposure check; DRY_RUN has none)
+    CLOSING           15:55 -> 16:00 ET   (exposure check: broker evidence of no positions/orders)
     AFTER_CLOSE       16:00 -> 16:20 ET   (waits for the 15-min SIP delay + 5-min margin)
     REPORT_DUE        from 16:20 ET
 With no approved strategy, the decision window is the whole session up to the closing phase.

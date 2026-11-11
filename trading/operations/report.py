@@ -19,6 +19,17 @@ WORKER_ALIVE_MIN_SHARE = 0.95
 CLOCK_CHECK_EVERY_S = 1800
 STREAK_REQUIRED = 5
 SAFETY_CHECK_CODES = {"order_guard_disabled": "F3", "environment_dry_run": "F4", "runtime_outside_onedrive": "F5"}
+# Owner-authorized correction (2026-11-10): the closing "no exposure" check used to be recorded as passed without asking
+# the broker. From this session date on, broker evidence is required (F9 / I6 / N4); earlier sessions keep the
+# classification they had under the original rules and are never relabelled.
+EXPOSURE_EVIDENCE_FROM = date(2026, 11, 11)
+PAPER_HOST = "https://paper-api.alpaca.markets"
+
+
+def _verified_none(x: dict) -> bool:
+    """Same test as broker_checks.verified_none (kept here: this module imports no broker code)."""
+    return (x.get("verified") is True and x.get("status") == "VERIFIED_NONE" and x.get("environment_host") == PAPER_HOST
+            and bool(x.get("account_ref")))
 
 
 def _p(s):
@@ -82,6 +93,40 @@ def classify(store, d: date, now: datetime) -> dict:
     if not all(g.get("operations_code_committed") for g in gits):
         inc.append("I5 operations code at run time was not exactly a committed version; evidence not tied to a commit")
 
+    # ---- broker exposure evidence (sessions from EXPOSURE_EVIDENCE_FROM)
+    exposure = []
+    if d >= EXPOSURE_EVIDENCE_FROM:
+        exp = [(c, json.loads(c["detail_json"] or "{}")) for c in checks if c["name"] == "exposure_none"]
+        exposure = [{"stage": c["stage"], "ts_utc": c["ts_utc"], "ok": bool(c["ok"]), "status": x.get("status"),
+                     "account_ref": x.get("account_ref"), "reason": x.get("reason"),
+                     "positions": x.get("positions"), "open_orders": x.get("open_orders")} for c, x in exp]
+        found = [x for _, x in exp if x.get("status") == "EXPOSURE_FOUND"]
+        if found:
+            fail.append(f"F9 unexpected exposure at the broker in {len(found)} check(s): {found[0].get('reason')} "
+                        "(nothing was closed or cancelled; owner review required)")
+        finals_all = [c for c in checks if c["stage"] == "final"]
+        if finals_all and not any(c["name"] == "exposure_none" for c in finals_all):
+            intr.append("N4 final pre-open exposure check not recorded")
+        reached_close = any(e["kind"] == "after_close" for e in events) or any(c["stage"] == "closing" for c in checks)
+        closing = [(c, x) for c, x in exp if c["stage"] == "closing"]
+        if reached_close:
+            if not closing:
+                inc.append("I6 no closing exposure evidence recorded")
+            else:
+                c, x = closing[-1]
+                if not (c["ok"] and _verified_none(x)):
+                    if x.get("status") != "EXPOSURE_FOUND":
+                        inc.append("I6 closing exposure not verified by broker evidence: "
+                                   + (x.get("reason") or "no broker observation recorded (a local assertion is not evidence)"))
+                elif _p(x["observed_from_utc"]) < plan.closing_utc:
+                    inc.append("I6 closing exposure evidence predates the closing phase (stale)")
+                else:
+                    first = next((y for cc, y in exp if cc["stage"] in ("pre_open", "final", "late_start") and _verified_none(y)), None)
+                    if first is None:
+                        inc.append("I6 account unverifiable: no earlier broker observation this session to compare with")
+                    elif first["account_ref"] != x["account_ref"]:
+                        inc.append("I6 account at closing differs from the account observed earlier this session")
+
     # ---- INTERRUPTED
     recorded = {x["minute_utc"] for x in decisions}
     missing = [m for m in expected if m not in recorded]
@@ -128,6 +173,8 @@ def classify(store, d: date, now: datetime) -> dict:
                              "operations_code_committed": all(g.get("operations_code_committed") for g in gits),
                              "fingerprints": sorted({r["code_fingerprint"] for r in runs})},
             "final_preopen_checks": [{k: c[k] for k in ("name", "ok", "dependency", "detail_json")} for c in finals],
+            "exposure_evidence": exposure if d >= EXPOSURE_EVIDENCE_FROM else
+            "not required for sessions before 2026-11-11 (original rules; the closing check was a recorded assumption)",
             "decisions": {"expected": len(expected), "recorded": len(decisions), "missing": len(missing),
                           "allowed": len(allowed), "denied": len(decisions) - len(allowed),
                           "reason_tallies": dict(tallies.most_common())},

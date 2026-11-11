@@ -105,10 +105,10 @@ Prefix each with `.venv\Scripts\` when running from PowerShell.
 | When | Checks |
 |---|---|
 | Start | order guard disabled and `TRADING_MODE=paper`; environment DRY_RUN; records outside OneDrive. **Any failure: the runner refuses (a FAIL).** |
-| 08:45 and 09:25 ET | records writable, disk at least 1 GB free, approvals file readable, kill switch readable, monitor worker alive, credentials present (names only), broker clock skew 2 s or less, calendar agrees with the broker clock, paper account ACTIVE and not blocked |
+| 08:45 and 09:25 ET | records writable, disk at least 1 GB free, approvals file readable, kill switch readable, monitor worker alive, credentials present (names only), broker clock skew 2 s or less, calendar agrees with the broker clock, paper account ACTIVE and not blocked, no positions and no open orders by broker evidence |
 | Every minute, 09:30-15:55 ET | entry permission with all reasons: environment, approvals (re-read each minute), phase, data freshness and suitability, risk state, kill switch, clock, records |
 | Every 30 min | broker clock skew and calendar agreement |
-| 15:55 ET | closing: confirms no exposure (DRY_RUN holds none) |
+| 15:55 ET | closing: broker evidence (read-only GETs) of no positions and no open orders; anything else is F9 or I6 (amendment 2026-11-10 in `docs/DRY_RUN_ACCEPTANCE.md`) |
 | 16:20 ET | after-close report and classification |
 
 ## Persistent background operation: PROPOSED, not installed

@@ -903,6 +903,36 @@ pipeline -> watch progress -> cancel if needed -> open the report.
 - **Not done:** no broker connection, no order capability, no strategy. The open policy decisions are listed in
   `docs/EXECUTION_LAB.md`.
 
+## Dry-run "no exposure" check made truthful (2026-11-10, owner-authorized correction)
+
+- **Defect:**
+  - The 15:55 ET closing check `exposure_none` was recorded as passed without asking the broker. The note read
+    "DRY_RUN holds no positions and contains no order code".
+  - The session classification ignored closing checks.
+  - The runner's description and `docs/OPERATIONS.md` claimed it "confirms no exposure".
+- **Correction:** read-only broker evidence covering the paper account identity (host plus a one-way account
+  reference), positions, and open orders including partially filled ones, with the observation time.
+  - It runs at 08:45, 09:25 (and late start) and 15:55 ET.
+  - New reasons for sessions from 2026-11-11: F9 (exposure found), I6 (closing exposure unverified), N4 extended.
+  - The client gained three GET-only methods: `get_account_identity`, `get_positions`, `get_open_orders`.
+  - Earlier sessions are not relabelled.
+- **Tests:** `tests/test_exposure_check.py`, 31 tests on synthetic fixtures, covering:
+  - an empty account;
+  - a position;
+  - open and partially filled orders;
+  - the broker unavailable;
+  - malformed and incomplete responses;
+  - a wrong environment or account;
+  - stale evidence;
+  - a local assertion plus a fresh heartbeat, which does not pass.
+- **Verified (real, read-only):** 2026-11-11 00:21:43 UTC, paper account `df0ca3cbd37a`: VERIFIED_NONE, 0 positions,
+  0 open orders.
+- **Fingerprint:** before `461c31297c5a6c1e` (no session ran on it); after, see the commit.
+  - Acceptance before the correction: 0 of 5 (11-09 INTERRUPTED, 11-10 INCOMPLETE), so no counted session is lost.
+  - The count starts with the first session on the committed corrected code.
+- **Also identified:** `calendar_agreement` skips comparison within 5 s of the open or close and still counts as
+  ok. It is now labelled `compared: false`; its result is unchanged, pending an owner decision.
+
 ## Missing
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca

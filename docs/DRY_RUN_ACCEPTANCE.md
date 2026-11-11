@@ -10,6 +10,53 @@ involved.
 **Implemented in:** `trading/operations/report.py` (`classify`, `acceptance`). Tests:
 `tests/test_operations_runner.py`.
 
+## Amendment 2026-11-10: broker evidence for "no exposure" (owner-authorized correction)
+
+**Defect found.** Until this amendment, the closing step at 15:55 ET recorded `exposure_none` as passed with the note
+"DRY_RUN holds no positions and contains no order code". It never asked the broker, and the classification below did
+not look at closing checks at all. The runner's description ("confirms the closing phase holds no exposure") and
+`docs/OPERATIONS.md` claimed a verification that did not happen.
+
+**Correction.** The owner authorized this correction on 2026-11-10, knowing it changes the operations fingerprint.
+- `exposure_none` is now read-only broker evidence: the paper account's identity (trading host plus a 12-digit
+  one-way account reference), its positions, and its open orders, including partially filled ones. The observation
+  time is recorded.
+- It runs at the 08:45 and 09:25 ET checks (and at a late start) as a dependency check, and again at 15:55 ET.
+- **VERIFIED_NONE** is the only passing result.
+- **EXPOSURE_FOUND** lists what was found. Nothing is closed or cancelled.
+- **UNVERIFIABLE** covers missing credentials, a failed request, a malformed or incomplete response (a full
+  open-order page), a slow observation, a wrong environment, or an account that differs from the one observed
+  earlier in the session.
+
+**New reasons (for sessions dated 2026-11-11 and later):**
+- **F9** Unexpected exposure found at the broker in any check (positions or open orders). DRY_RUN must hold none;
+  owner review required.
+- **I6** The runner reached the closing step, but the closing exposure was not verified by broker evidence:
+  - no closing record;
+  - a record without a broker observation (a local assertion is not evidence);
+  - UNVERIFIABLE;
+  - an observation taken before the closing phase;
+  - no verified observation earlier in the session to compare the account with;
+  - the account differs from the earlier observation.
+- **N4** (extended) The final pre-open exposure check failed or was not recorded.
+- **PASS** additionally requires item 9: a VERIFIED_NONE exposure observation at the closing phase, for the same
+  account as the earlier verified observation in that session.
+
+**Records before this amendment are not relabelled.** Sessions dated before 2026-11-11 keep the classification they
+had under the original rules. Their closing check stays what it was: a recorded assumption, not evidence. This does
+not weaken anything: before the amendment no session had passed (2026-11-09 INTERRUPTED, 2026-11-10 INCOMPLETE;
+streak 0 of 5).
+
+**Effect on the count.** The fingerprint changed from `461c31297c5a6c1e`, on which no session had run, to the
+corrected version's fingerprint (`PROGRESS.md`). The five-session count was already 0, so no counted session is lost.
+The count starts with the first session that runs the committed corrected code. No other requirement or waiting
+period is added.
+
+**Also labelled, not changed.** `calendar_agreement` within 5 s of the open or close is not compared. It is now
+recorded as `compared: false`, "SKIPPED ... an explicit assumption, not evidence". Its pass/fail value is unchanged,
+because the first periodic check falls at 09:30:00 ET. Changing it would turn every on-time session into a failure
+without adding evidence; that would need a separate owner decision.
+
 ## Principle: missing evidence is never a pass
 
 - A session is PASS only if positive evidence for every requirement below exists in the records.
@@ -83,6 +130,8 @@ counted.
 6. The monitoring worker was alive in at least 95% of decision minutes.
 7. The runner reached the after-close step, and the report reconciles with the records.
 8. No FAIL, INCOMPLETE or INTERRUPTED reason applies.
+9. (From 2026-11-11, see the amendment) A VERIFIED_NONE broker exposure observation at the closing phase, for
+   the same account as the earlier verified observation that session.
 
 **Allowed, and not counted against a PASS:**
 - The kill switch being ON (an owner drill): it only adds a denial reason.
