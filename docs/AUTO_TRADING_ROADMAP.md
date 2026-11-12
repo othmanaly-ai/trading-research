@@ -65,7 +65,7 @@ Starting automatically must never mean trading automatically: most days, the cor
 | Strategy closure guards | `trading/experiment.py` / `orb_experiment.py` refuse closed experiments; `STATUS.json` CLOSED for 001 and 002 | Tested | The operations layer must refuse closed, failed, deferred or mismatched strategies itself |
 | Risk sizing and limits | `trading/risk.py`: `size_position`, `RiskState`, `OWNER_BASELINE_2026_11_03` | Tested; used in real-data simulations (001, 002) | Persistent state, broker-based equity, partial fills, manual positions (section F, risk mapping) |
 | Simulation engine | `trading/engine.py` (`SessionStrategy`, `execute_plan`), `trading/backtest.py` | Tested; verified on real development data | A forward (live-bar) adapter for shadow decisions (Milestone 2) |
-| Cost model | `trading/costs.py` (base 2.3 bp, stress 6.6, severe 9.6 round trip) | Implemented. The spread component is provisionally conservative (`feasibility/spread_measurement/FINDINGS_pilot.md`). Slippage and fees are unmeasured. | Measured slippage, which needs fills: paper fills are a partial proxy at best |
+| Cost model | `trading/costs.py` (base 2.3 bp, stress 6.6, severe 9.6 round trip) | Implemented. The spread component is provisionally conservative (`feasibility/spread_measurement/FINDINGS_pilot.md`). Slippage and fees are unmeasured. | Measured slippage, which needs real-money fills. Paper fills are simulated and cannot establish it (corrected 2026-11-11: paper fills test order handling and Alpaca's simulated execution; they cannot establish real-world slippage) |
 | Event records and ledger | `trading/events.py` (modes DEMO_REPLAY, HISTORICAL_REPLAY); `trading/dashboard/ledger.py`; `trading/journal.py` | Tested; verified on demo and historical data | An operations record store with DRY_RUN / SHADOW / PAPER modes and source/receipt/decision/submit/fill timestamps |
 | Dashboard | `trading/dashboard/server.py` (127.0.0.1 only; no broker code; no credentials); real-record views; depmap | Verified in the browser. **Running:** a listener on 127.0.0.1:8765 (this session) | An "Operations" table view: mode, approved strategy, feed, freshness, reconciliation, entry permission and reasons |
 | Dependency map | `trading/dashboard/depmap.py`, `docs/DEPENDENCY_MAP.md`; "no execution path" by rule | Tested | Operations nodes (runner, gate), still with no execution node until Milestone 3 |
@@ -333,7 +333,7 @@ entries can be considered. Halts, kill switches and owner-only blocks survive re
 
 | Item | Content |
 |---|---|
-| **Deliverable** | A written review: paper vs shadow vs backtest behaviour; fill quality and slippage on paper (with paper-fill caveats); operational incidents; unresolved limitations |
+| **Deliverable** | A written review: paper vs shadow vs backtest behaviour; paper order handling and simulated fill behaviour (not real-world slippage (corrected 2026-11-11: paper fills test order handling and Alpaca's simulated execution; they cannot establish real-world slippage)); operational incidents; unresolved limitations |
 | **Acceptance** | Every figure is traceable to records. Paper results are never labelled real-money profit. |
 | **Decisions** | Continue, revise (a new spec version, a new lock) or stop |
 

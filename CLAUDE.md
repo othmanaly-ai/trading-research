@@ -115,7 +115,12 @@ Exit codes for the data check: 0 = success, 1 = API refused or failed, 2 = no cr
 - `trading/experiment.py` enforces the period lock and variant budget. Never bypass it,
   never run the final period without explicit owner approval, and never edit
   `research/*/variants.csv` except by appending through the runner.
-- Risk values in `trading/risk.py` are placeholders until the owner sets them (SPEC D1).
+- Risk limits: the owner set them on 2026-11-03 (SPEC D1), as `OWNER_BASELINE_2026_11_03` in
+  `trading/risk.py`, used by experiments 001 (v1.3 lock) and 002: $100,000 start, 0.10% risk per
+  trade incl. modeled costs, 0.50% daily loss, 3% drawdown halt, 5% notional per position, 10% gross
+  exposure, 2 positions, no leverage. The `RiskLimits` class defaults are still placeholders
+  (`placeholder=True`); never use them for an evaluation. Changing the limits needs an owner
+  decision and breaks the experiment locks.
 - Experiment lock: `research/001_intraday_momentum/EXPERIMENT_LOCK.json`
   (`python -m trading.experiment_lock` checks it).
   - Any change to the spec file, costs, periods, budget, pass rules or risk limits breaks the

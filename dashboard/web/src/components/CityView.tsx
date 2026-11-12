@@ -661,11 +661,15 @@ export default function CityView(props: Props) {
     frame = requestAnimationFrame(loop);
     // Pause all rendering while the tab is hidden (backend monitoring is unaffected: it runs in
     // the worker process, and the page's own polling is separate from this loop).
+    // The same applies while another city workspace (Website Agency) is shown in this tab.
     const onVisibility = () => {
-      if (document.hidden) { cancelAnimationFrame(frame); frame = 0; }
+      const hidden = document.hidden || document.documentElement.dataset.workspace === "agency";
+      if (hidden) { cancelAnimationFrame(frame); frame = 0; }
       else if (!frame) { last = performance.now(); needs = true; frame = requestAnimationFrame(loop); }
     };
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("workspace-change", onVisibility);
+    onVisibility();
 
     const setEdges = (e: EdgeSpec[] | null) => { extEdges = e; rebuildLinks(); needs = true; };
     api.current = { sync, focus, hover: setHover, setEdges };
@@ -678,6 +682,7 @@ export default function CityView(props: Props) {
     return () => {
       cancelAnimationFrame(frame);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("workspace-change", onVisibility);
       ro.disconnect();
       el.removeEventListener("city-reset", onReset);
       ld.removeEventListener("pointerdown", onDown);

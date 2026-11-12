@@ -64,6 +64,9 @@ HOST = "127.0.0.1"
 # Read-only preview (`--read-only-preview`): a second viewing instance that refuses every state-changing request
 # except the in-memory demo replay controls, and reads the monitoring store through in-memory snapshots.
 READ_ONLY_PREVIEW = False
+# The separate Website Agency board (WebsiteAgencyCity, own server and data) shown by the city
+# workspace switcher. The page may frame it and read its /api/health; nothing else is shared.
+AGENCY_ORIGINS = "http://127.0.0.1:4310 http://localhost:4310"
 WEB_DIST = Path(__file__).resolve().parents[2] / "dashboard" / "web" / "dist"
 RESPONSIBILITIES = Path(__file__).resolve().parents[2] / "research" / "responsibilities.json"
 JOBS_DB = Path(__file__).resolve().parents[2] / "data" / "jobs" / "jobs.sqlite"
@@ -472,7 +475,8 @@ def make_handler(ctrl: ReplayController, history_root: Path = HISTORY_DIR):
             self.send_header("Content-Type", ctype)
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Content-Security-Policy",
-                             "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:")
+                             "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+                             f"frame-src {AGENCY_ORIGINS}; connect-src 'self' {AGENCY_ORIGINS}; frame-ancestors 'none'")
             self.send_header("Cache-Control", "no-store")
             if length is not None:
                 self.send_header("Content-Length", str(length))

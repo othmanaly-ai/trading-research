@@ -59,7 +59,7 @@ def _no_network(event, args):
         raise RuntimeError("crash drill: network access is refused")
 
 
-def _open(d: Path, restart: bool):
+def _open(d: Path, restart: bool, port_factory=None):
     from trading.execution_lab import ledger as L
     from trading.execution_lab.fake_broker import FakeBroker
     from trading.execution_lab.lab import Clock, Lab, LabConfig
@@ -69,7 +69,8 @@ def _open(d: Path, restart: bool):
     t += timedelta(seconds=1)
     clock_file.write_text(t.isoformat())
     broker = FakeBroker.load(str(d / "broker.json")) if (d / "broker.json").exists() else FakeBroker().save_to(str(d / "broker.json"))
-    lab = Lab(L.Ledger(str(d / "ledger.sqlite")), broker, Clock(t), LabConfig(), restart=restart, policy=LAB_TEST_POLICY)
+    port = port_factory(broker) if port_factory else broker      # another broker port over the same durable broker
+    lab = Lab(L.Ledger(str(d / "ledger.sqlite")), port, Clock(t), LabConfig(), restart=restart, policy=LAB_TEST_POLICY)
     return lab, broker
 
 
@@ -85,10 +86,10 @@ def _summary(lab, broker) -> dict:
             "events": len(lab.ledger.events())}
 
 
-def run_step(d: Path, step: str) -> dict:
+def run_step(d: Path, step: str, port_factory=None) -> dict:
     sys.addaudithook(_no_network)
     restart = step not in ("init",) and (d / "ledger.sqlite").exists() and step in ("restart_reconcile",)
-    lab, broker = _open(d, restart)
+    lab, broker = _open(d, restart, port_factory)
     cid = "lab-synthetic-v1:2030-06-03:0001"
     out = {"step": step}
     if step == "init":
@@ -121,7 +122,7 @@ def run_step(d: Path, step: str) -> dict:
 
 # ---------------------------------------------------------------- a whole drill (each step = fresh process)
 
-def run_drill(name: str, d: Path) -> dict:
+def run_drill(name: str, d: Path, port: str = "fake", module: str = "trading.execution_lab.crashdrill") -> dict:
     steps = []
     for step, crash in DRILLS[name]["steps"]:
         # an allowlist of system variables only: no credentials of any kind reach the drill processes
@@ -129,7 +130,7 @@ def run_drill(name: str, d: Path) -> dict:
                                          "PATHEXT", "WINDIR") if os.getenv(k) is not None}
         if crash:
             env["XLAB_CRASH_AT"] = crash
-        p = subprocess.run([sys.executable, "-m", "trading.execution_lab.crashdrill", "step", "--dir", str(d), "--step", step],
+        p = subprocess.run([sys.executable, "-m", module, "step", "--dir", str(d), "--step", step],
                            env=env, capture_output=True, text=True, timeout=120,
                            cwd=str(Path(__file__).resolve().parents[2]))
         rec = {"step": step, "crash_at": crash, "exit_code": p.returncode}
@@ -139,7 +140,9 @@ def run_drill(name: str, d: Path) -> dict:
             rec["stderr_tail"] = p.stderr.strip().splitlines()[-3:]
         steps.append(rec)
     final = steps[-1].get("summary", {})
-    return {"drill": name, "title": DRILLS[name]["title"], "steps": steps, "final": final,
+    label = "" if port == "fake" else f" [{port}]"
+    return {"drill": name if port == "fake" else f"{name}@{port}", "port": port,
+            "title": DRILLS[name]["title"] + label, "steps": steps, "final": final,
             "checks": check(name, steps)}
 
 

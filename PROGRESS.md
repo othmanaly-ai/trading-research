@@ -1,8 +1,86 @@
 # Progress record
 
-Last updated: 2026-11-03 (checks run around 21:30 UTC; strategy spec drafted later the same day).
+Last updated: 2026-11-08. The current-status summary below was written from the records listed
+in it. The dated log further down is kept as history.
 
-## Verified (ran it and saw the result)
+## Current status (2026-11-08)
+
+**In one sentence:** the research system works and its data access is verified. Both strategies
+tested so far failed at the development stage. No strategy is approved, and nothing here is
+evidence of profit.
+
+### Verified: run, and the result observed
+
+| Area | What is verified | Evidence (dated log section) |
+|---|---|---|
+| Alpaca read-only access (paper) | Account read; SPY SIP daily and 1-minute bars; IEX real-time; delayed SIP at a 20-min boundary | "Alpaca read-only access VERIFIED" (2026-11-03), re-run 2026-11-04; monitoring sections |
+| Order safety | Order guard blocks (`TRADING_MODE=paper`, `ORDER_SUBMISSION_ENABLED=false`); client is GET-only; host allowlist | Guard called directly; tests |
+| Historical data store | 1,511 of 1,511 development sessions (2016-2021 SPY SIP) stored with provenance; validation and final never retrieved | "Development evaluation of 001" |
+| Research pipeline | Locked experiments, period lock, variant budget, attempt log, closed-experiment refusal; engine accounting checked trade by trade for 001 | 001 and 002 results; tests |
+| Risk controls (simulation) | Owner baseline limits enforced in the engine: per-trade, daily (within-day), drawdown halt, notional, exposure | "Owner risk baseline", "Spec v1.3 locked" |
+| Research-job pipeline and control panel | Reconcile/report jobs, dedupe, cancel, restart; both experiments reconcile with 0 discrepancies | "Research-job control panel" |
+| Read-only market monitoring | Separate worker, crash recovery, daily evidence reports, IEX vs delayed-SIP comparison | Monitoring sections (2026-11-04) |
+| City dashboard | Real-record views (overview, monitor, jobs, research, dependencies) and DEMO replay views, kept separate; checked in the built-in browser | City sections (2026-11-05) |
+| Offline tests | `pytest -q`: 311 passed, 4 warnings, 0 failed (run 2026-11-08, includes uncommitted working-tree changes) | This update |
+
+### Failed experiments (closed; validation and final data untouched)
+
+| Experiment | Result | Main reason | Record |
+|---|---|---|---|
+| 001 intraday momentum (v1.3, `001-fd13f1fdef`) | FAILED_DEVELOPMENT: net -1.41% at base costs; -0.50% even at zero cost; 10th percentile of random entry | No predictive relation: the signal picked slightly worse-than-average days | `research/001_intraday_momentum/RESULTS_development.md` |
+| 002 opening-range breakout (v1.0, `002-895a4f9c5d`) | FAILED_DEVELOPMENT: net -0.014% at base, -2.19% at stress; 83rd percentile of random entry (95th required) | A small pre-cost edge (about +2.3 bp per trade), equal to the base cost (2.3 bp round trip) | `research/002_opening_range_breakout/RESULTS_development.md` |
+
+A plain-English comparison and the recommended next task: `research/FAILURE_COMPARISON_001_002.md`.
+
+### Blockers
+
+- **Gap-down candidate: DEFERRED_DATA_SEMANTICS.** Not failed, and never evaluated.
+  - The quote timestamp clock, the `?` condition code, the NBBO construction, locked/crossed
+    meaning and known corrections are undocumented.
+  - Downloads are blocked in code.
+  - Resuming needs written answers to A1-A5 in
+    `feasibility/execution_data/ALPACA_SUPPORT_REQUEST_DRAFT.md` (unsent; sending it is the owner's
+    decision), then a new owner decision.
+- **Trading costs are unmeasured.** The base, stress and severe models are guesses. 002's result
+  hinged on them. The opening-minute quote checks (7 dates) are not a cost model.
+- **Development data is partly contaminated** for late-day, morning-range/breakout and
+  "buy after down mornings" ideas (`research/EXPLORATION_LOG.md`).
+- **Model review: OPTIONAL / DISABLED.** The owner revoked paid calls on 2026-11-04.
+
+### Unfinished or not built
+
+- **No next hypothesis chosen.** The recommendation is an execution-cost measurement first (see the
+  comparison file). A six-session pilot is pre-registered in `feasibility/spread_measurement/PLAN.md`
+  (commit be2d9cd, 2026-11-08). Its limits are implemented and tested in `trading/spread_measurement.py`
+  (19 synthetic tests; suite 330 passed). **Pilot run once on 2026-11-09 01:22 UTC.**
+  - 60 of 60 windows were complete and measured, with no cap reached.
+  - Usage: 135 of 600 requests, 7.9 of 75 MB.
+  - **Provisional result:** the spread was 1 cent most of the time. The estimated spread component
+    of execution cost (half-spread) was 0.12-0.25 bp per side, against 0.5 bp assumed at base. It is
+    not what every order pays.
+  - Every quote carries the unknown code `?`.
+  - Details: `feasibility/spread_measurement/FINDINGS_pilot.md`.
+  - The cost model is unchanged. The other 18 sessions are pending a separate decision.
+- **Scenario simulation** (`docs/PRODUCT_SPEC.md` section 8): proposed, awaiting owner review.
+- **Paper-account monitoring in the dashboard:** not implemented. Account access is verified from
+  the command line only.
+- **Multi-strategy account simulator:** not built.
+- **Uncommitted working-tree changes:**
+  - a city workspace switcher to the separate Website Agency board (`dashboard/README.md`,
+    `dashboard/web/index.html`, `dashboard/web/public/`, `CityView.tsx`, `server.py` CSP,
+    `tests/test_dashboard.py`)
+  - not recorded in the log below, and not reviewed in this update
+- **Monitoring runs only while** this computer, the city server and its worker are running. No
+  unattended service is claimed.
+- **Never done:** live trading, order submission, any use of validation or final data.
+
+### How to read the log below
+
+The sections below are dated history, oldest first. Statements later contradicted by newer
+evidence are marked **[SUPERSEDED ...]** inline, with a pointer to the newer evidence. They were
+true when written.
+
+## Verified (ran it and saw the result) (2026-11-03)
 
 | Component | Evidence |
 |---|---|
@@ -13,10 +91,12 @@ Last updated: 2026-11-03 (checks run around 21:30 UTC; strategy spec drafted lat
 | Dependencies install on Python 3.15 | pandas 3.1.0, exchange_calendars 4.13.2, requests 2.34.2, pytest 9.2.0 (binary wheels) |
 | Offline test suite | `pytest -q`: 22 passed (calendar holidays/early close/DST, validation on synthetic bars, client pagination, host guard, no order methods, secret hiding, order guard) |
 | Missing-credential handling | `python -m trading.verify_data_access` prints BLOCKED and exits 2 without making a network call |
-| Playwright MCP server | Connected in this Claude Code session (25 tools). Not used yet. |
+| Playwright MCP server | Connected in this Claude Code session (25 tools). Not used yet. **[SUPERSEDED: later sessions had no Playwright connector; the built-in browser was used instead]** |
 | daytrading-starter skill | Listed as available in this session. Not invoked. |
 
 ## Implemented, not yet verified against the real API
+
+**[SUPERSEDED: both were verified against the real paper API on 2026-11-03 23:51 UTC; see "Alpaca read-only access VERIFIED"]**
 
 - `trading/alpaca_client.py`: read-only paper account and historical bars, with pagination.
   Written from Alpaca's official docs (historical bars reference, market data overview), but
@@ -38,9 +118,9 @@ Last updated: 2026-11-03 (checks run around 21:30 UTC; strategy spec drafted lat
   - kill switch, stress options, sizing caps
   - period lock, budget, and reuse flag
 - Speed: about 0.75 s per synthetic year, so roughly 50 s for a full development run.
-- **No backtest has been run on real data. There are no strategy results.**
+- **No backtest has been run on real data. There are no strategy results.** **[SUPERSEDED: experiments 001 and 002 were evaluated on real 2016-2021 development data on 2026-11-04; both failed]**
 - Not built yet: a loader that downloads and stores 2016-2026 SPY bars; a spread
-  measurement from historical quotes.
+  measurement from historical quotes. **[SUPERSEDED in part: the loader `trading/history.py` was built and used for the development period. A spread measurement (cost model) is still not built; only access and opening-minute quote checks exist]**
 
 ## DEMO REPLAY dashboard (synthetic data, simulated outcomes)
 
@@ -60,7 +140,7 @@ Last updated: 2026-11-03 (checks run around 21:30 UTC; strategy spec drafted lat
     - the empty, reconnecting and `?3d=off` fallback states render
     - reduced motion works, and there are no console errors
     - browser storage is empty, and the bundle has no credential references
-- Not done: real Alpaca data or account in the dashboard (plan in `dashboard/README.md`).
+- Not done: real Alpaca data or account in the dashboard (plan in `dashboard/README.md`). **[SUPERSEDED in part: historical replay builds from real stored data, and real monitoring data is shown (2026-11-04). The paper account is still not shown in the dashboard]**
   The Playwright connector was disconnected in this session, so the built-in browser was used instead.
 
 ## Research & Simulation Lab, milestone 3a (2026-11-03)
@@ -102,7 +182,7 @@ Last updated: 2026-11-03 (checks run around 21:30 UTC; strategy spec drafted lat
 - **Tests:** `pytest -q`: 103 passed (9 new in `tests/test_history.py`). `npm run build`: type check passed.
 - **Implemented:** historical storage (`trading/history.py`) and HISTORICAL REPLAY mode
   (`trading/dashboard/historical_replay.py`, `server --mode historical`).
-- **Unverified: real Alpaca access and historical replay with real data.** No credentials
+- **[SUPERSEDED: Alpaca access verified 2026-11-03 23:51 UTC; real development data stored 2026-11-04]** **Unverified: real Alpaca access and historical replay with real data.** No credentials
   were available in this session: no `.env` file, no `APCA_*` variables, no Alpaca connector.
   `verify_data_access` exits 2 (BLOCKED) and historical mode refuses to start. The
   history code has only been exercised against fake API responses.
@@ -112,11 +192,11 @@ Last updated: 2026-11-03 (checks run around 21:30 UTC; strategy spec drafted lat
 | Trading City and tower panels | Verified (DEMO) | Built-in browser: selection, six tabs, chart, tables, no overflow |
 | Shared event records, consistent totals | Verified (DEMO) | Tests plus a browser cross-check: label = snapshot = report; equity identity |
 | Demo replay controls | Verified | Pause holds the cursor, resume advances, restart, speed |
-| Historical data retrieval and validation | Implemented, unverified | `trading/history.py` tested with fake API responses only; no keys |
-| Historical session replay | Implemented, unverified | `--mode historical` refuses without stored data (checked); never run on real data |
-| Strategy spec and evaluation | Verified on synthetic data | Spec v1.1 with hash; evaluation tests; not run on real data |
+| Historical data retrieval and validation | Implemented, unverified **[SUPERSEDED: verified 2026-11-04, 1,511 sessions]** | `trading/history.py` tested with fake API responses only; no keys |
+| Historical session replay | Implemented, unverified **[SUPERSEDED: verified to build from real stored data, 2026-11-04]** | `--mode historical` refuses without stored data (checked); never run on real data |
+| Strategy spec and evaluation | Verified on synthetic data **[SUPERSEDED: evaluated on real data; 001 failed]** | Spec v1.1 with hash; evaluation tests; not run on real data |
 | Scenario simulation | Missing (proposed) | `docs/PRODUCT_SPEC.md` section 8 awaits review |
-| Alpaca paper-account monitoring | Missing | Access not verified |
+| Alpaca paper-account monitoring | Missing | Access not verified **[SUPERSEDED: access verified; dashboard account monitoring still missing]** |
 | All dashboard numbers | Illustrative | DEMO fixtures |
 
 ## Journal and research workflow, milestone 4a+ (2026-11-03)
@@ -126,7 +206,7 @@ Fresh evidence this session:
   broken requirements (`pip check`) and 103 tests passed, before this milestone's changes.
 - **Tests:** `pytest -q`: 110 passed (7 new in `tests/test_journal.py`). `npm run build`:
   type check passed.
-- **Alpaca:** still unverified.
+- **Alpaca:** still unverified. **[SUPERSEDED: verified 2026-11-03 23:51 UTC]**
   - There is no `.env` file, and `APCA_*` is not set in this shell or at the Windows user level.
   - There is no Alpaca connector in this session.
   - `verify_data_access` exits 2 (BLOCKED).
@@ -148,16 +228,16 @@ Verified on DEMO data, in tests and in the browser:
 - the historical path is tested only with fake API-shaped data
 
 Known defects and limitations:
-- **Daily loss limit:** it exists and is unit-tested, but the engine checks it once before
+- **[SUPERSEDED: fixed in spec v1.2, within-day check; see "Pre-evaluation hardening"]** **Daily loss limit:** it exists and is unit-tested, but the engine checks it once before
   each day's single trade, so in experiment 001 it can never trigger. It needs a
   within-day check before any multi-trade strategy.
 - **Costs** are unmeasured guesses, until a spread measurement exists.
-- **Risk limits** are placeholders (D1 unanswered).
-- **No real-data results exist** for any strategy.
+- **Risk limits** are placeholders (D1 unanswered). **[SUPERSEDED: owner baseline set 2026-11-03 and locked in v1.3]**
+- **No real-data results exist** for any strategy. **[SUPERSEDED: 001 and 002 results, 2026-11-04]**
 
 ## Pre-evaluation hardening (2026-11-03, after 9064814)
 
-- **First blocker unchanged:** secure data configuration.
+- **First blocker unchanged:** secure data configuration. **[SUPERSEDED: credentials present and access verified later the same day]**
   - Checked again this session: no `.env` file, and `APCA_*` is not set in the shell or at
     the Windows user level.
   - `.env` and `.env.*` are git-ignored; only `.env.example` is tracked.
@@ -227,7 +307,7 @@ Known defects and limitations:
   - A drawdown breach exits the same way and halts permanently.
 - The dashboard ledger's unrealized P&L now uses the same after-cost definition.
 - **Tests:** `pytest -q`: 130 passed (new risk, engine and lock tests).
-- **Lock** `001-eaa09c9d5a` is now MISMATCHED (new risk fields), as designed. It has not been
+- **[SUPERSEDED: resolved by the v1.3 lock `001-fd13f1fdef` (long-only), next section]** **Lock** `001-eaa09c9d5a` is now MISMATCHED (new risk fields), as designed. It has not been
   superseded yet because the requested long-only constraint conflicts with accepted decision
   D6 (long and short). Candidate ids: `001-dea482a7be` (long and short) and `001-872d4e72b4`
   (long-only).
@@ -309,7 +389,7 @@ Known defects and limitations:
   - the pipeline ingest -> reconcile -> analysis -> rule_checks -> model_review -> report
   - **Results:** both experiments reconcile with 0 discrepancies (9 and 13 checks).
     model_review is **blocked** (no ANTHROPIC_API_KEY and no authorization); no model output
-    exists.
+    exists. **[SUPERSEDED: model review is now OPTIONAL / DISABLED and marked `skipped`; see "Paid AI postponed"]**
   - **Tests:** success, missing and corrupt artifacts, failure recovery, retry/restart duplicate
     prevention, tamper detection, cancel, dashboard/store consistency, strict JSON (171 pass).
 - **City:** "Research jobs" tab (real, not demo). The mode strip text was corrected: paper
@@ -340,7 +420,7 @@ pipeline -> watch progress -> cancel if needed -> open the report.
     "cancellation requested"; the current step finishes, and the remaining steps become
     cancelled. Completed evidence is kept.
   - **Restart:** running work becomes FAILED "interrupted", never completed.
-  - **Model review:** reported as NOT IMPLEMENTED / UNAVAILABLE. A key alone changes nothing.
+  - **Model review:** reported as NOT IMPLEMENTED / UNAVAILABLE. A key alone changes nothing. **[SUPERSEDED: implemented with mocks, then OPTIONAL / DISABLED]**
 - **Fixed during verification:**
   - Concurrent first opens of a new job database could report "database is locked". Schema
     setup is now serialized, and the server answers database errors with 503.
@@ -382,7 +462,7 @@ pipeline -> watch progress -> cancel if needed -> open the report.
     and deterministic steps were reused
   - throwaway harness with a MOCK provider: the review panel and evidence links render, and
     injected text is flagged
-- **Waiting for the owner:** provider/model choice, a budget authorization file, the API key in
+- **[SUPERSEDED: owner chose a provider, then revoked paid calls on 2026-11-04]** **Waiting for the owner:** provider/model choice, a budget authorization file, the API key in
   your own environment, SDK install, then one approved verification call. See `docs/MODEL_REVIEW.md`.
 - **Tests:** 223 pass.
 
@@ -401,7 +481,7 @@ pipeline -> watch progress -> cancel if needed -> open the report.
   - the separation, `.env` reading and the byte-order-mark case
   - real SDK error mapping against a closed local port (no request left this machine)
   - 229 tests pass
-- **Still not done (owner steps):**
+- **Still not done (owner steps):** **[SUPERSEDED: authorization revoked 2026-11-04; these steps are no longer pending]**
   - write `research/MODEL_REVIEW_AUTHORIZATION.json`
   - set the API key in your environment or `.env`
   - run the verification call
@@ -772,7 +852,6 @@ pipeline -> watch progress -> cancel if needed -> open the report.
     decisions. It never acquired its single-runner lock, so it stalled before starting.
   - Under the acceptance rules, that day is not a PASS.
 
-
 ## Reporting fixes and reliability diagnosis (2026-11-09 evening)
 
 - **Fixed: request-failure count.**
@@ -850,7 +929,6 @@ pipeline -> watch progress -> cancel if needed -> open the report.
 - **Report differences, classified:** later evidence and code changes on 11-04 to 11-06; a recorded amendment plus one
   defect (an `other_errors` undercount) on 11-09; 11-10 is identical at its cutoff.
 - **Not done:** the reliability gate stays PROPOSED and model assistance DISABLED.
-
 ## Dry-run records split by Windows app virtualization; report reproducibility (2026-11-10)
 
 - **Confirmed cause:**
@@ -876,7 +954,6 @@ pipeline -> watch progress -> cancel if needed -> open the report.
     The code is fixed; the v3 correction is previewed, not applied.
 - **Note:** operations code changed (`paths.py`, `__main__.py`, `snapshot.py`), so the operations fingerprint changed.
   Dry-run sessions count only on a committed version (I5).
-
 ## Milestone status (2026-11-10, after the close)
 
 - **Report completion (monitoring checklist): COMPLETE.** Rule (docs/MONITORING.md, unchanged): 5 consecutive scheduled
@@ -990,7 +1067,44 @@ pipeline -> watch progress -> cancel if needed -> open the report.
   - the intended account and written authorization, absent
   - Milestone 1 acceptance not met
 
-## Missing
+## Milestone 1 acceptance record and version freeze (2026-11-11, after the close)
+
+- **Authoritative acceptance output.**
+  - Run by the owner in a normal PowerShell window with `python -m trading.operations acceptance`; output reported in
+    chat on 2026-11-11.
+  - **Result:** 2026-11-11 = **PASS**; `current_streak` = **1**; `accepted` = **false**; fingerprint
+    `6cc6999855edd4f1`.
+  - It agrees with the stored report `reports/2026-11-11.json`: PASS, 385 of 385 decision minutes, broker-verified
+    no exposure, code commit `34cd713`. 2026-11-10 stays INCOMPLETE, as recorded.
+  - No rule, threshold or historical result was changed to record this.
+- **Version frozen for the remaining sessions.**
+  - The dry run runs operations fingerprint `6cc6999855edd4f1` (commit `34cd713`) for the four sessions still
+    needed: 2026-11-12, 11-13, 11-16 and 11-17. All four must PASS.
+  - No change to the fingerprinted files (`trading/operations/*.py`, `config/approved_strategies.json`,
+    `trading/sessions.py`, `trading/safety.py`, `trading/alpaca_client.py`) until Milestone 1 is accepted, or the
+    owner decides otherwise. Any change would restart the count.
+  - Work elsewhere (the execution lab, the paper adapter, docs) does not touch the fingerprint; re-measure it before
+    each session rather than assuming it.
+- **Also recorded today:**
+  - **Intended paper account:** `config/intended_paper_account.json` holds account reference `df0ca3cbd37a`, confirmed
+    by the owner at 2026-11-12T01:30:27Z (the account ending 4KLR). This is **identification only**: no policy, no
+    write networking, no orders.
+  - **Monitor worker:** one worker. PID 15180 is the venv launcher, and PID 9680 is its child interpreter running
+    `trading.monitor run`.
+  - **City server (8765):** down. The owner restarts it with `python -m trading.startup` in a normal PowerShell
+    window (`docs/OPERATIONS.md`, "Recovering the production city server").
+- **Still blocked:**
+  - every execution-policy value (UNSET);
+  - the paper network transport (not built);
+  - order submission (guard refuses);
+  - paper-test limits (owner choices);
+  - written authorization (absent).
+
+## Missing (written 2026-11-03)
+
+**[SUPERSEDED: see the current-status summary at the top. Alpaca access is verified, real
+development data is stored, and the owner's risk limits are enforced in the simulation engine.
+Only the Playwright line still holds.]**
 
 - **alpaca-paper connection:** not present in this Code session (connector list has no Alpaca
   server). No `APCA_*` environment variables are set and there is no `.env` file.

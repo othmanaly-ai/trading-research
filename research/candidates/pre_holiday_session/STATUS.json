@@ -1,0 +1,22 @@
+{
+  "candidate_id": "pre_holiday_session",
+  "title": "Long SPY on pre-holiday sessions (09:31 entry, exit at the last regular bar; PROPOSAL, never approved)",
+  "state": "REJECTED",
+  "is_experiment": false,
+  "performance_evaluated": false,
+  "status": "REJECTED by the owner (R1, 2026-11-11). Never evaluated: no code, no returns computed, no price data read for these dates. Reasons: published evidence is close-to-close, not our open-to-close interval; about 9 trades a year cannot be tested in practical time.",
+  "decided_utc": "2026-11-11",
+  "decided_by": "owner decision 2026-11-11 (R1)",
+  "downloads": "NONE (uses stored development SPY SIP bars only, after spec approval)",
+  "blockers": [],
+  "open_uncertainties": [
+    "Power: about 20-34 bp per trade is the smallest detectable effect with 53 development trades (assumed volatility)",
+    "Costs remain assumptions: spread unmeasured pending Alpaca's quote answers; slippage unmeasured without fills"
+  ],
+  "resume_requires": "Not resumable as is. Any pre-holiday idea would be a new hypothesis needing a new owner decision.",
+  "records": [
+    "research/candidates/pre_holiday_session/PROPOSAL.md",
+    "research/EXPLORATION_LOG.md",
+    "research/candidates/REVIEW_2026-11-11_pre_holiday.md"
+  ]
+}

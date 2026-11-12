@@ -261,3 +261,24 @@ def test_depmap_endpoint_is_read_only_and_has_no_execution_path(server, tmp_path
     assert not any(k in i for i in ids for k in ("order", "execution"))
     assert all(set(e["kinds"]) <= {"declared", "recorded", "proposed"} for e in body["edges"])
     assert not (tmp_path / "no-jobs.sqlite").exists()                      # reading created nothing
+
+
+def test_csp_allows_only_the_local_agency_workspace(server):
+    """The city workspace switcher may frame the separate Website Agency board and read its
+    health check; nothing else from outside this server is allowed, and this page can't be framed."""
+    with urllib.request.urlopen(server + "/api/meta", timeout=10) as r:
+        csp = r.headers["Content-Security-Policy"]
+    assert "default-src 'self'" in csp
+    assert "frame-src http://127.0.0.1:4310 http://localhost:4310" in csp
+    assert "connect-src 'self' http://127.0.0.1:4310 http://localhost:4310" in csp
+    assert "frame-ancestors 'none'" in csp
+    assert "script-src" not in csp            # scripts stay same-origin via default-src
+
+
+def test_workspace_switcher_is_navigation_only():
+    """Switching workspaces must not call this dashboard's API (monitor, research, settings, orders)."""
+    js = (Path(__file__).resolve().parents[1] / "dashboard" / "web" / "public" / "workspaces.js").read_text(encoding="utf-8")
+    assert "/api/" in js and js.count("/api/") == 1 and "/api/health" in js    # only the agency health probe
+    assert "127.0.0.1:4310" in js and "8765" not in js
+    for forbidden in ("/api/control", "/api/monitor", "/api/pipelines", "X-Dashboard-Control", "method:"):
+        assert forbidden not in js

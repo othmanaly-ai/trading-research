@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "environment": "paper",
+  "account_ref": "df0ca3cbd37a",
+  "confirmed_by": "owner (chat confirmation after checking Alpaca's Paper Trading dashboard: account number ending 4KLR)",
+  "confirmed_utc": "2026-11-12T01:30:27Z",
+  "recorded_by": "Claude, at the owner's explicit instruction; time recorded when the confirmation was received",
+  "evidence": "read-only GET /v2/account on https://paper-api.alpaca.markets, 2026-11-12 ~01:20 UTC: same one-way reference as the dry run's records; ACTIVE; not blocked; no positions; no open orders",
+  "scope": "ACCOUNT IDENTIFICATION ONLY. Approves no execution policy, no broker-write networking and no order submission."
+}

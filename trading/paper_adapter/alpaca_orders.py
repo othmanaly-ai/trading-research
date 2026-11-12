@@ -95,6 +95,13 @@ class AlpacaPaperOrderAdapter:
         self._seen_fills: set[str] = set()
         self._last_status: dict[str, str] = {}
 
+    def know(self, ids: dict[str, str]) -> None:
+        """Seed client -> broker order ids from the durable ledger (a fresh process knows nothing else). Without this,
+        fills and status changes of orders acknowledged in an earlier process would be ignored until a lookup."""
+        for cid, bid in ids.items():
+            if bid:
+                self._ids.setdefault(cid, bid)
+
     def _write_allowed(self) -> str | None:
         try:
             self.guard()

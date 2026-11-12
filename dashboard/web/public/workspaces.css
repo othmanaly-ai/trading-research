@@ -1,0 +1,27 @@
+/* City workspace switcher (Trading City / Website Agency). */
+.workspace-switcher { position: relative; z-index: 50; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px; background: #080d19; color: #edf3ff; border-bottom: 1px solid #293247; font: 600 14px/1.2 system-ui, sans-serif; }
+.workspace-switcher .workspace-label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #93a3bc; margin-right: 8px; }
+.workspace-switcher a { color: #c7d4eb; text-decoration: none; background: #151e30; border: 1px solid #34405a; border-radius: 8px; padding: 9px 16px; }
+.workspace-switcher a:hover { border-color: #6d7fa3; }
+.workspace-switcher a[aria-current="page"] { background: #123b47; color: #8cf6e0; border-color: #33cdb1; box-shadow: inset 0 -3px 0 #33cdb1; }
+.workspace-switcher a:focus-visible { outline: 3px solid #f9ca78; outline-offset: 3px; }
+.agency-workspace { display: flex; flex-direction: column; height: calc(100dvh - var(--ws-nav-h, 52px)); background: #0d0e10; color: #e6edf8; font: 14px/1.5 system-ui, sans-serif; }
+.agency-workspace[hidden] { display: none; }
+.agency-workspace .workspace-note { margin: 0; padding: 6px 16px; color: #c9d6ec; font-size: 13px; border-bottom: 1px solid #1f2738; }
+.agency-workspace a { color: #8cf6e0; }
+.agency-status:empty { display: none; }
+.agency-status { padding: 8px 16px; color: #f9ca78; }
+.agency-workspace iframe { flex: 1; width: 100%; min-height: 0; border: 0; background: #0d0e10; }
+.agency-down { margin: 24px 16px; padding: 18px 20px; max-width: 760px; border: 1px solid #6b3a2e; border-left: 4px solid #ff5a36; border-radius: 10px; background: #15161a; }
+.agency-down h2 { margin: 0 0 8px; font-size: 18px; }
+.agency-down p { margin: 6px 0; }
+.agency-down pre { overflow-x: auto; padding: 10px 12px; background: #0a0b0d; border-radius: 8px; color: #e6edf8; }
+.agency-retry { font: inherit; color: #0d0e10; background: #8cf6e0; border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+.agency-retry:focus-visible { outline: 3px solid #f9ca78; outline-offset: 3px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+[hidden] { display: none !important; }
+@media (max-width: 480px) {
+  .workspace-switcher { padding: 8px 10px; gap: 6px; }
+  .workspace-switcher .workspace-label { width: 100%; }
+  .workspace-switcher a { flex: 1; text-align: center; padding: 10px 8px; }
+}

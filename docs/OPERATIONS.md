@@ -81,6 +81,57 @@ were recorded but invisible to the city.
 - The stale app copy is still at `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Local\TradingProject\operations\`.
   It holds only the two 11-08 preflight and no-session records. It was left in place pending an owner decision.
 
+## Recovering the production city server (port 8765)
+
+Use this when the city server has stopped, for example on 2026-11-10 at 21:49 ET (see
+`docs/OPERATIONAL_INCIDENTS.md`).
+- **Always in a normal Windows PowerShell window**, from the Start menu, never in a Claude desktop terminal.
+- **Never kill a process you have not identified.**
+
+1. Go to the project folder and look before starting anything:
+
+   ```powershell
+   Set-Location "C:\Users\othma\OneDrive\Documents\TradingProject"
+   .\.venv\Scripts\python.exe -m trading.startup --check-only
+   ```
+
+   Check-only starts nothing. With the server down, expect:
+   - "City server … FAIL not running (check only)"
+   - "Market monitor … SKIP"
+
+2. Identify every TradingProject Python process, and what is listening on 8765:
+
+   ```powershell
+   Get-CimInstance Win32_Process -Filter "Name like 'python%'" | Where-Object { $_.CommandLine -match 'trading\.(dashboard\.server|monitor run|operations run)' } | Select-Object ProcessId, ParentProcessId, CreationDate, CommandLine | Format-List
+   Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue | Select-Object OwningProcess
+   ```
+
+   - Each worker or runner appears **twice** (the venv launcher plus its child interpreter): that is one process.
+   - Servers with `--read-only-preview` (ports 8768-8770) are separate viewers. They are not production and are not
+     touched.
+   - **Stop and ask** if something you cannot identify listens on 8765.
+
+3. If nothing listens on 8765, start it:
+
+   ```powershell
+   .\.venv\Scripts\python.exe -m trading.startup
+   ```
+
+   - It reuses anything healthy, and opens the server in its own window.
+   - **It does not start a second worker** when one is alive: the server's supervisor relaunches only when no worker
+     heartbeat exists, and the worker's OS lock refuses a second poller.
+
+4. Verify the counts by repeating step 2. Expect:
+   - **one** listener on 8765, owned by the new `trading.dashboard.server --port 8765` process
+   - **one** worker (one launcher plus interpreter pair)
+   - in the city, Market readiness "Exactly one intended monitoring worker" = PASS, and "Worker heartbeat" = PASS
+
+   If two separate worker pairs appear, do not kill either one. Report it: readiness shows FAIL, and the lock
+   already stops the second from polling.
+
+5. Leave the new server window open. Closing it stops the city server. It does not stop the worker, but nothing
+   supervises the worker then.
+
 ## Other commands (none of them place orders)
 
 | Command | What it does |

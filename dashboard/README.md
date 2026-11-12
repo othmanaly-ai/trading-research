@@ -143,3 +143,19 @@ Prerequisite: Alpaca paper keys in `.env`, and a successful
    keys never appear in API responses, server-sent events, logs or the bundle.
 7. **Orders stay disabled.** Paper order submission is a later milestone needing
    explicit approval and its own failure, duplicate-order and reconciliation tests.
+
+## City workspaces (Trading City / Website Agency)
+
+The top bar switches between this dashboard and the separate **Website Agency** board from the
+`WebsiteAgencyCity` project, inside the same browser tab: `/` or `/?workspace=agency`. Direct links,
+refresh and back/forward all work. The code lives in `dashboard/web/public/workspaces.js` and `.css`.
+
+- Switching is navigation only. It calls no `/api/*` endpoint here, so it cannot start or stop the
+  monitoring worker, change settings, run research or enable orders.
+- The agency runs its own server (`python tools/serve.py 4310` in WebsiteAgencyCity) with its own data. Before
+  framing it, the page reads `http://127.0.0.1:4310/api/health`. If that fails it shows an "unavailable" panel
+  with the recovery command instead of an empty frame.
+- The CSP allows exactly that: `frame-src` and `connect-src` for `127.0.0.1:4310` / `localhost:4310`. Nothing
+  else is allowed, and the dashboard itself can't be framed (`frame-ancestors 'none'`).
+- While the agency workspace is shown, the 3D city stops rendering (the same pause as a hidden tab). Monitoring
+  runs in its own worker process and is unaffected by what the browser shows.

@@ -89,8 +89,12 @@ def _ts(s: str) -> datetime:
 
 class Lab:
     def __init__(self, ledger: L.Ledger, broker, clock: Clock, config: LabConfig | None = None,
-                 restart: bool = False, policy: ExecutionPolicy = APPROVED):
+                 restart: bool = False, policy: ExecutionPolicy = APPROVED, entry_controls=None):
         self.ledger, self.broker, self.clock = ledger, broker, clock
+        # Injected session controls (kill switch, paper-only account checks): a callable returning blocking reasons.
+        # Checked when an entry is validated AND again immediately before it is sent. Entries only: cancels,
+        # protective stops, reconciliation and the emergency stop are never blocked by it.
+        self.entry_controls = entry_controls
         self.cfg = config or LabConfig()
         self.policy = policy
         self.cv = f"{self.cfg.version()}+{policy.version()}"
@@ -99,6 +103,16 @@ class Lab:
                                     "note": "restart: outstanding orders are rebuilt from the ledger; entries stay "
                                             "blocked until reconciliation" if restart else "fresh start"},
                   event_id=f"start:{n + 1}")
+        if hasattr(broker, "know"):        # a stateless broker port (paper adapter) relearns our order ids from the ledger
+            broker.know({o.order_id: o.broker_order_id for o in self.state()["orders"].values() if o.broker_order_id})
+
+    def _control_reasons(self) -> list[str]:
+        if self.entry_controls is None:
+            return []
+        try:
+            return list(self.entry_controls())
+        except Exception as exc:                       # a control that cannot be evaluated blocks (fail closed)
+            return [f"SESSION CONTROLS UNAVAILABLE ({type(exc).__name__}): entry blocked (fail closed)"]
 
     # ---------------------------------------------------------------- records
     def _evt(self, kind: str, payload: dict, order_id: str | None = None, event_id: str | None = None,
@@ -140,6 +154,7 @@ class Lab:
         refusal = source_refusal(source)
         if refusal:
             reasons.append(refusal)
+        reasons += self._control_reasons()
         reasons += describe_missing(self.policy.missing("entry"))
         reasons += [f"POLICY INVALID: {x}" for x in self.policy.invalid()]
         pol = self.policy
@@ -212,6 +227,12 @@ class Lab:
         o = self.state()["orders"][cid]
         if o.state != L.VALIDATED:          # never resubmit: an id that has been submitted is only reconciled
             return {"order_id": cid, "submitted": False, "reasons": [f"not resubmitted: order is {o.state}"]}
+        if o.purpose == "entry":
+            late = self._control_reasons()                 # the state may have changed since validation
+            if late:
+                self._evt("blocked", {"reasons": late, "stage": "send-time controls (nothing sent)"}, cid,
+                          f"blocked-send:{cid}")
+                return {"order_id": cid, "submitted": False, "reasons": late}
         self._evt("submit_requested", {"symbol": symbol, "side": side, "qty": qty, "spec": spec,
                                        "note": "recorded BEFORE the broker call"}, cid, f"submit:{cid}")
         _crash("after_submit_record_before_send")
@@ -273,6 +294,32 @@ class Lab:
                   sc, f"intent:{sc}")
         self._evt("validated", {"check": {"protect": True, "policy": self.policy.label}}, sc, f"validated:{sc}")
         return self._submit(sc, o.symbol, "sell", need, spec)
+
+    def exit_position(self, symbol: str, qty: int, ref_price: float, why: str = "") -> dict:
+        """Reduce exposure: sell shares the LEDGER holds and no other live sell has reserved. Risk-reducing, so the
+        kill switch and the entry gates never block it. Only on an explicit call: nothing here liquidates
+        automatically. Needs the policy's order type and time in force (unset = refused, never a default)."""
+        st = self.state()
+        n = len([e for e in self.ledger.events() if e["kind"] == "intent_created" and e["payload"].get("purpose") == "exit"]) + 1
+        cid = f"{self.cfg.strategy_version}:{self.cfg.session}:exit{n:03d}"
+        held = (st["positions"].get(symbol) or {}).get("qty", 0)
+        reserved = sum(o.remaining_qty for o in st["orders"].values()
+                       if o.symbol == symbol and o.side == "sell" and o.state in L.LIVE)
+        reasons = [f"POLICY UNSET: {f} (needed to place an exit order)" for f in ("order_type", "time_in_force")
+                   if getattr(self.policy, f) is None]
+        if qty <= 0 or qty > held - reserved:
+            reasons.append(f"exit of {qty} exceeds the unreserved ledger position ({held} held, {reserved} reserved by "
+                           "live sells); cancel those first")
+        spec = None if reasons else {"type": self.policy.order_type, "time_in_force": self.policy.time_in_force,
+                                     "limit_price": round(ref_price, 2), "order_class": "simple"}
+        self._evt("intent_created", {"symbol": symbol, "side": "sell", "qty": qty, "ref_price": ref_price,
+                                     "purpose": "exit", "why": why, "spec": spec, "client_order_id": cid}, cid,
+                  f"intent:{cid}")
+        if reasons:
+            self._evt("blocked", {"reasons": reasons}, cid, f"blocked:{cid}")
+            return {"order_id": cid, "submitted": False, "reasons": reasons}
+        self._evt("validated", {"check": {"exit": True, "policy": self.policy.label}}, cid, f"validated:{cid}")
+        return self._submit(cid, symbol, "sell", qty, spec)
 
     def retry_submit(self, cid: str) -> dict:
         """What a naive retry would do. The lab refuses unless the intent was never submitted."""
